@@ -1,0 +1,9 @@
+[data-tooltip]:before {            
+    position : absolute;
+     content : attr(data-tooltip);
+     opacity : 0;
+}
+
+[data-tooltip]:hover:before {        
+    opacity : 1;
+}

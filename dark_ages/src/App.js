@@ -2,7 +2,7 @@ import './App.css';
 import {Variable, VariableComponent} from './variable/variable.js'
 import {Cumulator, CumulatorComponent} from './variable/cumulator.js'
 import { AggregatorModifier } from './variable/aggregator';
-import {additive, multiplicative, VariableModifier} from './variable/modifier.js'
+import {additive, multiplicative, VariableModifier, VariableModifierComponent} from './variable/modifier.js'
 import {Timer, TimerComponent} from './timer.js'
 import React from 'react';
 
@@ -81,7 +81,10 @@ class App extends React.Component {
                 ],
                 type: additive,
                 aggregatorCallback: (variable, variables) => {
-                    return variables.reduce((partial_sum, variable) => partial_sum + variable.currentValue, 0);
+                    return {
+                        value: variables.reduce((partial_sum, variable) => partial_sum + variable.currentValue, 0),
+                        explanation: variables.reduce((partial_sum, variable) => `${partial_sum}, ${variable.name} - ${variable.currentValue}`, "Sum of: "),
+                    }
                 }
             }
         );
@@ -117,7 +120,7 @@ class App extends React.Component {
             <div>
             <div><VariableComponent variable={this.state.aggregator}/></div>
             <div><CumulatorComponent variable={this.state.treasury}/></div>
-            
+            <div><VariableModifierComponent modifier={this.constModifier}/></div>
             </div>
         ); //<PlayUI timer={this.state.timer} gameTimer={this.state.gameTimer}/>
         } else {

@@ -1,4 +1,6 @@
 import React from 'react'
+import Tooltip from './tooltip/tooltip';
+import ReactTooltip from 'react-tooltip';
 
 export class Variable {
     constructor(props) {
@@ -16,15 +18,14 @@ export class Variable {
         this.modifiers = props.modifiers || [];
         this.subscriptions = [];
         this.currentDepth = 0;
-        this.subscribed = false;
-        if (!this.subscribed) {
-            let self = this;
-            for (let modifier of this.modifiers) {
-                // console.log(this.name + ' subbing to ' + modifier.name);
-                modifier.subscribe((depth) => {
-                    self.recalculate();
-                });
-            }
+        this.explanations = [];
+
+        let self = this;
+        for (let modifier of this.modifiers) {
+            // console.log(this.name + ' subbing to ' + modifier.name);
+            modifier.subscribe((depth) => {
+                self.recalculate();
+            });
         }
         this.recalculate();
     }
@@ -57,20 +58,23 @@ export class Variable {
         this.subscriptions.forEach(subscription => subscription(depth))
     }
     recalculate(force=false) {
-        if (this.name.includes('settl')) {
+        if (this.name.includes('otal')) {
             console.log('calc ' + this.name);
         }
         this.modifiers.sort((a, b) => {
             return a.priority() > b.priority();
         });
         let value = this.baseValue;
+        let explanations = [];
         for (let modifier of this.modifiers) {
-            let newValue = modifier.modify(value);
+            let result = modifier.modify(value);
             // console.log('added ' + (newValue - value));
-            value = newValue;
+            value = result.result;
+            explanations.push(result.explanation);
         }
         if (this.currentValue !== value) {
             this.currentValue = value;
+            this.explanations = explanations;
             this.currentDepth += 1;
             if (this.currentDepth < 3) {
                 this.callSubscribers(this.currentDepth);
@@ -92,9 +96,9 @@ export class VariableComponent extends React.Component {
         this.subscribed = false;
         this.ingestProps(props, false);
         if (this.variable) {
-            this.state = {currentValue: this.variable.currentValue};
+            this.state = {variable: this.variable};
         } else {
-            this.state = {currentValue: 'nan'};
+            this.state = {variable: 'nan'};
         }
         // console.log('new var created ' + this.variable.name + ' subbed: ' + this.variable.subscriptions);
     }
@@ -105,10 +109,6 @@ export class VariableComponent extends React.Component {
             this.subscribed = false
         }
         this.variable = props.variable;
-        if (this.variable === undefined) {
-            // console.log('new var');
-            this.variable = new Variable(props);
-        }
         if (wasSubscribed || forceSubscribe) {
             this.trySubscribe();
         }
@@ -136,17 +136,18 @@ export class VariableComponent extends React.Component {
             let self = this;
             if (this.variable) {
                 this.callback = this.variable.subscribe(() => {
-                    self.setState({currentValue:self.variable.currentValue})
+                    self.setState({variable:self.variable})
                 }, 'display');
                 this.subscribed = true;
             }
         }
     }
     render () {
-        let displayValue = Math.round(this.state.currentValue, 3);
+        let displayValue = Math.round(this.state.variable.currentValue, 3);
+        let content = this.variable.explanations.join("<br />")
         if (this.props.showName) {
             return <span>
-                {this.variable.name}: {displayValue} 
+                <p title={content}> {this.variable.name}: {displayValue} </p>
             </span>
         } else {
             return <span>
@@ -172,10 +173,6 @@ VariableComponent.defaultProps = {
 
 // Current issue: why doesn't the aggregator update anything?
 // - variables
-//   - do example cases:
-//       - We need the modifiers to have an explain method and for the variable to collect them as it modify()s
-//       - what if the actual list of modifiers changes? would that be handled by props changing? Probs not, might need a separate function
-//       - treasury variable increasing by an amount per turn that is the sum of the income variables of a list of settlements
-//       - having a modifier depend on another object's variable, e.g. a battle bonus which depend's on the general's culture, where both the general and the culture can change
-//       - think about how to use a variable from a completely different place, will it always work? e.g. the 
+//   - We need the modifiers to have an explain method and for the variable to collect them as modify()s
 //   - build the tooltip system for showing modifiers
+//   - Refactor the PlayUI into a base class

@@ -17,14 +17,16 @@ export class AggregatorModifier extends VariableModifier {
     }
 
     modify(value) {
-        console.log("HERE");
         this.aggregate();
         return super.modify(value);
     }
 
     aggregate() {
-        let newVariable = this.aggregatorCallback(this.variable, this.variables);
-        this.variable.setNewBaseValue(newVariable);
+        let result = this.aggregatorCallback(this.variable, this.variables);
+        this.variable.setNewBaseValue(result.value);
+        // setNewBaseValue doesn't trigger a modify so no explanations account
+        // even if we force pushed new updates, how would we clear out old ones?
+        // IDEA: aggregator callback could return a list of modifiers instead?
     }
  
     subscribeToVariables() {
