@@ -12,6 +12,10 @@ export class AbstractModifier {
         if (this.type === undefined){
             throw Error('Need this');
         }
+        this.dirty = true;
+    }
+    isDirty() {
+        return this.dirty;
     }
     subscribe(callback) {
         this.subscriptions.push(callback);

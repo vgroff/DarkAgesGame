@@ -1,4 +1,4 @@
-import { additive, multiplicative, VariableModifier } from "./modifier";
+import { VariableModifier } from "./modifier";
 import { Variable } from "./variable";
 
 
@@ -11,30 +11,25 @@ export class AggregatorModifier extends VariableModifier {
         if (this.aggregatorCallback === undefined || this.objectList === undefined || this.keys === undefined) {
             throw Error("need callback and object list and keys (even if empty)")
         }
-        this.subscriptions = [];
+        this.variableSubscriptions = [];
         this.variables = [];
         this.variables = this.subscribeToVariables();
     }
 
     modify(value) {
-        let newVariable = this.aggregatorCallback(this.variable, this.variables);
-        this.variable.setNewBaseValue(newVariable);
+        console.log("HERE");
+        this.aggregate();
         return super.modify(value);
     }
 
-    priority() {
-        if (this.type === additive) {
-            return 0;
-        } else if (this.type === multiplicative) {
-            return 1;
-        } else {
-            throw Error("what");
-        }
+    aggregate() {
+        let newVariable = this.aggregatorCallback(this.variable, this.variables);
+        this.variable.setNewBaseValue(newVariable);
     }
-
+ 
     subscribeToVariables() {
         for (let i = 0; i < this.variable.length; i++) {
-            this.subscriptions.forEach(sub => this.variables[i].unsubscribe(sub));
+            this.variableSubscriptions.forEach(sub => this.variables[i].unsubscribe(sub));
         }
         this.subscriptions = [];
         for (const [index, obj] of this.objectList.entries()) {
@@ -52,10 +47,12 @@ export class AggregatorModifier extends VariableModifier {
             }
             if (variable instanceof Variable) {
                 this.variables.push(variable);
-                this.subscriptions.push(variable.subscribe(() => this.variable.recalculate()));
+                this.variableSubscriptions.push(variable.subscribe(() => this.aggregate()));
+                this.aggregate();
             } else {
                 throw Error("expect variable");
             }
         }
+        return this.variables;
     }
 }

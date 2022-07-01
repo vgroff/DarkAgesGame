@@ -30,7 +30,6 @@ class PlayUI extends React.Component {
         })});
     }
     componentDidMount() {
-        let self = this;
         this.subs.forEach(sub => {
             let state = {ready:true};
             state[sub.key] = sub.variable;
@@ -63,9 +62,9 @@ class App extends React.Component {
         this.timer = new Timer({name: 'Internal timer'});
         this.timer.startTimer();
         this.settlements = [
-            new Settlement(5),
-            new Settlement(12),
-            new Settlement(2)
+            new Settlement('settlement1', 5),
+            new Settlement('settlement2',12),
+            new Settlement('settlement3',2)
         ];
         this.aggregator = new AggregatorModifier(
             {
@@ -82,13 +81,11 @@ class App extends React.Component {
                 ],
                 type: additive,
                 aggregatorCallback: (variable, variables) => {
-                    return variables.reduce((partial_sum, variable) => partial_sum + variable);
+                    return variables.reduce((partial_sum, variable) => partial_sum + variable.currentValue, 0);
                 }
             }
         );
-        this.variableModifier = new VariableModifier({name:'timer-based modifier', variable: this.timer, type:multiplicative});
         this.constModifier = new VariableModifier({name:'const modifier', type:additive, startingValue:3});
-        this.value = new Variable({name:'var1', startingValue: 2, modifiers:[this.variableModifier, this.constModifier]});
         this.treasury = new Cumulator({name: 'Treasury', startingValue: 100, timer:this.timer, modifiers:[this.constModifier]});
         this.state = {
             value: this.value,
@@ -101,7 +98,7 @@ class App extends React.Component {
             timer: this.timer,
             value: this.value,
             treasury: this.treasury,
-            aggregator: this.aggregator,
+            aggregator: this.aggregator.variable,
             ready: true
         });
     }
@@ -120,9 +117,9 @@ class App extends React.Component {
             <div>
             <div><VariableComponent variable={this.state.aggregator}/></div>
             <div><CumulatorComponent variable={this.state.treasury}/></div>
-            <PlayUI timer={this.state.timer} gameTimer={this.state.gameTimer}/>
+            
             </div>
-        ); 
+        ); //<PlayUI timer={this.state.timer} gameTimer={this.state.gameTimer}/>
         } else {
             return (
             <div>

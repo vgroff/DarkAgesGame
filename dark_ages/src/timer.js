@@ -10,7 +10,7 @@ export class Timer extends Variable {
         this.started = false;
         this.timerNumber = Timer.timerNumber;
         Timer.timerNumber += 1;
-        this.name = "Timer " + this.timerNumber;
+        console.log(`New timer created ${this.name}, timer number: ${this.timerNumber}`);
     }
     stopTimer() {
         if (this.started) {
@@ -27,6 +27,10 @@ export class Timer extends Variable {
             this.started = true;
         }
     };
+    killTimer() {
+        this.stopTimer();
+        this.clearSubscriptions();
+    }
 }
 
 export class TimerComponent extends VariableComponent {

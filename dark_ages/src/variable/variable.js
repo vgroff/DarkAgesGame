@@ -3,6 +3,9 @@ import React from 'react'
 export class Variable {
     constructor(props) {
         // console.log('new var created ' + this.name);
+        if (props.name.includes('tax')) {
+            console.log(props.name);
+        }
         const unnamed = 'unnamed variable'
         this.name = props.name || unnamed;
         if (this.name === unnamed) {
@@ -28,11 +31,17 @@ export class Variable {
     componentDidCatch(err) {
         console.log("ERR" + err.stack);
     }
+    clearSubscriptions() {
+        this.subscriptions = [];
+    }
     setNewBaseValue(baseValue) {
         this.baseValue = baseValue;
         this.recalculate();
     }
     subscribe(callback, reason = '') {
+        if (this.name.includes('tax')) {
+            console.log('subbing to ' + this.name);
+        }
         this.subscriptions.push(callback);
         // console.log("sub to "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length + ' ' + reason)
         return callback;
@@ -47,7 +56,10 @@ export class Variable {
         // console.log("Calling subs "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
         this.subscriptions.forEach(subscription => subscription(depth))
     }
-    recalculate(dontSetState=false) {
+    recalculate(force=false) {
+        if (this.name.includes('settl')) {
+            console.log('calc ' + this.name);
+        }
         this.modifiers.sort((a, b) => {
             return a.priority() > b.priority();
         });
@@ -57,7 +69,7 @@ export class Variable {
             // console.log('added ' + (newValue - value));
             value = newValue;
         }
-        if (!dontSetState && this.currentValue !== value) {
+        if (this.currentValue !== value) {
             this.currentValue = value;
             this.currentDepth += 1;
             if (this.currentDepth < 3) {
@@ -73,6 +85,9 @@ export class Variable {
 
 export class VariableComponent extends React.Component {
     constructor(props) {
+        if (props.variable === undefined) {
+            throw Error('need a variable to show')
+        }
         super(props);
         this.subscribed = false;
         this.ingestProps(props, false);
@@ -155,6 +170,7 @@ VariableComponent.defaultProps = {
     showName: true
 };
 
+// Current issue: why doesn't the aggregator update anything?
 // - variables
 //   - do example cases:
 //       - We need the modifiers to have an explain method and for the variable to collect them as it modify()s
