@@ -7,7 +7,6 @@ export const additive = 'additive';
 export class AbstractModifier {
     constructor(props) {
         this.name = props.name || 'unnamed modifier';
-        this.state = {};
         this.subscriptions = [];
         this.type = props.type;
         if (this.type === undefined){
@@ -20,6 +19,10 @@ export class AbstractModifier {
     }
     callSubscribers(callback, depth) {
         this.subscriptions.forEach(subscription => subscription())
+    }
+    unsubscribe(callback) {
+        this.subscriptions = this.subscriptions.filter(c => c !== callback);
+        // console.log("subs to "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
     }
     render () {
         return <div>
@@ -40,14 +43,6 @@ export class VariableModifier extends AbstractModifier {
             self.callSubscribers(depth);
         }, 'modifier value ' + this.name);
     }   
-    subscribe(callback) {
-        // console.log('subbed to ' + this.name);
-        this.subscriptions.push(callback);
-        return callback;
-    }
-    callSubscribers(callback, depth) {
-        this.subscriptions.forEach(subscription => subscription());
-    }
     modify(value) {
         if (this.type === additive) {
             return value + this.variable.currentValue;

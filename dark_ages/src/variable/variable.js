@@ -3,7 +3,11 @@ import React from 'react'
 export class Variable {
     constructor(props) {
         // console.log('new var created ' + this.name);
-        this.name = props.name || 'unnamed variable';
+        const unnamed = 'unnamed variable'
+        this.name = props.name || unnamed;
+        if (this.name === unnamed) {
+            console.log('Unnamed variable;')
+        }
         this.baseValue = props.startingValue || 0;
         this.currentValue = this.baseValue;
         this.modifiers = props.modifiers || [];
@@ -60,6 +64,9 @@ export class Variable {
                 this.callSubscribers(this.currentDepth);
             }
             this.currentDepth = 0;
+            if (isNaN(this.currentValue)) {
+                throw Error("nan number");
+            }
         }
     }
 }
@@ -121,13 +128,14 @@ export class VariableComponent extends React.Component {
         }
     }
     render () {
+        let displayValue = Math.round(this.state.currentValue, 3);
         if (this.props.showName) {
             return <span>
-                {this.variable.name}: {this.state.currentValue} 
+                {this.variable.name}: {displayValue} 
             </span>
         } else {
             return <span>
-                Current value: {this.state.currentValue} 
+                Current value: {displayValue} 
             </span>
         }
     }
@@ -149,6 +157,7 @@ VariableComponent.defaultProps = {
 
 // - variables
 //   - do example cases:
+//       - We need the modifiers to have an explain method and for the variable to collect them as it modify()s
 //       - what if the actual list of modifiers changes? would that be handled by props changing? Probs not, might need a separate function
 //       - treasury variable increasing by an amount per turn that is the sum of the income variables of a list of settlements
 //       - having a modifier depend on another object's variable, e.g. a battle bonus which depend's on the general's culture, where both the general and the culture can change
