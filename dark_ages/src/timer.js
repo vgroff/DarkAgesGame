@@ -1,26 +1,52 @@
 import React from 'react'
+import {Variable, VariableComponent} from './variable/variable.js'
 
-class Timer extends React.Component {
+
+
+export class Timer extends Variable {
+    static timerNumber = 1;
     constructor(props) {
         super(props);
-        this.days = 0
-        this.state = {days:this.days};
+        this.started = false;
+        this.timerNumber = Timer.timerNumber;
+        Timer.timerNumber += 1;
+        this.name = "Timer " + this.timerNumber;
     }
-    componentDidMount() {
-        let self = this;
-        this.intervalID = setInterval(() => {
-            self.days += 1;
-            self.setState({days: this.days});
-        }, 1000);
+    stopTimer() {
+        console.log("attempt Stop timer " + this.timerNumber);
+        if (this.started) {
+            console.log("Stop timer " + this.timerNumber);
+            clearInterval(this.intervalID);
+            this.started = false;
+        }
     };
-    componentWillUnmount() {
-        clearInterval(this.intervalID);
+    startTimer() {
+        console.log("attempt Starting timer " + this.timerNumber);
+        if (!this.started) {
+            console.log("Starting timer " + this.timerNumber);
+            let self = this;
+            this.intervalID = setInterval(() => {
+                self.setNewBaseValue(self.currentValue + 1);
+            }, 1000);
+            this.started = true;
+        }
     };
+}
+
+export class TimerComponent extends VariableComponent {
+    constructor(props) {
+        super(props)
+        this.variable = props.variable;
+    }
+    componentdidCatch(err, errInfo) {
+        console.log("ERR catch" + errInfo);
+    }
+    static getDerivedStateFromError(err, errInfo) {
+        console.log("ERR " + err);
+    }
     render () {
         return <div>
-            {this.state.days} days
+            <Variable variable={this.props.variable}/> days
         </div>
     }
 }
-
-export default Timer;
