@@ -33,12 +33,12 @@ export class Timer extends Variable {
     };
 }
 
-export class TimerComponent extends VariableComponent {
+export class TimerComponent extends React.Component {
     constructor(props) {
         super(props)
         this.variable = props.variable;
     }
-    componentdidCatch(err, errInfo) {
+    componentDidCatch(err, errInfo) {
         console.log("ERR catch" + errInfo);
     }
     static getDerivedStateFromError(err, errInfo) {

@@ -21,7 +21,7 @@ export class Variable {
         }
         this.recalculate();
     }
-    componentdidCatch(err) {
+    componentDidCatch(err) {
         console.log("ERR" + err.stack);
     }
     setNewBaseValue(baseValue) {
