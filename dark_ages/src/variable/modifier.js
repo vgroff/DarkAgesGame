@@ -6,10 +6,13 @@ export const additive = 'additive';
 
 export class AbstractModifier {
     constructor(props) {
-        this.name = props.name;
+        this.name = props.name || 'unnamed modifier';
         this.state = {};
         this.subscriptions = [];
         this.type = props.type;
+        if (this.type === undefined){
+            throw Error('Need this');
+        }
     }
     subscribe(callback) {
         this.subscriptions.push(callback);
@@ -50,6 +53,15 @@ export class VariableModifier extends AbstractModifier {
             return value + this.variable.currentValue;
         } else if (this.type === multiplicative) {
             return value*this.variable.currentValue;
+        } else {
+            throw Error("what");
+        }
+    }
+    priority() {
+        if (this.type === additive) {
+            return 0;
+        } else if (this.type === multiplicative) {
+            return 1;
         } else {
             throw Error("what");
         }

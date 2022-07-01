@@ -13,27 +13,23 @@ export class Timer extends Variable {
         this.name = "Timer " + this.timerNumber;
     }
     stopTimer() {
-        console.log("attempt Stop timer " + this.timerNumber);
         if (this.started) {
-            console.log("Stop timer " + this.timerNumber);
             clearInterval(this.intervalID);
             this.started = false;
         }
     };
     startTimer() {
-        console.log("attempt Starting timer " + this.timerNumber);
         if (!this.started) {
-            console.log("Starting timer " + this.timerNumber);
             let self = this;
             this.intervalID = setInterval(() => {
                 self.setNewBaseValue(self.currentValue + 1);
-            }, 1000);
+            }, 500);
             this.started = true;
         }
     };
 }
 
-export class TimerComponent extends React.Component {
+export class TimerComponent extends VariableComponent {
     constructor(props) {
         super(props)
         this.variable = props.variable;
@@ -45,8 +41,8 @@ export class TimerComponent extends React.Component {
         console.log("ERR " + err);
     }
     render () {
-        return <div>
-            <Variable variable={this.props.variable}/> days
-        </div>
+        return <span>
+            <VariableComponent variable={this.props.variable}/> days
+        </span>
     }
 }
