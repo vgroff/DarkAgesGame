@@ -133,8 +133,9 @@ export class VariableModifierComponent extends React.Component {
     }
     render () {
         let displayValue = Math.round(this.state.currentValue, 3);
+        let content = this.variable.explanations.join("\n")
         if (this.props.showName) {
-            return <span>
+            return <span title={content}>
                 {this.modifier.name}: {displayValue} 
             </span>
         } else {

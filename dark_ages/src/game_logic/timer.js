@@ -9,6 +9,8 @@ export class Timer extends Variable {
         super(props);
         this.started = false;
         this.timerNumber = Timer.timerNumber;
+        this.unit = props.unit || 'time units';
+        this.meaning = props.meaning || 'no timer meaning set';
         Timer.timerNumber += 1;
         console.log(`New timer created ${this.name}, timer number: ${this.timerNumber}`);
     }
@@ -22,8 +24,8 @@ export class Timer extends Variable {
         if (!this.started) {
             let self = this;
             this.intervalID = setInterval(() => {
-                self.setNewBaseValue(self.currentValue + 1, "Current day");
-            }, 500);
+                self.setNewBaseValue(self.currentValue + 1, this.meaning);
+            }, 800);
             this.started = true;
         }
     };
@@ -46,7 +48,7 @@ export class TimerComponent extends VariableComponent {
     }
     render () {
         return <span>
-            <VariableComponent variable={this.props.variable}/> days
+            <VariableComponent variable={this.props.variable} children={<span> days</span>}/> 
         </span>
     }
 }

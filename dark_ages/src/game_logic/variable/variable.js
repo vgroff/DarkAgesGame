@@ -1,12 +1,23 @@
 import React from 'react'
-import ReactTooltip from 'react-tooltip';
+import { styled } from '@mui/material/styles';
+import Tooltip, { TooltipProps, tooltipClasses } from '@mui/material/Tooltip';
+
+const HtmlTooltip = styled(({ className, ...props }) => (
+    <Tooltip {...props} classes={{ popper: className }} />
+))(({ theme }) => ({
+    [`& .${tooltipClasses.tooltip}`]: {
+        backgroundColor: '#f5f5f9',
+        color: 'rgba(0, 0, 0, 0.87)',
+        maxWidth: 220,
+        fontSize: theme.typography.pxToRem(12),
+        border: '1px solid #dadde9',
+    },
+}));
+  
 
 export class Variable {
     constructor(props) {
         // console.log('new var created ' + this.name);
-        if (props.name.includes('tax')) {
-            console.log(props.name);
-        }
         const unnamed = 'unnamed variable'
         this.name = props.name || unnamed;
         if (this.name === unnamed) {
@@ -39,7 +50,7 @@ export class Variable {
         }
         if (explanations === null) {
             this.baseValueExplanations = [];
-        } else if (!(typeof(explanations) == Array)) {
+        } else if (!Array.isArray(explanations)) {
             this.baseValueExplanations = [explanations];
         }
         this.recalculate();
@@ -56,15 +67,15 @@ export class Variable {
     subscribeToModifiers() {
         let self = this;
         for (let modifier of this.modifiers) {
+            if (modifier === undefined) {
+                throw Error('undefined modifier');
+            }
             this.modifierCallbacks.push(modifier.subscribe((depth) => {
                 self.recalculate();
             }));
         }
     }
     subscribe(callback, reason = '') {
-        if (this.name.includes('tax')) {
-            console.log('subbing to ' + this.name);
-        }
         this.subscriptions.push(callback);
         // console.log("sub to "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length + ' ' + reason)
         return callback;
@@ -91,7 +102,7 @@ export class Variable {
         for (let modifier of this.modifiers) {
             let result = modifier.modify(value);
             value = result.result;
-            explanations.push(result.explanation);
+            explanations.push({text: result.explanation, variable: result.variable});
         }
         if (this.currentValue !== value) {
             this.currentValue = value;
@@ -165,11 +176,18 @@ export class VariableComponent extends React.Component {
     }
     render () {
         let displayValue = Math.round(this.state.variable.currentValue, 3);
-        let content = this.variable.explanations.join("\n")
         if (this.props.showName) {
-            return <span>
-                <p title={content}> {this.variable.name}: {displayValue} </p>
-            </span>
+            return <HtmlTooltip title={
+                    Object.entries(this.variable.explanations).map(([i,explanation]) => {
+                        if (explanation.variable) {
+                            return <p  key={i}><VariableComponent variable={explanation.variable}/></p>
+                        } else {
+                            return <p key={i} >{explanation.text}</p>
+                        }
+                    })
+                }>
+                <span style={{"text-align": "center"}} >{this.variable.owner ? `${this.variable.owner.name}'s ` : ''}{this.variable.name}: {displayValue} {this.props.children}</span>
+                </HtmlTooltip>
         } else {
             return <span>
                 Current value: {displayValue} 
@@ -177,12 +195,6 @@ export class VariableComponent extends React.Component {
         }
     }
 }
-
-/* <ol>
-{this.props.modifiers.map((modifier, i) => (
-<li key={i} ref={i}>{modifier}</li>
-))}
-</ol>     */
 
 Variable.defaultProps = {
     modifiers: []
@@ -192,9 +204,3 @@ VariableComponent.defaultProps = {
     showName: true
 };
 
-// - variables
-//   - finish explain/aggregate work
-//   - We need the modifiers to have an explain method and for the variable to collect them as modify()s
-//   - build the tooltip system for showing modifiers
-//   - Refactor the PlayUI into a base class
-//   - Don't show the tooltip when adding 0 or multiplying by 1
