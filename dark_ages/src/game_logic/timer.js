@@ -24,7 +24,7 @@ export class Timer extends Variable {
         if (!this.started) {
             let self = this;
             this.intervalID = setInterval(() => {
-                self.setNewBaseValue(self.currentValue + 1, this.meaning);
+                self.setNewBaseValue(self.currentValue + 1, [this.meaning]);
             }, 800);
             this.started = true;
         }

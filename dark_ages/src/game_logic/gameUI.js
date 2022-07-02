@@ -4,6 +4,7 @@ import {AggregatorModifier, VariableModifier, Variable, Cumulator, additive, Var
 import { Timer } from './timer';
 import Game from './game.js'
 import HUD from './hud.js'
+import Grid from  '@mui/material/Grid';
 
 
 class GameUI extends UIBase {
@@ -15,9 +16,13 @@ class GameUI extends UIBase {
         this.addVariables([this.gameClock]);
     }
     childRender() {
-        return <div>
-            <HUD style={{display: "grid", "grid-row-start": 1 / 4, "grid-row-end": 1/4}} gameClock={this.gameClock} treasury={this.game.treasury}/>
-        </div>
+        return <Grid container spacing={2}>
+            <Grid item xs={3}></Grid>
+                <Grid item xs={6}>
+                    <HUD style={{display: "grid", "grid-row-start": 1 / 4, "grid-row-end": 1/4}} gameClock={this.gameClock} treasury={this.game.treasury}/>
+                </Grid>
+            <Grid item xs={3}></Grid>
+        </Grid>
     }
 }
 

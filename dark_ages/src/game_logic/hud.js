@@ -2,8 +2,9 @@ import UIBase from './UIBase';
 import {AggregatorModifier, VariableModifier, Variable, Cumulator, additive, VariableComponent, CumulatorComponent} from './utils.js';
 import { TimerComponent } from './timer';
 import Button from '@mui/material/Button';
-import Grid from '@mui/material/Grid';
 import config from './config.js'
+import Grid from  '@mui/material/Grid';
+
 
 class HUD extends UIBase {
     constructor(props) {
@@ -13,29 +14,23 @@ class HUD extends UIBase {
     }
     childRender() {
         return <Grid container spacing={2}>
-            <Grid item xs={3}></Grid>
-            <Grid item xs={6}>
-                <Grid container spacing={2} style={{"text-align": "center"}}>
-                    <Grid item xs={6}>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12} style={{"text-align": "center"}}>
-                                <TimerComponent variable={this.props.gameClock} unit='days' meaning='current day'/>
-                            </Grid>
-                            <Grid item xs={6} style={{"text-align": "center"}}>
-                                <Button variant={config.buttonVariant}>Play</Button>
-                            </Grid>
-                            <Grid item xs={6} style={{"text-align": "center"}}>
-                                <Button variant={config.buttonVariant}>Pause</Button>
-                            </Grid>
-                        </Grid>
-                   </Grid>
-                    <Grid item xs={6}>
-                        <CumulatorComponent variable={this.props.treasury} timer={this.props.gameClock}/>
-                    </Grid>
+        <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
+            <Grid container spacing={2} style={{"textAlign": "center", margin: "auto"}}>
+                <Grid item xs={12} style={{"textAlign": "center", margin: "auto"}}>
+                    <TimerComponent variable={this.props.gameClock} unit='days' meaning='current day'/>
+                </Grid>
+                <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
+                    <Button variant={config.buttonVariant} onClick={this.props.gameClock.startTimer}>Play</Button>
+                </Grid>
+                <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
+                    <Button variant={config.buttonVariant} onClick={this.props.gameClock.stopTimer}>Pause</Button>
                 </Grid>
             </Grid>
-            <Grid item xs={3}></Grid>
         </Grid>
+        <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
+            <CumulatorComponent variable={this.props.treasury} timer={this.props.gameClock}/>
+        </Grid>
+    </Grid>
     }
 }
 
