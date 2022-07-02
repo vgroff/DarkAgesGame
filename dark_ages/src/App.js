@@ -9,7 +9,7 @@ import React from 'react';
 class Settlement {
     constructor(name, tax) {
         this.name = name;
-        this.tax = new Variable({name:`${this.name} tax`, startingValue: tax});
+        this.tax = new Variable({owner: this, name:`tax`, startingValue: tax});
     }
 }
 
@@ -80,16 +80,22 @@ class App extends React.Component {
                     ["settlements", 2, "tax"]
                 ],
                 type: additive,
-                aggregatorCallback: (variable, variables) => {
-                    return {
-                        value: variables.reduce((partial_sum, variable) => partial_sum + variable.currentValue, 0),
-                        explanation: variables.reduce((partial_sum, variable) => `${partial_sum}, ${variable.name} - ${variable.currentValue}`, "Sum of: "),
+                aggregatorCallback: (variable, variables, modifiers=true) => {
+                    if (!modifiers) {
+                        return {
+                            value: variables.reduce((partial_sum, variable) => partial_sum + variable.currentValue, 0),
+                            explanation: variables.reduce((partial_sum, variable) => `${partial_sum} ${variable.owner.name} ${variable.name}: ${variable.currentValue},`, "Sum of: "),
+                        }
+                    } else {
+                        return {
+                            modifiers: variables.map(variable => new VariableModifier({variable, type:'additive'}))
+                        };
                     }
                 }
             }
         );
         this.constModifier = new VariableModifier({name:'const modifier', type:additive, startingValue:3});
-        this.treasury = new Cumulator({name: 'Treasury', startingValue: 100, timer:this.timer, modifiers:[this.constModifier]});
+        this.treasury = new Cumulator({name: 'Treasury', startingValue: 100, timer:this.timer, modifiers:[this.constModifier, this.aggregator]});
         this.state = {
             value: this.value,
             timer: this.timer,

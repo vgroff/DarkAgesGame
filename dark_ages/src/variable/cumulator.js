@@ -16,7 +16,7 @@ export class Cumulator extends Variable {
     }
     aggregate() {
         if (this.baseValue !== this.currentValue) {
-            this.setNewBaseValue(this.currentValue);
+            this.setNewBaseValue(this.currentValue, `Last turn: ${this.baseValue}`);
         }
         this.lastChange = this.currentValue - this.previousAgg;
         this.previousAgg = JSON.parse(JSON.stringify(this.currentValue)); // Make a copy you never know

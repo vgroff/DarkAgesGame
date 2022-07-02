@@ -1,5 +1,4 @@
 import React from 'react'
-import Tooltip from './tooltip/tooltip';
 import ReactTooltip from 'react-tooltip';
 
 export class Variable {
@@ -13,20 +12,17 @@ export class Variable {
         if (this.name === unnamed) {
             console.log('Unnamed variable;')
         }
+        this.owner = props.owner || '';
         this.baseValue = props.startingValue || 0;
         this.currentValue = this.baseValue;
-        this.modifiers = props.modifiers || [];
         this.subscriptions = [];
         this.currentDepth = 0;
         this.explanations = [];
+        this.baseValueExplanations = [];
 
-        let self = this;
-        for (let modifier of this.modifiers) {
-            // console.log(this.name + ' subbing to ' + modifier.name);
-            modifier.subscribe((depth) => {
-                self.recalculate();
-            });
-        }
+        this.modifiers = [];
+        this.modifierCallbacks = [];
+        this.setModifiers(props.modifiers || []);
         this.recalculate();
     }
     componentDidCatch(err) {
@@ -35,9 +31,35 @@ export class Variable {
     clearSubscriptions() {
         this.subscriptions = [];
     }
-    setNewBaseValue(baseValue) {
+    setNewBaseValue(baseValue, explanations) {
         this.baseValue = baseValue;
+        this.baseValueExplanations = explanations;
+        if (explanations === undefined) {
+            throw Error("Need explanation")
+        }
+        if (explanations === null) {
+            this.baseValueExplanations = [];
+        } else if (!(typeof(explanations) == Array)) {
+            this.baseValueExplanations = [explanations];
+        }
         this.recalculate();
+    }
+    setModifiers(modifiers) {
+        for (const [i, modifier] of this.modifiers.entries()) {
+            modifier.unsubscribe(this.modifierCallbacks[i]);
+        }
+        this.modifierCallbacks = [];
+        this.modifiers = modifiers;
+        this.subscribeToModifiers();
+        this.recalculate();
+    }
+    subscribeToModifiers() {
+        let self = this;
+        for (let modifier of this.modifiers) {
+            this.modifierCallbacks.push(modifier.subscribe((depth) => {
+                self.recalculate();
+            }));
+        }
     }
     subscribe(callback, reason = '') {
         if (this.name.includes('tax')) {
@@ -65,10 +87,9 @@ export class Variable {
             return a.priority() > b.priority();
         });
         let value = this.baseValue;
-        let explanations = [];
+        let explanations = this.baseValueExplanations.map(val => val); // Need to copy the array
         for (let modifier of this.modifiers) {
             let result = modifier.modify(value);
-            // console.log('added ' + (newValue - value));
             value = result.result;
             explanations.push(result.explanation);
         }
@@ -144,7 +165,7 @@ export class VariableComponent extends React.Component {
     }
     render () {
         let displayValue = Math.round(this.state.variable.currentValue, 3);
-        let content = this.variable.explanations.join("<br />")
+        let content = this.variable.explanations.join("\n")
         if (this.props.showName) {
             return <span>
                 <p title={content}> {this.variable.name}: {displayValue} </p>
@@ -171,8 +192,9 @@ VariableComponent.defaultProps = {
     showName: true
 };
 
-// Current issue: why doesn't the aggregator update anything?
 // - variables
+//   - finish explain/aggregate work
 //   - We need the modifiers to have an explain method and for the variable to collect them as modify()s
 //   - build the tooltip system for showing modifiers
 //   - Refactor the PlayUI into a base class
+//   - Don't show the tooltip when adding 0 or multiplying by 1

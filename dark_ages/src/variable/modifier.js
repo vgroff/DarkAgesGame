@@ -48,16 +48,17 @@ export class VariableModifier extends AbstractModifier {
         }, 'modifier value ' + this.name);
     }   
     modify(value) {
+        let ownerText = this.variable.owner ? `${this.variable.owner.name}'s ` : '';
         if (this.type === additive) {
             return {
                 result: value + this.variable.currentValue, 
-                explanation: `Added ${this.variable.name}: ${this.variable.currentValue}`, 
+                explanation: `Added ${ownerText}${this.variable.name}: ${this.variable.currentValue}`, 
                 variable: this.variable
             };
         } else if (this.type === multiplicative) {
             return {
                 result: value*this.variable.currentValue, 
-                explanation: `Multiplied by ${this.variable.name}: ${this.variable.currentValue}`,
+                explanation: `Multiplied by ${ownerText}${this.variable.name}: ${this.variable.currentValue}`,
                 variable: this.variable
             };
         } else {

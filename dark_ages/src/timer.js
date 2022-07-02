@@ -22,7 +22,7 @@ export class Timer extends Variable {
         if (!this.started) {
             let self = this;
             this.intervalID = setInterval(() => {
-                self.setNewBaseValue(self.currentValue + 1);
+                self.setNewBaseValue(self.currentValue + 1, "Current day");
             }, 500);
             this.started = true;
         }
