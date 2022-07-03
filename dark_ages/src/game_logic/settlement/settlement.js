@@ -2,7 +2,7 @@ import {VariableModifier, Variable, addition, VariableComponent} from '../UIUtil
 import Grid from  '@mui/material/Grid';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Farm, ResourceBuilding, ResourceBuildingComponent} from './building.js'
+import {Farm, LumberjacksHut, ResourceBuilding, ResourceBuildingComponent} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 
 
@@ -17,6 +17,7 @@ export class Settlement {
         });
         this.buildings = []
         this.addBuilding(new Farm({startingSize: 3, productivityModifiers: []}));
+        this.addBuilding(new LumberjacksHut({startingSize: 3, productivityModifiers: []}));
     }
     addBuilding(building) {
         this.buildings.push(building);
@@ -34,11 +35,31 @@ export class SettlementComponent extends UIBase {
         this.addVariables([this.settlement.tax]);
     }
     render() {
-        return <Grid container spacing={2}>
+        return <Grid container>
         <Grid item xs={12}>
-            <VariableComponent variable={this.settlement.tax} />
-            <ResourceBuildingComponent building={this.settlement.buildings[0]}/>
-            <ResourceStorageComponent resourceStorage={this.settlement.resourceStorages[0]}/>
+            <h4>Information</h4>
+            <span>{this.settlement.name}</span><br />
+            <VariableComponent showOwner={false} variable={this.settlement.tax} />
+        </Grid>
+        <Grid item xs={12}>
+            <h4>Buildings</h4>
+                <Grid container spacing={2} justifyContent="center" alignItems="center">
+                    {this.settlement.buildings.map((building, i) => {
+                        return <Grid item xs={4} key={i} >
+                            <ResourceBuildingComponent building={building}/>
+                        </Grid>
+                    })}
+                </Grid>
+        </Grid>
+        <Grid item xs={12}>
+            <h4>Resources</h4>
+                <Grid container spacing={2} justifyContent="center" alignItems="center" >
+                    {this.settlement.resourceStorages.map((resourceStorage, i) => {
+                        return  <Grid item xs={4} key={i}>
+                            <ResourceStorageComponent resourceStorage={resourceStorage} />
+                        </Grid>
+                    })}
+                </Grid>
         </Grid>
     </Grid>
     }

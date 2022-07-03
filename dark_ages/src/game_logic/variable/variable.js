@@ -220,7 +220,7 @@ export class VariableComponent extends React.Component {
     render () {
         let displayValue = parseFloat(this.state.variable.currentValue.toFixed(3));
         return <HTMLTooltip title={
-                Object.entries(this.variable.explanations).map(([i,explanation]) => {
+                this.variable.explanations.map((explanation, i) => {
                     if (explanation.variable) {
                         return <span  key={i}><VariableComponent variable={explanation.variable}/><br /></span>
                     } else if (explanation.text) {

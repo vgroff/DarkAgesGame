@@ -3,6 +3,8 @@ import { titleCase, CustomTooltip } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Resources} from './resource.js'
+import Box from '@mui/material/Box';
+import Grid from  '@mui/material/Grid';
 
 
 export class Building {
@@ -65,9 +67,13 @@ export class ResourceBuildingComponent extends UIBase {
         this.addVariables([this.building.filledJobs,this.building.totalJobs,...this.toolTipVars]);
     }
     childRender() {
-        return <CustomTooltip items={this.toolTipVars}>
-            <span>{titleCase(this.building.name)} {this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span>
-        </CustomTooltip>
+        return <Grid container justifyContent="center" alignItems="center" spacing={2}>
+        <Grid item xs={12}>
+            <CustomTooltip items={this.toolTipVars} style={{textAlign:'center'}}>
+                <span style={{textAlign:'center', border: '2px solid black', borderRadius: '5px'}}>{titleCase(this.building.name)} {this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span>
+            </CustomTooltip>
+        </Grid>
+        </Grid>
     }
 }
 
@@ -77,6 +83,17 @@ export class Farm extends ResourceBuilding {
             resource: Resources.food, 
             productionRatio: 1.03, 
             sizeJobsMultiplier: 5,
+            ...props
+        })
+    }
+}
+
+export class LumberjacksHut extends ResourceBuilding {
+    constructor(props) {
+        super({name: "lumberjack's hut", 
+            resource: Resources.wood, 
+            productionRatio: 1.0, 
+            sizeJobsMultiplier: 3,
             ...props
         })
     }

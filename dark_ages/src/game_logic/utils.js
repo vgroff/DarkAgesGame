@@ -20,12 +20,13 @@ export const HTMLTooltip = styled(({ className, ...props }) => (
         maxWidth: 220,
         fontSize: theme.typography.pxToRem(12),
         border: '1px solid #dadde9',
+        textAlign: 'center'
     },
 }));
 
 export const CustomTooltip = (props) => {
     return <HTMLTooltip {...props} title={
-        Object.entries(props.items).map(([i,item]) => {
+        props.items.map((item, i) => {
             if (item instanceof Variable) {
                 return <span  key={i}><VariableComponent variable={item}/><br /></span>
             } else if (typeof(item) === 'string') {

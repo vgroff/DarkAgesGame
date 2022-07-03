@@ -15,7 +15,7 @@ class HUD extends UIBase {
     childRender() {
         return <Grid container spacing={2}>
         <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
-            <Grid container spacing={2} style={{"textAlign": "center", margin: "auto"}}>
+            <Grid container spacing={1} style={{"textAlign": "center", margin: "auto"}}>
                 <Grid item xs={12} style={{"textAlign": "center", margin: "auto"}}>
                     <TimerComponent variable={this.props.gameClock} unit='days' meaning='current day'/>
                 </Grid>

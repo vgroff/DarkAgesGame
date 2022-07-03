@@ -39,6 +39,7 @@ class Game {
 
 export default Game;
 
+// - Have jobs attached to the building in the UI
 // - variables
 //   - Making a trending variable - gonna be very similar to cumulator
 //   - Need some more specific aggregators - use ListAggregator to make Sum, Mean etc...

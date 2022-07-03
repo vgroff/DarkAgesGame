@@ -15,7 +15,7 @@ class UIBase extends React.Component {
             throw Error("Setting variables twice, something has gone wrong")
         }
         let self = this;
-        Object.entries(variables).forEach(([key, variable]) => self.addVarToStateObject(key, variable));
+        variables.forEach((variable, key) => self.addVarToStateObject(key, variable));
     }
     addVarToStateObject(key, variable) {
         this.subs.push({key, variable});
