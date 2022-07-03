@@ -1,6 +1,6 @@
 import React from 'react'
 import { AbstractModifier } from './modifier';
-import { roundNumber, HTMLTooltip } from '../utils';
+import { roundNumber, HTMLTooltip, titleCase } from '../utils';
 
 export class Variable {
     constructor(props) {
@@ -127,7 +127,7 @@ export class Variable {
             // }
             let result = modifier.modify(value);
             value = result.result;
-            explanations.push({text: result.explanation, variable: result.variable});
+            explanations.push({text: result.text, variable: result.variable});
         }
         if (this.max && value > this.max.currentValue) {
             value = this.max.currentValue;
@@ -218,6 +218,8 @@ export class VariableComponent extends React.Component {
         }
     }
     render () {
+        let ownerText = this.variable.owner ? (this.props.showOwner ? `${this.variable.owner.name}'s ` : '') : '';
+        let nameText = this.props.showName ? <span>{this.props.showOwner ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
         let displayValue = parseFloat(this.state.variable.currentValue.toFixed(3));
         return <HTMLTooltip title={
                 this.variable.explanations.map((explanation, i) => {
@@ -234,7 +236,7 @@ export class VariableComponent extends React.Component {
                     }
                 })
             }>
-            <span style={{"textAlign": "center"}} >{this.variable.owner ? `${this.variable.owner.name}'s ` : ''}{this.props.showName ? <span>{this.variable.name}: </span> : ''}{displayValue}{this.props.children}</span>
+            <span style={{"textAlign": "center"}} >{ownerText}{nameText}{displayValue}{this.props.children}</span>
             </HTMLTooltip>
     }
 }
@@ -244,6 +246,7 @@ Variable.defaultProps = {
 };
 
 VariableComponent.defaultProps = {
-    showName: true
+    showName: true,
+    showOwner: true
 };
 

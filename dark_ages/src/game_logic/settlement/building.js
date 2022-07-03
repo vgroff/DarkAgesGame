@@ -42,7 +42,8 @@ export class ResourceBuilding extends Building {
         this.totalJobs = new Variable({owner: this, name:"total jobs", startingValue: this.startingJobs, 
             modifiers:this.totalJobsModifiers
         });
-        this.filledJobs = new Variable({owner: this, name:"filled jobs", startingValue: 3, max: this.totalJobs,
+        let zero = new Variable({startingValue: 0});
+        this.filledJobs = new Variable({owner: this, name:"filled jobs", startingValue: 3, max: this.totalJobs, min: zero,
             modifiers:[]
         });
         this.productionModifiers = [
@@ -54,6 +55,9 @@ export class ResourceBuilding extends Building {
         this.production = new Variable({owner: this, name:"production",
             modifiers:this.productionModifiers
         });
+    }
+    setNewFilledJobs(villagers) {
+        this.filledJobs.setNewBaseValue(villagers, "Set by leader");
     }
 }
 
@@ -68,15 +72,15 @@ export class ResourceBuildingComponent extends UIBase {
         this.addVariables([this.building.filledJobs,this.building.totalJobs,...this.toolTipVars]);
     }
     childRender() {
-        return <Grid container justifyContent="center" alignItems="center" spacing={0.5} style={{border:"2px solid black", alignItems: "center", justifyContent: "center"}} >
+        return <Grid container spacing={0.5} style={{border:"2px solid #2196f3", borderRadius:"7px", alignItems: "center", justifyContent: "center"}} >
         <Grid item xs={9}>
             <CustomTooltip items={this.toolTipVars} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
                 <span>{titleCase(this.building.name)} {this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span>
             </CustomTooltip>
         </Grid>
         <Grid item xs={3} style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
-            <Button variant={"outlined"}  sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
-            <Button variant={"outlined"} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>
+            <Button variant={"outlined"} onClick={() => this.props.addWorkers(1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
+            <Button variant={"outlined"} onClick={() => this.props.addWorkers(-1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>
         </Grid>
         <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
             <Button variant={"outlined"}  sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Build</Button>

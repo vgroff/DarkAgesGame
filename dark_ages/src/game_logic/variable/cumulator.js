@@ -15,12 +15,19 @@ export class Cumulator extends Variable {
         this.timer.subscribe(() => {
             self.aggregate();
         });
+        this.subscribe(() => {
+            this.recalculateLastChange();
+        });
+    }
+    recalculateLastChange() {
+        this.lastChange = this.currentValue - this.baseValue;
     }
     aggregate() {
         if (this.baseValue !== this.currentValue) {
             this.setNewBaseValue(this.currentValue, `Last turn: ${roundNumber(this.previousAgg)}`);
+        } else {
+            return;
         }
-        this.lastChange = this.currentValue - this.previousAgg;
         this.previousAgg = JSON.parse(JSON.stringify(this.currentValue)); // Make a copy you never know
         if (this.previousAgg === undefined || this.previousAgg === null) {
             throw Error("Probably shouldnt JSON whatever type this is"); // Shouldnt happen I don't think

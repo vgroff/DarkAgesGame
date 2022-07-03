@@ -1,9 +1,11 @@
-import {VariableModifier, Variable, addition, VariableComponent} from '../UIUtils.js';
+import {VariableModifier, multiplication, Variable, castInt, addition, VariableComponent} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Farm, LumberjacksHut, ResourceBuilding, ResourceBuildingComponent} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
+import { Cumulator } from '../UIUtils.js';
+import { UnaryModifier } from '../variable/modifier.js';
 
 
 export class Settlement {
@@ -11,11 +13,25 @@ export class Settlement {
         this.name = props.name;
         this.tax = new Variable({owner: this, name:`tax`, startingValue: 0});
         this.gameClock = props.gameClock;
+        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 1.0001,
+            modifiers: []
+        });
+        this.populationSizeInternal = new Cumulator({owner: this, name:`population_size_internal`, startingValue: props.startingPopulation,
+            modifiers: [new VariableModifier({variable: this.populationSizeGrowth, type: multiplication})],
+            timer: this.gameClock
+        });
+        this.populationSizeExternal = new Variable({owner:this, name:"population size", startingValue: 0,
+            modifiers: [
+                new VariableModifier({variable: this.populationSizeInternal, type:addition}),
+                new UnaryModifier({type: castInt, priority: 10})
+            ]
+        }); 
         this.storageSize = new Variable({owner: this, name:`storage size`, startingValue: 1});
         this.resourceStorages = Object.entries(Resources).map(([resourceName, resource]) => {
             return new ResourceStorage({resource: resource, size: this.storageSize, startingAmount: 200, gameClock: this.gameClock})
         });
         this.buildings = []
+        this.jobsTaken = new Variable({owner: this, name:`jobs taken`, startingValue: 0, modifiers: []});
         this.addBuilding(new Farm({startingSize: 3, productivityModifiers: []}));
         this.addBuilding(new LumberjacksHut({startingSize: 3, productivityModifiers: []}));
     }
@@ -24,6 +40,7 @@ export class Settlement {
         if (building instanceof ResourceBuilding) {
             let resourceStorage = this.resourceStorages.find(resourceStorage => building.resource === resourceStorage.resource);
             resourceStorage.amount.addModifier(new VariableModifier({variable: building.production, type:addition}));
+            this.jobsTaken.addModifier(new VariableModifier({variable: building.filledJobs, type:addition}));
         }
     }
 }
@@ -32,21 +49,25 @@ export class SettlementComponent extends UIBase {
     constructor(props) {
         super(props);
         this.settlement = props.settlement;
-        this.addVariables([this.settlement.tax]);
+        //this.addVariables([this.settlement.tax]);
+    }
+    addToBuilding(building, amount) {
+        building.setNewFilledJobs(building.filledJobs.currentValue + amount);
     }
     render() {
         return <Grid container>
         <Grid item xs={12}>
             <h4>Information</h4>
             <span>{this.settlement.name}</span><br />
-            <VariableComponent showOwner={false} variable={this.settlement.tax} />
+            <VariableComponent showOwner={false} variable={this.settlement.tax} /><br />
+            <VariableComponent showOwner={false} variable={this.settlement.populationSizeExternal} />
         </Grid>
-        <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"2px solid black", alignItems: "center", justifyContent: "center"}}>
+        <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", alignItems: "center", justifyContent: "center"}}>
             <h4>Buildings</h4>
             <Grid container spacing={2} justifyContent="center" alignItems="center">
                 {this.settlement.buildings.map((building, i) => {
-                    return <Grid item xs={4} key={i}  style={{alignItems: "center", justifyContent: "center"}}>
-                        <ResourceBuildingComponent building={building}/>
+                    return <Grid item xs={4} key={i} style={{alignItems: "center", justifyContent: "center"}}>
+                        <ResourceBuildingComponent building={building} addWorkers={this.addToBuilding.bind(this.addToBuilding, building)}/>
                     </Grid>
                 })}
             </Grid>

@@ -6,7 +6,7 @@ class Game {
     constructor(gameClock) {
         this.gameClock = new Timer({name: 'Game timer', meaning: "Current day"});
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 40}),
         ];
         this.totalTax = new ListAggModifier(
             {
@@ -21,7 +21,7 @@ class Game {
                     if (!modifiers) {
                         return {
                             value: variables.reduce((partial_sum, variable) => partial_sum + variable.currentValue, 0),
-                            explanation: variables.reduce((partial_sum, variable) => `${partial_sum} ${variable.owner.name} ${variable.name}: ${variable.currentValue},`, "Sum of: "),
+                            text: variables.reduce((partial_sum, variable) => `${partial_sum} ${variable.owner.name} ${variable.name}: ${variable.currentValue},`, "Sum of: "),
                         }
                     } else {
                         return {
@@ -39,7 +39,7 @@ class Game {
 
 export default Game;
 
-// - Have jobs attached to the building in the UI
+// - Have jobs attached to the building in the UI - now hook it up
 // - variables
 //   - Making a trending variable - gonna be very similar to cumulator
 //   - Need some more specific aggregators - use ListAggregator to make Sum, Mean etc...

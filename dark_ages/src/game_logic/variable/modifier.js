@@ -4,6 +4,7 @@ import { roundNumber } from '../utils'
 
 export const multiplication = 'multiplication';
 export const addition = 'addition';
+export const castInt = 'castInt';
 
 export class AbstractModifier {
     constructor(props) {
@@ -29,6 +30,29 @@ export class AbstractModifier {
         return <div>
             Modifer: {this.value}
         </div>
+    }
+}
+
+export class UnaryModifier extends AbstractModifier {
+    constructor(props) {
+        super(props);
+        this.customPriority = props.customPriority;
+        if (!props.priority) {
+            throw Error("need priority");
+        }
+    }
+    modify(value) {
+        if (this.type === castInt) {
+            return {
+                result: parseInt(value), 
+                text: `Cast to integer`
+            };
+        } else {
+            throw Error("what");
+        }
+    }
+    priority() {
+        return this.customPriority;
     }
 }
 
@@ -60,13 +84,13 @@ export class VariableModifier extends AbstractModifier {
         if (this.type === addition) {
             return {
                 result: value + this.variable.currentValue, 
-                explanation: `Added ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue)}`, 
+                text: `Added ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue)}`, 
                 variable: this.variable
             };
         } else if (this.type === multiplication) {
             return {
                 result: value*this.variable.currentValue, 
-                explanation: `Multiplied by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue)}`,
+                text: `Multiplied by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue)}`,
                 variable: this.variable
             };
         } else {
