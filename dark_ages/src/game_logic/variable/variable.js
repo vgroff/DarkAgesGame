@@ -1,6 +1,6 @@
 import React from 'react'
 import { AbstractModifier } from './modifier';
-import { HTMLTooltip  } from '../UIUtils';
+import { roundNumber, HTMLTooltip } from '../utils';
 
 export class Variable {
     constructor(props) {
@@ -23,7 +23,7 @@ export class Variable {
         this.modifiers = [];
         this.modifierCallbacks = [];
         let startingValue = props.startingValue || 0
-        this.setNewBaseValue( startingValue, `base value: ${startingValue}`);
+        this.setNewBaseValue( startingValue, `base value: ${roundNumber(startingValue)}`);
         this.setModifiers(props.modifiers || []);
         this.recalculate();
     }
@@ -219,29 +219,23 @@ export class VariableComponent extends React.Component {
     }
     render () {
         let displayValue = parseFloat(this.state.variable.currentValue.toFixed(3));
-        if (this.props.showName) {
-            return <HTMLTooltip title={
-                    Object.entries(this.variable.explanations).map(([i,explanation]) => {
-                        if (explanation.variable) {
-                            return <span  key={i}><VariableComponent variable={explanation.variable}/><br /></span>
-                        } else if (explanation.text) {
-                            return <span key={i} >{explanation.text}<br /></span>
-                        } else if (typeof(explanation) === 'string') {
-                            return <span key={i} >{explanation}<br /></span>;
-                        } else if (explanation === null) {
-                            return null;
-                        } else {
-                            throw Error('what');
-                        }
-                    })
-                }>
-                <span style={{"textAlign": "center"}} >{this.variable.owner ? `${this.variable.owner.name}'s ` : ''}{this.variable.name}: {displayValue}{this.props.children}</span>
-                </HTMLTooltip>
-        } else {
-            return <span>
-                Current value: {displayValue} 
-            </span>
-        }
+        return <HTMLTooltip title={
+                Object.entries(this.variable.explanations).map(([i,explanation]) => {
+                    if (explanation.variable) {
+                        return <span  key={i}><VariableComponent variable={explanation.variable}/><br /></span>
+                    } else if (explanation.text) {
+                        return <span key={i} >{explanation.text}<br /></span>
+                    } else if (typeof(explanation) === 'string') {
+                        return <span key={i} >{explanation}<br /></span>;
+                    } else if (explanation === null) {
+                        return null;
+                    } else {
+                        throw Error('what');
+                    }
+                })
+            }>
+            <span style={{"textAlign": "center"}} >{this.variable.owner ? `${this.variable.owner.name}'s ` : ''}{this.props.showName ? <span>{this.variable.name}: </span> : ''}{displayValue}{this.props.children}</span>
+            </HTMLTooltip>
     }
 }
 

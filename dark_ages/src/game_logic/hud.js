@@ -1,5 +1,5 @@
 import UIBase from './UIBase';
-import {AggregatorModifier, VariableModifier, Variable, Cumulator, addition, VariableComponent, CumulatorComponent} from './utils.js';
+import { CumulatorComponent } from './UIUtils';
 import { TimerComponent } from './timer';
 import Button from '@mui/material/Button';
 import config from './config.js'

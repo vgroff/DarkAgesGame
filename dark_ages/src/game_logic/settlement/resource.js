@@ -1,7 +1,7 @@
-import {AggregatorModifier, titleCase, VariableModifier, Variable, Cumulator, addition, CumulatorComponent, multiplication, VariableComponent} from '../utils.js';
+import {VariableModifier, Variable, Cumulator, addition, CumulatorComponent, multiplication } from '../UIUtils.js';
+import { titleCase, CustomTooltip } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
-import { CustomTooltip  } from '../UIUtils';
 
 export class Resource {
     constructor(props) {
@@ -37,13 +37,14 @@ export class ResourceStorageComponent extends UIBase {
         this.addVariables([this.resourceStorage.amount]);
     }
     childRender() {
-        return <CustomTooltip items={this.toolTipVars}>
-            <span>{titleCase(this.resourceStorage.resource.name)}: <CumulatorComponent variable={this.resourceStorage.amount}/></span>
-        </CustomTooltip>
+        return <span>
+            <CustomTooltip items={this.toolTipVars}><span>{titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
+            <CumulatorComponent variable={this.resourceStorage.amount} showName={false}/>
+        </span>
     }
 }
 
 export const Resources = {
-    food: new Resource({name: "food", storageMultiplier: 250, description: "keeps your villagers alive"}),
+    food: new Resource({name: "food", storageMultiplier: 350, description: "keeps your villagers alive"}),
     wood: new Resource({name: "wood", storageMultiplier: 100, description: "for building, upkeep and fuel"}),
 };

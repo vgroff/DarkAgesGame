@@ -1,4 +1,4 @@
-import {AggregatorModifier, VariableModifier, Variable, Cumulator, addition, VariableComponent} from '../utils.js';
+import {VariableModifier, Variable, addition, VariableComponent} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
 import React from 'react';
 import UIBase from '../UIBase';
@@ -13,7 +13,7 @@ export class Settlement {
         this.gameClock = props.gameClock;
         this.storageSize = new Variable({owner: this, name:`storage size`, startingValue: 1});
         this.resourceStorages = Object.entries(Resources).map(([resourceName, resource]) => {
-            return new ResourceStorage({resource: resource, size: this.storageSize, staringAmount: 200, gameClock: this.gameClock})
+            return new ResourceStorage({resource: resource, size: this.storageSize, startingAmount: 200, gameClock: this.gameClock})
         });
         this.buildings = []
         this.addBuilding(new Farm({startingSize: 3, productivityModifiers: []}));

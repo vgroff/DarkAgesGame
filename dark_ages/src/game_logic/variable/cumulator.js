@@ -1,4 +1,6 @@
 import {Variable, VariableComponent} from './variable.js'
+import { roundNumber } from '../utils';
+
 
 export class Cumulator extends Variable {
     constructor(props) {
@@ -16,7 +18,7 @@ export class Cumulator extends Variable {
     }
     aggregate() {
         if (this.baseValue !== this.currentValue) {
-            this.setNewBaseValue(this.currentValue, `Last turn: ${this.previousAgg}`);
+            this.setNewBaseValue(this.currentValue, `Last turn: ${roundNumber(this.previousAgg)}`);
         }
         this.lastChange = this.currentValue - this.previousAgg;
         this.previousAgg = JSON.parse(JSON.stringify(this.currentValue)); // Make a copy you never know
@@ -37,7 +39,7 @@ export class CumulatorComponent extends VariableComponent {
             lastChange = parseFloat(this.state.variable.lastChange.toFixed(3));
         }
         return <span>
-            <VariableComponent variable={this.props.variable} children={[
+            <VariableComponent variable={this.props.variable} {...this.props} children={[
                 <span key={1}>{this.props.showMax && this.props.variable.max ? `/${this.props.variable.max.currentValue}` : ''}</span>,
                 <span key={2}>{this.props.showChange ? (lastChange > 0 ? `(+${lastChange})`: `(${lastChange})`) : ''}</span>
             ]}/> 

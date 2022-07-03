@@ -1,5 +1,6 @@
 import React from 'react';
 import { Variable } from './variable';
+import { roundNumber } from '../utils'
 
 export const multiplication = 'multiplication';
 export const addition = 'addition';
@@ -59,13 +60,13 @@ export class VariableModifier extends AbstractModifier {
         if (this.type === addition) {
             return {
                 result: value + this.variable.currentValue, 
-                explanation: `Added ${ownerText}${this.variable.name}: ${this.variable.currentValue}`, 
+                explanation: `Added ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue)}`, 
                 variable: this.variable
             };
         } else if (this.type === multiplication) {
             return {
                 result: value*this.variable.currentValue, 
-                explanation: `Multiplied by ${ownerText}${this.variable.name}: ${this.variable.currentValue}`,
+                explanation: `Multiplied by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue)}`,
                 variable: this.variable
             };
         } else {
@@ -114,72 +115,66 @@ export class VariableModifier extends AbstractModifier {
     }
 }
 
-export class VariableModifierComponent extends React.Component {
-    constructor(props) {
-        if (props.modifier === undefined) {
-            throw Error('need a variable to show')
-        }
-        super(props);
-        this.subscribed = false;
-        this.ingestProps(props, false);
-        if (this.modifier) {
-            this.state = {currentValue: this.modifier.variable.currentValue};
-        } else {
-            this.state = {currentValue: 'nan'};
-        }
-        // console.log('new var created ' + this.variable.name + ' subbed: ' + this.variable.subscriptions);
-    }
-    ingestProps(props, forceSubscribe=false) {
-        let wasSubscribed = this.subscribed;
-        if (wasSubscribed) {
-            this.modifier.unsubscribe(this.callback);
-            this.subscribed = false
-        }
-        this.modifier = props.modifier;
-        if (wasSubscribed || forceSubscribe) {
-            this.trySubscribe();
-        }
-        // console.log('new props on var ' + this.variable.name);
-    }
-    componentDidUpdate(prevProps) {
-        if (prevProps.modifier !== this.props.modifier) {
-            if (!this.props.modifier) {
-                throw Error('no modifier');
-            }
-            this.ingestProps(this.props);
-        }
-    }
-    componentDidMount() {
-        this.trySubscribe();
-    }
-    componentWillUnmount() {
-        if (this.subscribed) {
-            this.modifier.unsubscribe(this.callback);
-            this.subscribed = false            
-        }
-    }
-    trySubscribe() {
-        if (!this.subscribed) {
-            let self = this;
-            if (this.modifier) {
-                this.callback = this.modifier.subscribe(() => {
-                    self.setState({currentValue:self.modifier.variable.currentValue})
-                }, 'display');
-                this.subscribed = true;
-            }
-        }
-    }
-    render () {
-        let displayValue = Math.round(this.state.currentValue, 3);
-        let content = this.variable.explanations.join("\n")
-        if (this.props.showName) {
-            return <span title={content}>
-                {this.modifier.name}: {displayValue} 
-            </span>
-        } else {
-            return <span>
-                Current value: {displayValue} 
-            </span>
-        }
-    }
-}
+// Dont think the below serves any purpose - can just use the VariableComponent instead
+// export class VariableModifierComponent extends React.Component {
+//     constructor(props) {
+//         if (props.modifier === undefined) {
+//             throw Error('need a variable to show')
+//         }
+//         super(props);
+//         this.subscribed = false;
+//         this.ingestProps(props, false);
+//         if (this.modifier) {
+//             this.state = {currentValue: this.modifier.variable.currentValue};
+//         } else {
+//             this.state = {currentValue: 'nan'};
+//         }
+//         // console.log('new var created ' + this.variable.name + ' subbed: ' + this.variable.subscriptions);
+//     }
+//     ingestProps(props, forceSubscribe=false) {
+//         let wasSubscribed = this.subscribed;
+//         if (wasSubscribed) {
+//             this.modifier.unsubscribe(this.callback);
+//             this.subscribed = false
+//         }
+//         this.modifier = props.modifier;
+//         if (wasSubscribed || forceSubscribe) {
+//             this.trySubscribe();
+//         }
+//         // console.log('new props on var ' + this.variable.name);
+//     }
+//     componentDidUpdate(prevProps) {
+//         if (prevProps.modifier !== this.props.modifier) {
+//             if (!this.props.modifier) {
+//                 throw Error('no modifier');
+//             }
+//             this.ingestProps(this.props);
+//         }
+//     }
+//     componentDidMount() {
+//         this.trySubscribe();
+//     }
+//     componentWillUnmount() {
+//         if (this.subscribed) {
+//             this.modifier.unsubscribe(this.callback);
+//             this.subscribed = false            
+//         }
+//     }
+//     trySubscribe() {
+//         if (!this.subscribed) {
+//             let self = this;
+//             if (this.modifier) {
+//                 this.callback = this.modifier.subscribe(() => {
+//                     self.setState({currentValue:self.modifier.variable.currentValue})
+//                 }, 'display');
+//                 this.subscribed = true;
+//             }
+//         }
+//     }
+//     render () {
+//         return <VariableComponent variable={this.variable}/>
+//         // return <CustomTooltip title={''}>
+//         //     {this.props.showName ? <span>{this.variable.name}</span> : ''}{this.variable.currentValue} 
+//         // </CustomTooltip>
+//     }
+// }

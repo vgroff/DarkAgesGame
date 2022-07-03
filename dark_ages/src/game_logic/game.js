@@ -1,5 +1,5 @@
-import {Settlement, SettlementComponent} from "./settlement/settlement";
-import {AggregatorModifier, ListAggModifier, VariableModifier, Variable, Cumulator, addition, VariableComponent, CumulatorComponent} from './utils.js';
+import {Settlement, } from "./settlement/settlement";
+import {ListAggModifier, VariableModifier, Cumulator, addition} from './UIUtils';
 import {Timer} from './timer'
 
 class Game {
