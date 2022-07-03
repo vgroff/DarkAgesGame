@@ -23,8 +23,8 @@ export class Cumulator extends Variable {
         this.lastChange = this.currentValue - this.baseValue;
     }
     aggregate() {
-        if (this.baseValue !== this.currentValue) {
-            this.setNewBaseValue(this.currentValue, `Last turn: ${roundNumber(this.previousAgg)}`);
+        if (this.baseValue !== this.currentValue || this.baseValue !== this.previousAgg) {
+            this.setNewBaseValue(this.currentValue, `Last turn: ${roundNumber(this.previousAgg, this.displayRound)}`);
         } else {
             return;
         }

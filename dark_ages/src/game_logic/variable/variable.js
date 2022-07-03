@@ -19,11 +19,12 @@ export class Variable {
         this.max = props.max;
         this.min = props.min;
         this.printSubs = props.printSubs || false;
+        this.displayRound = props.displayRound || 2;
 
         this.modifiers = [];
         this.modifierCallbacks = [];
         let startingValue = props.startingValue || 0
-        this.setNewBaseValue( startingValue, `base value: ${roundNumber(startingValue)}`);
+        this.setNewBaseValue( startingValue, `base value: ${roundNumber(startingValue, this.displayRound)}`);
         this.setModifiers(props.modifiers || []);
         this.recalculate();
     }
@@ -127,7 +128,7 @@ export class Variable {
             // }
             let result = modifier.modify(value);
             value = result.result;
-            explanations.push({text: result.text, variable: result.variable});
+            explanations.push({text: result.text, variable: result.variable, type:modifier.type});
         }
         if (this.max && value > this.max.currentValue) {
             value = this.max.currentValue;
@@ -220,11 +221,11 @@ export class VariableComponent extends React.Component {
     render () {
         let ownerText = this.variable.owner ? (this.props.showOwner ? `${this.variable.owner.name}'s ` : '') : '';
         let nameText = this.props.showName ? <span>{this.props.showOwner ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
-        let displayValue = parseFloat(this.state.variable.currentValue.toFixed(3));
+        let displayValue = roundNumber(this.variable.currentValue, this.variable.displayRound);
         return <HTMLTooltip title={
                 this.variable.explanations.map((explanation, i) => {
                     if (explanation.variable) {
-                        return <span  key={i}><VariableComponent variable={explanation.variable}/><br /></span>
+                        return <span  key={i}>{titleCase(explanation.type)} with <VariableComponent variable={explanation.variable}/><br /></span>
                     } else if (explanation.text) {
                         return <span key={i} >{explanation.text}<br /></span>
                     } else if (typeof(explanation) === 'string') {

@@ -4,6 +4,7 @@ import { roundNumber } from '../utils'
 
 export const multiplication = 'multiplication';
 export const addition = 'addition';
+export const subtraction = 'subtraction';
 export const castInt = 'castInt';
 
 export class AbstractModifier {
@@ -84,13 +85,19 @@ export class VariableModifier extends AbstractModifier {
         if (this.type === addition) {
             return {
                 result: value + this.variable.currentValue, 
-                text: `Added ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue)}`, 
+                text: `Added ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`, 
+                variable: this.variable
+            };
+        } else if (this.type === subtraction) {
+            return {
+                result: value - this.variable.currentValue, 
+                text: `Subtracted by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
                 variable: this.variable
             };
         } else if (this.type === multiplication) {
             return {
                 result: value*this.variable.currentValue, 
-                text: `Multiplied by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue)}`,
+                text: `Multiplied by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
                 variable: this.variable
             };
         } else {
@@ -100,8 +107,10 @@ export class VariableModifier extends AbstractModifier {
     priority() {
         if (this.type === addition) {
             return 0;
-        } else if (this.type === multiplication) {
+        } else if (this.type === subtraction) {
             return 1;
+        } else if (this.type === multiplication) {
+            return 2;
         } else {
             throw Error("what");
         }

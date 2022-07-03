@@ -6,7 +6,7 @@ class Game {
     constructor(gameClock) {
         this.gameClock = new Timer({name: 'Game timer', meaning: "Current day"});
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 40}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 1000}),
         ];
         this.totalTax = new ListAggModifier(
             {
@@ -39,7 +39,9 @@ class Game {
 
 export default Game;
 
-// - Have jobs attached to the building in the UI - now hook it up
+// - Now build a demand system
+// - Settlement.jobsTaken is a great candidate for the SumAggregetor
+// - Build housing?
 // - variables
 //   - Making a trending variable - gonna be very similar to cumulator
 //   - Need some more specific aggregators - use ListAggregator to make Sum, Mean etc...

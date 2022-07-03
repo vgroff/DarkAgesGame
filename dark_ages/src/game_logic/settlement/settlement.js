@@ -1,4 +1,4 @@
-import {VariableModifier, multiplication, Variable, castInt, addition, VariableComponent} from '../UIUtils.js';
+import {VariableModifier, multiplication, subtraction, Variable, castInt, addition, VariableComponent} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
 import React from 'react';
 import UIBase from '../UIBase';
@@ -13,8 +13,24 @@ export class Settlement {
         this.name = props.name;
         this.tax = new Variable({owner: this, name:`tax`, startingValue: 0});
         this.gameClock = props.gameClock;
-        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 1.0001,
+        this.populationSizeDecline = new Variable({owner:this, name:"population decline", startingValue: 0.0001,
+            displayRound: 5,
             modifiers: []
+        });
+        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 1.00015,
+            displayRound: 5,
+            modifiers: []
+        });
+        this.immigrationFactor = new Variable({owner:this, name:"immigrationFactor", startingValue: 1.0,
+            modifiers: []
+        });
+        this.populationSizeChange = new Variable({owner:this, name:"population rate of change", startingValue: 0,
+            displayRound: 5,
+            modifiers: [
+                new VariableModifier({variable: this.populationSizeGrowth, type: addition}),
+                new VariableModifier({variable: this.populationSizeDecline, type: subtraction}),
+                new VariableModifier({variable: this.immigrationFactor, type: multiplication}) // Causes higher growth and higher decline intentionally
+            ]
         });
         this.populationSizeInternal = new Cumulator({owner: this, name:`population_size_internal`, startingValue: props.startingPopulation,
             modifiers: [new VariableModifier({variable: this.populationSizeGrowth, type: multiplication})],
@@ -60,7 +76,8 @@ export class SettlementComponent extends UIBase {
             <h4>Information</h4>
             <span>{this.settlement.name}</span><br />
             <VariableComponent showOwner={false} variable={this.settlement.tax} /><br />
-            <VariableComponent showOwner={false} variable={this.settlement.populationSizeExternal} />
+            <VariableComponent showOwner={false} variable={this.settlement.populationSizeExternal} /><br />
+            <VariableComponent showOwner={false} variable={this.settlement.populationSizeChange} />
         </Grid>
         <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", alignItems: "center", justifyContent: "center"}}>
             <h4>Buildings</h4>
