@@ -21,7 +21,7 @@ export const CustomTooltip = (props) => {
             if (item instanceof Variable) {
                 return <span  key={i}><VariableComponent variable={item}/><br /></span>
             } else if (typeof(item) === 'string') {
-                return <span key={i} >{item}<br /></span>;
+                return <span key={i} style={{fontStyle: 'italics'}}>{item}<br /></span>;
             } else {
                 throw Error('what');
             }

@@ -9,6 +9,8 @@ import { CustomTooltip  } from '../UIUtils';
 export class Building {
     constructor(props) {
         this.name = props.name;
+        this.startingSize = props.startingSize || 0;
+        this.size = new Variable({owner: this, name:"building size", startingValue: this.startingSize, modifiers:[]});
     }
 }
 
@@ -25,8 +27,6 @@ export class ResourceBuilding extends Building {
             throw Error('Need a productivity modifier');
         };
         this.productivity = new Variable({owner: this, name:"productivity", startingValue: 1, modifiers:this.productivityModifiers});
-        this.startingSize = props.startingSize || 0;
-        this.size = new Variable({owner: this, name:"building size", startingValue: this.startingSize, modifiers:[]});
         this.startingJobs = props.startingJobs || 0;
         this.sizeJobsMultiplier = props.sizeJobsMultiplier;
         if (!this.sizeJobsMultiplier) {
@@ -44,9 +44,9 @@ export class ResourceBuilding extends Building {
             modifiers:[]
         });
         this.productionModifiers = [
-            new VariableModifier({name:"from workers", startingValue:this.productionRatio, printSubs: true, type:addition, modifiers: [
+            new VariableModifier({name:"from workers", startingValue:this.productionRatio, type:addition, modifiers: [
                 new VariableModifier({variable: this.filledJobs, type:multiplication}),
-                new VariableModifier({variable: this.productivity, type:multiplication, printSubs: true})
+                new VariableModifier({variable: this.productivity, type:multiplication})
             ]})
         ];
         this.production = new Variable({owner: this, name:"production",

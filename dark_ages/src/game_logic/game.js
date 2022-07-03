@@ -1,13 +1,13 @@
 import {Settlement, SettlementComponent} from "./settlement/settlement";
 import {AggregatorModifier, ListAggModifier, VariableModifier, Variable, Cumulator, addition, VariableComponent, CumulatorComponent} from './utils.js';
- 
+import {Timer} from './timer'
 
 class Game {
     constructor(gameClock) {
+        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day"});
         this.settlements = [
-            new Settlement({name: 'Village 1'}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock}),
         ];
-        this.gameClock = gameClock;
         this.totalTax = new ListAggModifier(
             {
                 name: "Total tax",

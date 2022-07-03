@@ -34,14 +34,18 @@ export class CumulatorComponent extends VariableComponent {
     render () {
         let lastChange = 0;
         if (this.variable) {
-            lastChange = this.variable.lastChange;
+            lastChange = parseFloat(this.state.variable.lastChange.toFixed(3));
         }
         return <span>
-            <VariableComponent variable={this.props.variable} children={<span>{this.props.showChange ? (lastChange > 0 ? '+' + lastChange : lastChange) : ''}</span>}/> 
+            <VariableComponent variable={this.props.variable} children={[
+                <span key={1}>{this.props.showMax && this.props.variable.max ? `/${this.props.variable.max.currentValue}` : ''}</span>,
+                <span key={2}>{this.props.showChange ? (lastChange > 0 ? `(+${lastChange})`: `(${lastChange})`) : ''}</span>
+            ]}/> 
         </span>
     }
 }
 
 CumulatorComponent.defaultProps = {
-    showChange: true
+    showChange: true,
+    showMax: true
 };

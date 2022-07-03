@@ -13,8 +13,8 @@ import { SettlementComponent } from './settlement/settlement';
 class GameUI extends UIBase {
     constructor(props) {
         super(props);
-        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day"});
-        this.game = new Game(this.gameClock);
+        this.game = new Game();
+        this.gameClock = this.game.gameClock;
 
         this.addVariables([props.internalTimer]);
     }
@@ -26,7 +26,7 @@ class GameUI extends UIBase {
                         <HUD gameClock={this.gameClock} treasury={this.game.treasury}/>
                     </div>
                     <div>
-                        <MainUI internalTimer={this.props.internalTimer} game={this.game} currentSettlement={0}/>
+                        <MainUI gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game} currentSettlement={0}/>
                     </div>
                 </Grid>
             <Grid item xs={3}></Grid>

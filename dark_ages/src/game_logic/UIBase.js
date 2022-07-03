@@ -24,6 +24,9 @@ class UIBase extends React.Component {
         this.subs.forEach(sub => {
             let state = {ready:true};
             let self = this;
+            if (sub.variable === undefined) {
+                debugger;
+            }
             sub.callback = sub.variable.subscribe(() => {
                 self.setState({ready: true, key: sub.key, variable: sub.variable});
             });

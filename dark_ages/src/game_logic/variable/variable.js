@@ -235,7 +235,7 @@ export class VariableComponent extends React.Component {
                         }
                     })
                 }>
-                <span style={{"textAlign": "center"}} >{this.variable.owner ? `${this.variable.owner.name}'s ` : ''}{this.variable.name}: {displayValue} {this.props.children}</span>
+                <span style={{"textAlign": "center"}} >{this.variable.owner ? `${this.variable.owner.name}'s ` : ''}{this.variable.name}: {displayValue}{this.props.children}</span>
                 </HTMLTooltip>
         } else {
             return <span>
