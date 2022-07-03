@@ -5,6 +5,7 @@ import UIBase from '../UIBase';
 import {Resources} from './resource.js'
 import Box from '@mui/material/Box';
 import Grid from  '@mui/material/Grid';
+import Button from '@mui/material/Button';
 
 
 export class Building {
@@ -67,11 +68,24 @@ export class ResourceBuildingComponent extends UIBase {
         this.addVariables([this.building.filledJobs,this.building.totalJobs,...this.toolTipVars]);
     }
     childRender() {
-        return <Grid container justifyContent="center" alignItems="center" spacing={2}>
-        <Grid item xs={12}>
-            <CustomTooltip items={this.toolTipVars} style={{textAlign:'center'}}>
-                <span style={{textAlign:'center', border: '2px solid black', borderRadius: '5px'}}>{titleCase(this.building.name)} {this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span>
+        return <Grid container justifyContent="center" alignItems="center" spacing={0.5} style={{border:"2px solid black", alignItems: "center", justifyContent: "center"}} >
+        <Grid item xs={9}>
+            <CustomTooltip items={this.toolTipVars} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+                <span>{titleCase(this.building.name)} {this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span>
             </CustomTooltip>
+        </Grid>
+        <Grid item xs={3} style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
+            <Button variant={"outlined"}  sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
+            <Button variant={"outlined"} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>
+        </Grid>
+        <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
+            <Button variant={"outlined"}  sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Build</Button>
+        </Grid>
+        <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
+            <Button variant={"outlined"}  sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Demolish</Button>
+        </Grid>
+        <Grid item xs={12} style={{textAlign:"center",  padding: "2px", minWidth:"100%", maxWidth: "100%", alignItems: "center", justifyContent: "center"}}>
+            <Button variant={"outlined"} sx={{fontSize: 12, minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Upgrade</Button>
         </Grid>
         </Grid>
     }

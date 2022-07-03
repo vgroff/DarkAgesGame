@@ -37,7 +37,7 @@ export class ResourceStorageComponent extends UIBase {
         this.addVariables([this.resourceStorage.amount]);
     }
     childRender() {
-        return <span>
+        return <span justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
             <CustomTooltip items={this.toolTipVars}><span>{titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
             <CumulatorComponent variable={this.resourceStorage.amount} showName={false}/>
         </span>

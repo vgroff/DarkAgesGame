@@ -41,21 +41,24 @@ export class SettlementComponent extends UIBase {
             <span>{this.settlement.name}</span><br />
             <VariableComponent showOwner={false} variable={this.settlement.tax} />
         </Grid>
-        <Grid item xs={12}>
+        <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"2px solid black", alignItems: "center", justifyContent: "center"}}>
             <h4>Buildings</h4>
-                <Grid container spacing={2} justifyContent="center" alignItems="center">
-                    {this.settlement.buildings.map((building, i) => {
-                        return <Grid item xs={4} key={i} >
-                            <ResourceBuildingComponent building={building}/>
-                        </Grid>
-                    })}
-                </Grid>
+            <Grid container spacing={2} justifyContent="center" alignItems="center">
+                {this.settlement.buildings.map((building, i) => {
+                    return <Grid item xs={4} key={i}  style={{alignItems: "center", justifyContent: "center"}}>
+                        <ResourceBuildingComponent building={building}/>
+                    </Grid>
+                })}
+            </Grid>
+            <Grid container spacing={2} justifyContent="center" alignItems="center">
+                <Grid item xs={12}><br/></Grid>
+            </Grid>
         </Grid>
         <Grid item xs={12}>
             <h4>Resources</h4>
-                <Grid container spacing={2} justifyContent="center" alignItems="center" >
+                <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
                     {this.settlement.resourceStorages.map((resourceStorage, i) => {
-                        return  <Grid item xs={4} key={i}>
+                        return  <Grid item xs={4} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
                             <ResourceStorageComponent resourceStorage={resourceStorage} />
                         </Grid>
                     })}
