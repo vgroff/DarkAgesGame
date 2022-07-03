@@ -1,8 +1,8 @@
 import React from 'react';
 import { Variable } from './variable';
 
-export const multiplicative = 'multiplicative';
-export const additive = 'additive';
+export const multiplication = 'multiplication';
+export const addition = 'addition';
 
 export class AbstractModifier {
     constructor(props) {
@@ -12,10 +12,6 @@ export class AbstractModifier {
         if (this.type === undefined){
             throw Error('Need this');
         }
-        this.dirty = true;
-    }
-    isDirty() {
-        return this.dirty;
     }
     subscribe(callback) {
         this.subscriptions.push(callback);
@@ -38,24 +34,35 @@ export class AbstractModifier {
 export class VariableModifier extends AbstractModifier {
     constructor(props) {
         super(props);
+        this.object = props.object || null;
+        this.keys = props.keys || null;
+        if (this.keys && !Array.isArray(this.keys)) {
+            throw Error('VariableModifier keys should be an array')
+        }
+        if (props.variable && (props.keys || props.object)) {
+            throw Error('cant take both')
+        }
+        if (this.object && !this.keys) {
+            throw Error('inconsistent')
+        }
         this.variable = props.variable;
-        if (this.variable === undefined) {
+        if (this.variable === undefined && !(this.keys && this.object)) {
             this.variable = new Variable(props);
         }
-        let self = this;
-        this.variable.subscribe((depth) => {
-            self.callSubscribers(depth);
-        }, 'modifier value ' + this.name);
+        this.resubscribeToVariable();
     }   
     modify(value) {
+        if (this.keys && this.object) {
+            this.resubscribeToVariable();
+        }
         let ownerText = this.variable.owner ? `${this.variable.owner.name}'s ` : '';
-        if (this.type === additive) {
+        if (this.type === addition) {
             return {
                 result: value + this.variable.currentValue, 
                 explanation: `Added ${ownerText}${this.variable.name}: ${this.variable.currentValue}`, 
                 variable: this.variable
             };
-        } else if (this.type === multiplicative) {
+        } else if (this.type === multiplication) {
             return {
                 result: value*this.variable.currentValue, 
                 explanation: `Multiplied by ${ownerText}${this.variable.name}: ${this.variable.currentValue}`,
@@ -66,12 +73,43 @@ export class VariableModifier extends AbstractModifier {
         }
     }
     priority() {
-        if (this.type === additive) {
+        if (this.type === addition) {
             return 0;
-        } else if (this.type === multiplicative) {
+        } else if (this.type === multiplication) {
             return 1;
         } else {
             throw Error("what");
+        }
+    }
+    resubscribeToVariable() {
+        if (this.keys && this.object) {
+            let variable = this.getVariable();
+            if (this.variable === variable) {
+                return; // No need to re sub
+            }
+            if (this.variable) {
+                this.variable.unsubscribe(this.variableSubscription);
+            }
+            this.variable = variable;
+        }
+        let self = this;
+        this.variableSubscription = this.variable.subscribe((depth) => {
+            self.callSubscribers(depth);
+        }, 'modifier value ' + this.name);
+        self.callSubscribers(0); // new variable -> call subs again
+    }
+    getVariable() {
+        let variable = this.object;
+        for (let key of this.keys) {
+            variable = variable[key];
+            if (variable === undefined) {
+                throw Error("undefined variable");
+            }
+        }
+        if (variable instanceof Variable) {
+            return variable;
+        } else {
+            throw Error("expect variable");
         }
     }
 }

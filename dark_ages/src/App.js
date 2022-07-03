@@ -30,10 +30,8 @@ class App extends React.Component {
     render() {
         if (this.state.ready) {
         return (
-            <div>
-            <div><GameUI variable={this.state.aggregator}/></div>
-            </div>
-        ); //<PlayUI timer={this.state.timer} gameTimer={this.state.gameTimer}/>
+            <div><GameUI internalTimer={this.state.timer}/></div>
+        )
         } else {
             return (
             <div>

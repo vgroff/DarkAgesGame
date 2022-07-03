@@ -11,13 +11,13 @@ export class ListAggModifier extends AggregatorModifier {
         if (Array.isArray(this.keys[0][0]) || Array.isArray(this.keys[1][0])) {
             throw Error("keys should be 1d for list agg")
         }
-        if (this.keys === undefined || this.objectList.length !== 1) {
-            throw Error("need key and size 1 objectList")
+        if (this.keys === undefined || this.aggregatorList.length !== 1) {
+            throw Error("need key and size 1 aggregatorList")
         }
     }
 
-    getVariables(objectList, keys) {
-        let list = objectList[0]; 
+    getVariables(aggregatorList, keys) {
+        let list = aggregatorList[0]; 
         for (let key of keys[0]) {
             list = list[key];
             if (list === undefined) {

@@ -1,19 +1,6 @@
 import React from 'react'
-import { styled } from '@mui/material/styles';
-import Tooltip, { TooltipProps, tooltipClasses } from '@mui/material/Tooltip';
-
-const HtmlTooltip = styled(({ className, ...props }) => (
-    <Tooltip {...props} classes={{ popper: className }} />
-))(({ theme }) => ({
-    [`& .${tooltipClasses.tooltip}`]: {
-        backgroundColor: '#f5f5f9',
-        color: 'rgba(0, 0, 0, 0.87)',
-        maxWidth: 220,
-        fontSize: theme.typography.pxToRem(12),
-        border: '1px solid #dadde9',
-    },
-}));
-  
+import { AbstractModifier } from './modifier';
+import { HTMLTooltip  } from '../UIUtils';
 
 export class Variable {
     constructor(props) {
@@ -24,15 +11,19 @@ export class Variable {
             console.log('Unnamed variable;')
         }
         this.owner = props.owner || '';
-        this.baseValue = props.startingValue || 0;
         this.currentValue = this.baseValue;
         this.subscriptions = [];
         this.currentDepth = 0;
         this.explanations = [];
         this.baseValueExplanations = [];
+        this.max = props.max;
+        this.min = props.min;
+        this.printSubs = props.printSubs || false;
 
         this.modifiers = [];
         this.modifierCallbacks = [];
+        let startingValue = props.startingValue || 0
+        this.setNewBaseValue( startingValue, `base value: ${startingValue}`);
         this.setModifiers(props.modifiers || []);
         this.recalculate();
     }
@@ -43,19 +34,50 @@ export class Variable {
         this.subscriptions = [];
     }
     setNewBaseValue(baseValue, explanations) {
+        if (this.max && baseValue > this.max.currentValue) {
+            baseValue = this.max.currentValue;
+        } else if (this.min && baseValue < this.min.currentValue) {
+            baseValue = this.min.currentValue;
+        }
+        let recalculate = true;
+        if (baseValue === this.baseValue) {
+            recalculate = false;
+        }
         this.baseValue = baseValue;
         this.baseValueExplanations = explanations;
         if (explanations === undefined) {
             throw Error("Need explanation")
         }
-        if (explanations === null) {
+        if (this.baseValueExplanations === null) {
             this.baseValueExplanations = [];
-        } else if (!Array.isArray(explanations)) {
+        } else if (!Array.isArray(this.baseValueExplanations)) {
             this.baseValueExplanations = [explanations];
         }
-        this.recalculate();
+        if (recalculate) {
+            this.recalculate();
+        }
+    }
+    addModifier(modifier) {
+        if (!(modifier instanceof AbstractModifier)) {
+            throw Error('not a modifier');
+        }
+        let modifiers = this.modifiers.map(modifier => modifier);
+        modifiers.push(modifier);
+        this.setModifiers(modifiers)
     }
     setModifiers(modifiers) {
+        if (modifiers.length === this.modifierCallbacks.length) {
+            let sameArray = true;
+            for (const [i, modifier] of modifiers.entries()) {
+                if (modifier !== modifiers[i]) {
+                    sameArray = false;
+                    break;
+                }
+            }
+            if (sameArray) {
+                return; // No need to update
+            }
+        }
         for (const [i, modifier] of this.modifiers.entries()) {
             modifier.unsubscribe(this.modifierCallbacks[i]);
         }
@@ -77,34 +99,48 @@ export class Variable {
     }
     subscribe(callback, reason = '') {
         this.subscriptions.push(callback);
-        // console.log("sub to "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length + ' ' + reason)
+        if (this.printSubs) {
+            console.log("sub to "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length + ' ' + reason)
+        }
         return callback;
-        // console.log("sub to "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
     }
     unsubscribe(callback) {
         // console.log("unsubs "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
         this.subscriptions = this.subscriptions.filter(c => c !== callback);
-        // console.log("unsubs "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
+        if (this.printSubs) {
+            console.log("unsubs from "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
+        }
     }
-    callSubscribers(callback, depth) {
+    callSubscribers(depth) {
         // console.log("Calling subs "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
         this.subscriptions.forEach(subscription => subscription(depth))
     }
     recalculate(force=false) {
-        if (this.name.includes('otal')) {
-            console.log('calc ' + this.name);
-        }
         this.modifiers.sort((a, b) => {
             return a.priority() > b.priority();
         });
         let value = this.baseValue;
         let explanations = this.baseValueExplanations.map(val => val); // Need to copy the array
         for (let modifier of this.modifiers) {
+            // if (this.name.includes("production")) {
+            //     debugger;
+            // }
             let result = modifier.modify(value);
             value = result.result;
             explanations.push({text: result.explanation, variable: result.variable});
         }
+        if (this.max && value > this.max.currentValue) {
+            value = this.max.currentValue;
+        } else if (this.min && value < this.min.currentValue) {
+            value = this.min.currentValue;
+        }
         if (this.currentValue !== value) {
+            // if (this.name.includes("work")) {
+            //     debugger;
+            // }
+            // if (this.name.includes("production")) {
+            //     debugger;
+            // }
             this.currentValue = value;
             this.explanations = explanations;
             this.currentDepth += 1;
@@ -125,6 +161,7 @@ export class VariableComponent extends React.Component {
             throw Error('need a variable to show')
         }
         super(props);
+        this.printSubs = props.printSubs || false;
         this.subscribed = false;
         this.ingestProps(props, false);
         if (this.variable) {
@@ -139,6 +176,9 @@ export class VariableComponent extends React.Component {
         if (wasSubscribed) {
             this.variable.unsubscribe(this.callback);
             this.subscribed = false
+            if (this.printSubs) {
+                console.log(`${this.name} component unsubscribed from ${this.variable.name}`)
+            }
         }
         this.variable = props.variable;
         if (wasSubscribed || forceSubscribe) {
@@ -171,23 +211,32 @@ export class VariableComponent extends React.Component {
                     self.setState({variable:self.variable})
                 }, 'display');
                 this.subscribed = true;
+                if (this.printSubs) {
+                    console.log(`Component subscribed to ${this.variable.name}`)
+                }
             }
         }
     }
     render () {
-        let displayValue = Math.round(this.state.variable.currentValue, 3);
+        let displayValue = parseFloat(this.state.variable.currentValue.toFixed(3));
         if (this.props.showName) {
-            return <HtmlTooltip title={
+            return <HTMLTooltip title={
                     Object.entries(this.variable.explanations).map(([i,explanation]) => {
                         if (explanation.variable) {
-                            return <p  key={i}><VariableComponent variable={explanation.variable}/></p>
+                            return <span  key={i}><VariableComponent variable={explanation.variable}/><br /></span>
+                        } else if (explanation.text) {
+                            return <span key={i} >{explanation.text}<br /></span>
+                        } else if (typeof(explanation) === 'string') {
+                            return <span key={i} >{explanation}<br /></span>;
+                        } else if (explanation === null) {
+                            return null;
                         } else {
-                            return <p key={i} >{explanation.text}</p>
+                            throw Error('what');
                         }
                     })
                 }>
                 <span style={{"textAlign": "center"}} >{this.variable.owner ? `${this.variable.owner.name}'s ` : ''}{this.variable.name}: {displayValue} {this.props.children}</span>
-                </HtmlTooltip>
+                </HTMLTooltip>
         } else {
             return <span>
                 Current value: {displayValue} 

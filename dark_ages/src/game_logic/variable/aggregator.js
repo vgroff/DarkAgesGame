@@ -6,16 +6,16 @@ export class AggregatorModifier extends VariableModifier {
     constructor(props) {
         super(props);
         this.aggregatorCallback = props.aggregatorCallback;
-        this.objectList = props.objectList;
-        if (this.objectList && props.object) {
+        this.aggregatorList = props.aggregatorList;
+        if (this.aggregatorList && props.aggregate) {
             throw Error("Cant have both");
         }
-        if (this.objectList === undefined && props.object) {
-            this.objectList = [props.object];
+        if (this.aggregatorList === undefined && props.aggregate) {
+            this.aggregatorList = [props.aggregate];
         }
         this.keys = props.keys;
-        if (this.aggregatorCallback === undefined || this.objectList === undefined || this.keys === undefined) {
-            throw Error("need callback and object list and keys (even if empty)")
+        if (this.aggregatorCallback === undefined || this.aggregatorList === undefined || this.keys === undefined) {
+            throw Error("need callback and aggregate list and keys (even if empty)")
         }
         if (!Array.isArray(this.keys)) {
             throw Error('aggregator keys should be an array')
@@ -26,7 +26,7 @@ export class AggregatorModifier extends VariableModifier {
     }
 
     modify(value) {
-        this.resubscribeToVariables(); //  Need to resub in case the objects have changed?
+        this.resubscribeToVariables(); //  Need to resub in case the aggregates have changed?
         return super.modify(value);
     }
 
@@ -39,9 +39,9 @@ export class AggregatorModifier extends VariableModifier {
         }
     }
 
-    getVariables(objectList, keysList) {
+    getVariables(aggregatorList, keysList) {
         let variables = [];
-        for (const [index, obj] of objectList.entries()) {
+        for (const [index, obj] of aggregatorList.entries()) {
             let variable = obj;
             for (let keys of keysList[index]) {
                 if (!Array.isArray(keys)) {
@@ -67,7 +67,7 @@ export class AggregatorModifier extends VariableModifier {
         for (let i = 0; i < this.variable.length; i++) {
             this.variableSubscriptions.forEach(sub => this.variables[i].unsubscribe(sub));
         }
-        this.variables = this.getVariables(this.objectList, this.keys);
+        this.variables = this.getVariables(this.aggregatorList, this.keys);
         this.variableSubscriptions = [];
         this.variableSubscriptions = this.variables.map(variable => variable.subscribe(() => this.aggregate()));
         this.aggregate();

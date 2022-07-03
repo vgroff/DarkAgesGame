@@ -1,5 +1,5 @@
 import UIBase from './UIBase';
-import {AggregatorModifier, VariableModifier, Variable, Cumulator, additive, VariableComponent, CumulatorComponent} from './utils.js';
+import {AggregatorModifier, VariableModifier, Variable, Cumulator, addition, VariableComponent, CumulatorComponent} from './utils.js';
 import { TimerComponent } from './timer';
 import Button from '@mui/material/Button';
 import config from './config.js'
@@ -20,10 +20,10 @@ class HUD extends UIBase {
                     <TimerComponent variable={this.props.gameClock} unit='days' meaning='current day'/>
                 </Grid>
                 <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
-                    <Button variant={config.buttonVariant} onClick={this.props.gameClock.startTimer}>Play</Button>
+                    <Button variant={config.buttonVariant} onClick={this.props.gameClock.startTimer.bind(this.props.gameClock)}>Play</Button>
                 </Grid>
                 <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
-                    <Button variant={config.buttonVariant} onClick={this.props.gameClock.stopTimer}>Pause</Button>
+                    <Button variant={config.buttonVariant} onClick={this.props.gameClock.stopTimer.bind(this.props.gameClock)}>Pause</Button>
                 </Grid>
             </Grid>
         </Grid>
