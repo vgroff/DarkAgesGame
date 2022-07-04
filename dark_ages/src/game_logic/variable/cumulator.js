@@ -13,6 +13,7 @@ export class Cumulator extends Variable {
         this.previousAgg = -1;
         this.lastChange = 0;
         this.timer.subscribe(() => {
+            console.log("aggregated on timer");
             self.aggregate();
         });
         this.subscribe(() => {
@@ -23,6 +24,7 @@ export class Cumulator extends Variable {
         this.lastChange = this.currentValue - this.baseValue;
     }
     aggregate() {
+        this.recalculateLastChange();
         if (this.baseValue !== this.currentValue || this.baseValue !== this.previousAgg) {
             this.setNewBaseValue(this.currentValue, `Last turn: ${roundNumber(this.previousAgg, this.displayRound)}`);
         } else {

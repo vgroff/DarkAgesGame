@@ -9,7 +9,7 @@ import Grid from  '@mui/material/Grid';
 class HUD extends UIBase {
     constructor(props) {
         super(props);
-        this.props.gameClock.startTimer();
+        // this.props.gameClock.startTimer();
         this.addVariables([this.props.treasury, this.props.gameClock]);
     }
     childRender() {
@@ -19,11 +19,14 @@ class HUD extends UIBase {
                 <Grid item xs={12} style={{"textAlign": "center", margin: "auto"}}>
                     <TimerComponent variable={this.props.gameClock} unit='days' meaning='current day'/>
                 </Grid>
-                <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
+                <Grid item xs={4} style={{"textAlign": "center", margin: "auto"}}>
                     <Button variant={config.buttonVariant} onClick={this.props.gameClock.startTimer.bind(this.props.gameClock)}>Play</Button>
                 </Grid>
-                <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
+                <Grid item xs={4} style={{"textAlign": "center", margin: "auto"}}>
                     <Button variant={config.buttonVariant} onClick={this.props.gameClock.stopTimer.bind(this.props.gameClock)}>Pause</Button>
+                </Grid>
+                <Grid item xs={4} style={{"textAlign": "center", margin: "auto"}}>
+                    <Button variant={config.buttonVariant} onClick={this.props.gameClock.forceTick.bind(this.props.gameClock)}>Next Day</Button>
                 </Grid>
             </Grid>
         </Grid>

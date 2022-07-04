@@ -108,6 +108,7 @@ export class LoggerComponent extends UIBase {
     childRender() {
         return <div>
             <div style={{textAlign:'right', paddingRight: '5px'}}>{this.renderInspect()}</div>
+            <br />
             <div style={{textAlign:'center'}}>
                 <Button onClick={() => {this.logger.backOne()}} variant='outlined' style={{fontSize:12}}>Go Back</Button>
             </div>

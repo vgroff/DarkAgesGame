@@ -30,6 +30,9 @@ export class Timer extends Variable {
             this.started = true;
         }
     };
+    forceTick() {
+        this.setNewBaseValue(this.currentValue + 1, [this.meaning]);
+    }
     killTimer() {
         this.stopTimer();
         this.clearSubscriptions();

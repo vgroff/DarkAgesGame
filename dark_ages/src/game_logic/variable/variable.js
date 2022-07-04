@@ -34,13 +34,19 @@ export class Variable {
         this.modifierCallbacks = [];
         let startingValue = props.startingValue || 0
         this.setNewBaseValue( startingValue, `base value: ${roundNumber(startingValue, this.displayRound)}`);
-        this.setModifiers(props.modifiers || []);
+        if (props.modifiers) {
+            this.setModifiers(props.modifiers);
+        }
         this.recalculate();
     }
     clearSubscriptions() {
         this.subscriptions = [];
     }
     setNewBaseValue(baseValue, explanations) {
+        if (this.name.includes("stone daily demand")) {
+            // debugger;
+            console.log(`${this.name} base being set to ${baseValue}`);
+        }
         if (isNaN(baseValue)) {
             debugger;
             throw Error("nan number");
@@ -77,6 +83,9 @@ export class Variable {
         this.setModifiers(modifiers)
     }
     setModifiers(modifiers) {
+        if (modifiers.length === 0 && this.modifiers.length === 0) {
+            return;
+        }
         if (modifiers.length === this.modifierCallbacks.length) {
             let sameArray = true;
             for (const [i, modifier] of modifiers.entries()) {
@@ -86,6 +95,7 @@ export class Variable {
                 }
             }
             if (sameArray) {
+                console.log("Ignoring call to set modiifers")
                 return; // No need to update
             }
         }
@@ -133,9 +143,6 @@ export class Variable {
         let value = this.baseValue;
         let explanations = this.baseValueExplanations.map(val => val); // Need to copy the array
         for (let modifier of this.modifiers) {
-            // if (this.name.includes("production")) {
-            //     debugger;
-            // }
             let result = modifier.modify(value);
             value = result.result;
             explanations.push({text: result.text, variable: result.variable, type:modifier.type});
@@ -146,17 +153,19 @@ export class Variable {
             value = this.min.currentValue;
         }
         if (this.currentValue !== value) {
-            // if (this.name.includes("work")) {
-            //     debugger;
-            // }
-            // if (this.name.includes("production")) {
-            //     debugger;
-            // }
+            if (this.name.includes("stone daily demand")) {
+                // debugger;
+                console.log(`${this.name} modification calculated as ${value}`);
+            }
             this.currentValue = value;
             this.explanations = explanations;
             this.currentDepth += 1;
-            if (this.currentDepth < 3) {
+            if (this.currentDepth < 5) {
                 this.callSubscribers(this.currentDepth);
+            }
+            if (this.name.includes("stone daily demand")) {
+                // debugger;
+                console.log(`${this.name} finally set to ${this.currentValue}`);
             }
             this.currentDepth = 0;
             if (isNaN(this.currentValue)) {

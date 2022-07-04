@@ -67,7 +67,7 @@ export class ResourceBuilding extends Building {
         this.inputResources = props.inputResources || [];
         var self = this;
         this.propDemandsDesired = [];
-        this.minPropDemandSatisfied = []
+        this.propDemandsSatisfied = []
         this.inputResources.forEach((input, i) => {
             if (!input.resource || !input.multiplier) {
                 throw Error("need this stuff");
@@ -77,11 +77,11 @@ export class ResourceBuilding extends Building {
             });
             self.propDemandsDesired.push(propDemandDesired);
             let resourceStorage = self.resourceStorages.find(resourceStorage => input.resource === resourceStorage.resource);
-            self.propDemandsDesired.push(resourceStorage.addDemand(
+            self.propDemandsSatisfied.push(resourceStorage.addDemand(
                 self.name,
                 new Variable({ owner: self, name: `${resourceStorage.resource.name} demand from ${self.name}`,
                     startingValue: input.multiplier, modifiers: [
-                        new VariableModifier({variable: self.totalProduction, type: multiplication}),
+                        new VariableModifier({variable: self.theoreticalProduction, type: multiplication}),
                         new VariableModifier({variable: self.efficiency, type: division})
                     ]
                 }), 
@@ -90,22 +90,20 @@ export class ResourceBuilding extends Building {
             );
         });
         this.propDemandsDesired.forEach((demand, i) => {
-            demand.setModifiers(self.propDemandsDesired.filter((_, j) => {return i !== j}).map(variable => {
+            demand.setModifiers(self.propDemandsSatisfied.filter((_, j) => {return i !== j}).map(variable => {
                 return new VariableModifier({variable: variable, type: min, customPriority: 5})
             }
-        ))});
+        ))}); // Limit the demand on all inputs by the min of the others to avoid waste
         this.minPropDemandSatisfied = new Variable({owner: this, name: "proportion of demand satisfied",startingValue: 1, 
-            modifiers: self.propDemandsDesired.map(demandSatisfied => {
+            modifiers: self.propDemandsSatisfied.map(demandSatisfied => {
                 return new VariableModifier({variable: demandSatisfied, type: min, customPriority: 5});
             })
-        })
-        // add these to actual Production
+        }); // Limit the production by the min of the inputs
         let productionModifiers = [
             new VariableModifier({variable: this.theoreticalProduction,type: addition})
         ];
         productionModifiers.push(new VariableModifier({variable: this.minPropDemandSatisfied,type: multiplication}))
         this.totalProduction.setModifiers(productionModifiers);
-    
     }
     setNewFilledJobs(villagers) {
         this.filledJobs.setNewBaseValue(villagers, "Set by leader");

@@ -119,13 +119,13 @@ export class VariableModifier extends AbstractModifier {
                 text: `Divided by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
                 variable: this.variable
             }; 
-        } else if (this.type === min) {
+        } else if (this.type === max) {
             return {
                 result: Math.max(value, this.variable.currentValue), 
                 text: `Maxed with ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
                 variable: this.variable
             }; 
-        } else if (this.type === max) {
+        } else if (this.type === min) {
             return {
                 result: Math.min(value, this.variable.currentValue), 
                 text: `Mined with ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,

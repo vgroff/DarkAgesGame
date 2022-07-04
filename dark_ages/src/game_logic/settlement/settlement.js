@@ -44,7 +44,7 @@ export class Settlement {
         }); 
         this.storageSize = new Variable({owner: this, name:`storage size`, startingValue: 1});
         this.resourceStorages = Object.entries(Resources).map(([resourceName, resource]) => {
-            return new ResourceStorage({resource: resource, size: this.storageSize, startingAmount: 100 / resource.prod, gameClock: this.gameClock})
+            return new ResourceStorage({resource: resource, size: this.storageSize, startingAmount: 2 / resource.productionRatio, gameClock: this.gameClock})
         });
         this.buildings = []
         this.jobsTaken = new Variable({owner: this, name:`jobs taken`, startingValue: 0, modifiers: []});

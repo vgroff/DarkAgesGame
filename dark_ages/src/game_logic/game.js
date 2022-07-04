@@ -39,10 +39,10 @@ class Game {
 
 export default Game;
 
-// - Need to be able to take inputs into resource buildings
-// - Add an efficiency to resource buildings
-// - Add a variable (and object?) display thing in the top right
-// - Add building upkeep
+// - Inputs into resource buildings => going well, but need to:
+//   a) fix the cumulator component so that it shows amountTurnStart and change
+//   b) some weird behaviour going on for the quarry+stonecutters near 0 -> should investigate
+// - Add building upkeep - going to need that trending cumulator variable
 // - Settlement.jobsTaken is a great candidate for the SumAggregetor
 // - Deal with the fuel variable issue - give it infinite storage? 
 //   Don't bother with making it a resource? Would be easier to apply demand though perhaps? Maybe leave until demand sorted
