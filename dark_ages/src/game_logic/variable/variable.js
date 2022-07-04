@@ -1,6 +1,8 @@
 import React from 'react'
 import { AbstractModifier } from './modifier';
 import { roundNumber, HTMLTooltip, titleCase } from '../utils';
+import {Logger} from '../logger'
+
 
 export class Variable {
     constructor(props) {
@@ -18,6 +20,13 @@ export class Variable {
         this.baseValueExplanations = [];
         this.max = props.max;
         this.min = props.min;
+        let self = this;
+        if (this.max) {
+            this.max.subscribe(() => self.recalculate());
+        }
+        if (this.min) {
+            this.min.subscribe(() => self.recalculate());
+        }
         this.printSubs = props.printSubs || false;
         this.displayRound = props.displayRound || 2;
 
@@ -27,9 +36,6 @@ export class Variable {
         this.setNewBaseValue( startingValue, `base value: ${roundNumber(startingValue, this.displayRound)}`);
         this.setModifiers(props.modifiers || []);
         this.recalculate();
-    }
-    componentDidCatch(err) {
-        console.log("ERR" + err.stack);
     }
     clearSubscriptions() {
         this.subscriptions = [];
@@ -219,26 +225,36 @@ export class VariableComponent extends React.Component {
         }
     }
     render () {
-        let ownerText = this.variable.owner ? (this.props.showOwner ? `${this.variable.owner.name}'s ` : '') : '';
-        let nameText = this.props.showName ? <span>{this.props.showOwner ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
+        let ownerText = (this.variable.owner && this.props.showOwner) ? `${this.variable.owner.name}'s ` : '';
+        let nameText = this.props.showName ? <span>{this.props.showOwner && this.variable.owner ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
         let displayValue = roundNumber(this.variable.currentValue, this.variable.displayRound);
-        return <HTMLTooltip title={
-                this.variable.explanations.map((explanation, i) => {
-                    if (explanation.variable) {
-                        return <span  key={i}>{titleCase(explanation.type)} with <VariableComponent variable={explanation.variable}/><br /></span>
-                    } else if (explanation.text) {
-                        return <span key={i} >{explanation.text}<br /></span>
-                    } else if (typeof(explanation) === 'string') {
-                        return <span key={i} >{explanation}<br /></span>;
-                    } else if (explanation === null) {
-                        return null;
-                    } else {
-                        throw Error('what');
-                    }
-                })
-            }>
-            <span style={{"textAlign": "center"}} >{ownerText}{nameText}{displayValue}{this.props.children}</span>
-            </HTMLTooltip>
+        let explanations = this.variable.explanations.map((explanation, i) => {
+            if (explanation.variable) {
+                return <span  key={i}>{titleCase(explanation.type)} with <VariableComponent variable={explanation.variable}/><br /></span>
+            } else if (explanation.text) {
+                return <span key={i} >{titleCase(explanation.text)}<br /></span>
+            } else if (typeof(explanation) === 'string') {
+                return <span key={i} >{titleCase(explanation)}<br /></span>;
+            } else if (explanation === null) {
+                return null;
+            } else {
+                throw Error('what');
+            }
+        });
+        if (!this.props.expanded) {
+            return <HTMLTooltip title={explanations}>
+                <span style={{"textAlign": "center"}} onClick={() => {Logger.setInspect(this.variable)}}>
+                    {ownerText}{nameText}{displayValue}{this.props.children}
+                </span>
+                </HTMLTooltip>
+        } else {
+            return <span style={{"textAlign": "center", ...this.props.style}} onClick={() => {Logger.setInspect(this.variable)}}>
+                    {ownerText}{nameText}{displayValue}{this.props.children}
+                    <br/>
+                    Explanation: <br/>
+                    {explanations}
+            </span>
+        }
     }
 }
 
@@ -248,6 +264,7 @@ Variable.defaultProps = {
 
 VariableComponent.defaultProps = {
     showName: true,
-    showOwner: true
+    showOwner: true,
+    expanded: false
 };
 

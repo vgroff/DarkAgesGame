@@ -1,4 +1,4 @@
-import {VariableModifier, Variable, addition, multiplication, } from '../UIUtils.js';
+import {VariableModifier, Variable, addition, min, multiplication,division } from '../UIUtils.js';
 import { titleCase, CustomTooltip } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
@@ -19,11 +19,11 @@ export class Building {
 export class ResourceBuilding extends Building {
     constructor(props) {
         super(props);
-        this.resource = props.resource;
-        this.productionRatio = props.productionRatio;
-        if (!this.productionRatio) {
-            throw Error('Need a production ratio');
+        this.resourceStorages = props.resourceStorages;
+        if (!this.resourceStorages) {
+            throw Error("need storage");
         }
+        this.outputResource = props.outputResource;
         this.productivityModifiers = props.productivityModifiers;        
         if (!this.productivityModifiers) {
             throw Error('Need a productivity modifier');
@@ -43,18 +43,68 @@ export class ResourceBuilding extends Building {
             modifiers:this.totalJobsModifiers
         });
         let zero = new Variable({startingValue: 0});
-        this.filledJobs = new Variable({owner: this, name:"filled jobs", startingValue: 3, max: this.totalJobs, min: zero,
+        this.filledJobs = new Variable({owner: this, name:"filled jobs", startingValue: 1, max: this.totalJobs, min: zero,
             modifiers:[]
         });
         this.productionModifiers = [
-            new VariableModifier({name:"from workers", startingValue:this.productionRatio, type:addition, modifiers: [
+            new VariableModifier({name:"production from workers", startingValue:this.outputResource.productionRatio, type:addition, modifiers: [
                 new VariableModifier({variable: this.filledJobs, type:multiplication}),
                 new VariableModifier({variable: this.productivity, type:multiplication})
             ]})
         ];
-        this.production = new Variable({owner: this, name:"production",
-            modifiers:this.productionModifiers
+        this.theoreticalProduction = new Variable({owner: this, name:"theoretical total production",
+            modifiers: this.productionModifiers
         });
+        this.totalProduction = new Variable({owner: this, name:"total production",
+            modifiers: []
+        });
+        let resourceStorage = this.resourceStorages.find(resourceStorage => this.outputResource === resourceStorage.resource);
+        resourceStorage.addSupply(this.totalProduction);
+        this.efficiency = new Variable({owner: this, name:"efficiency", startingValue: 1,
+            modifiers: []
+        });
+        this.inputResources = props.inputResources || [];
+        var self = this;
+        this.propDemandSatisfied = [];
+        this.minPropDemandSatisfied = []
+        this.inputResources.forEach((input, i) => {
+            if (!input.resource || !input.multiplier) {
+                throw Error("need this stuff");
+            }
+            let minPropDemandSatisfied = new Variable({name: "satisfied input resource demand", startingValue: 1,
+                modifiers: []
+            });
+            this.minPropDemandSatisfied.push(minPropDemandSatisfied);
+            let resourceStorage = self.resourceStorages.find(resourceStorage => input.resource === resourceStorage.resource);
+            self.propDemandSatisfied.push(resourceStorage.addDemand(
+                this.name,
+                new Variable({ owner: self, name: `${resourceStorage.resource.name} demand from ${self.name}`,
+                    startingValue: input.multiplier, modifiers: [
+                        new VariableModifier({variable: self.production, type: multiplication}),
+                        new VariableModifier({variable: self.efficiency, type: division})
+                    ]
+                }), 
+                minPropDemandSatisfied,
+                1)
+            );
+        });
+        this.minPropDemandSatisfied.forEach((demand, i) => {
+            demand.setModifiers(self.propDemandSatisfied.filter((_, j) => {return i !== j}).map(variable => {
+                return new VariableModifier({variable: variable, type: min, priority: 5})
+            }
+        ))});
+        this.minPropDemandSatisfied = new Variable({owner: this, name: "proportion of demand satisfied",startingValue: 1, 
+            modifiers: this.propDemandSatisfied.map(demandSatisfied => {
+                return new VariableModifier({variable: demandSatisfied, type: min});
+            })
+        })
+        // add these to actual Production
+        let productionModifiers = [
+            new VariableModifier({variable: this.theoreticalProduction,type: addition})
+        ];
+        productionModifiers.push(new VariableModifier({variable: this.minPropDemandSatisfied,type: multiplication}))
+        this.totalProduction.setModifiers(productionModifiers);
+    
     }
     setNewFilledJobs(villagers) {
         this.filledJobs.setNewBaseValue(villagers, "Set by leader");
@@ -67,7 +117,7 @@ export class ResourceBuildingComponent extends UIBase {
         this.building = props.building;
         this.toolTipVars = [
             this.building.size,
-            this.building.production
+            this.building.totalProduction
         ]
         this.addVariables([this.building.filledJobs,this.building.totalJobs,...this.toolTipVars]);
     }
@@ -98,9 +148,20 @@ export class ResourceBuildingComponent extends UIBase {
 export class Farm extends ResourceBuilding {
     constructor(props) {
         super({name: "farm", 
-            resource: Resources.food, 
-            productionRatio: 1.03, 
+            outputResource: Resources.food, 
+            productionRatio: 1.05, 
             sizeJobsMultiplier: 5,
+            ...props
+        })
+    }
+}
+
+export class HuntingCabin extends ResourceBuilding {
+    constructor(props) {
+        super({name: "hunter's cabin", 
+            outputResource: Resources.food, 
+            productionRatio: 1.35, 
+            sizeJobsMultiplier: 3,
             ...props
         })
     }
@@ -109,7 +170,41 @@ export class Farm extends ResourceBuilding {
 export class LumberjacksHut extends ResourceBuilding {
     constructor(props) {
         super({name: "lumberjack's hut", 
-            resource: Resources.wood, 
+            outputResource: Resources.wood, 
+            productionRatio: 1.0, 
+            sizeJobsMultiplier: 3,
+            ...props
+        })
+    }
+}
+
+export class CharcoalKiln extends ResourceBuilding {
+    constructor(props) {
+        super({name: "charcoal kiln", 
+            outputResource: Resources.coal, 
+            productionRatio: 1.0, 
+            sizeJobsMultiplier: 3,
+            ...props
+        })
+    }
+}
+
+export class Quarry extends ResourceBuilding {
+    constructor(props) {
+        super({name: "quarry", 
+            outputResource: Resources.stone, 
+            productionRatio: 1.0, 
+            sizeJobsMultiplier: 3,
+            ...props
+        })
+    }
+}
+
+export class Stonecutters extends ResourceBuilding {
+    constructor(props) {
+        super({name: "Stonecutter's workshop", 
+            outputResource: Resources.stoneBricks, 
+            inputResources: [{resource:Resources.stone, multiplier: 2}],
             productionRatio: 1.0, 
             sizeJobsMultiplier: 3,
             ...props

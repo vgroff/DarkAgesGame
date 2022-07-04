@@ -6,7 +6,7 @@ class Game {
     constructor(gameClock) {
         this.gameClock = new Timer({name: 'Game timer', meaning: "Current day"});
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 1000}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 40}),
         ];
         this.totalTax = new ListAggModifier(
             {
@@ -39,8 +39,17 @@ class Game {
 
 export default Game;
 
-// - Now build a demand system
+// - Need to be able to take inputs into resource buildings
+// - Add an efficiency to resource buildings
+// - Add a variable (and object?) display thing in the top right
+// - Add building upkeep
 // - Settlement.jobsTaken is a great candidate for the SumAggregetor
+// - Deal with the fuel variable issue - give it infinite storage? 
+//   Don't bother with making it a resource? Would be easier to apply demand though perhaps? Maybe leave until demand sorted
+// - Now build a demand system:
+//   - 2 classes: artisans and labourers. Both have the same demand system, but they get different wages
+//   - Demand is broken up by priority - simply a resource, an amount and a happiness achieved
+//   - always fulfill the best price-value ratio for a given priority
 // - Build housing?
 // - variables
 //   - Making a trending variable - gonna be very similar to cumulator

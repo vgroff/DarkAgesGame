@@ -3,7 +3,7 @@ import Game from './game.js'
 import HUD from './hud.js'
 import Grid from  '@mui/material/Grid';
 import MainUI from './mainUI.js'
-
+import {Logger, LoggerComponent} from './logger'
 
 
 class GameUI extends UIBase {
@@ -16,8 +16,8 @@ class GameUI extends UIBase {
     }
     childRender() {
         return <Grid container spacing={2}>
-            <Grid item xs={3}></Grid>
-                <Grid item xs={6}>
+            <Grid item xs={2}></Grid>
+                <Grid item xs={8}>
                     <div>
                         <HUD gameClock={this.gameClock} treasury={this.game.treasury}/>
                     </div>
@@ -25,7 +25,9 @@ class GameUI extends UIBase {
                         <MainUI gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game} currentSettlement={0}/>
                     </div>
                 </Grid>
-            <Grid item xs={3}></Grid>
+            <Grid item xs={2}>
+                <LoggerComponent logger={Logger.getLogger()}/>
+            </Grid>
         </Grid>
     }
 }

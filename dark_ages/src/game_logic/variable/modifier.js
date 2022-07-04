@@ -5,7 +5,18 @@ import { roundNumber } from '../utils'
 export const multiplication = 'multiplication';
 export const addition = 'addition';
 export const subtraction = 'subtraction';
+export const division = 'division';
+export const exponentiation = 'exponentiation';
+export const min = 'min';
+export const max = 'max';
 export const castInt = 'castInt';
+
+export const priority = {
+    addition: 1,
+    subtraction: 2,
+    multiplication: 3,
+    division: 4
+};
 
 export class AbstractModifier {
     constructor(props) {
@@ -18,6 +29,7 @@ export class AbstractModifier {
     }
     subscribe(callback) {
         this.subscriptions.push(callback);
+        return callback;
         // console.log("subs to "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
     }
     callSubscribers(callback, depth) {
@@ -60,6 +72,7 @@ export class UnaryModifier extends AbstractModifier {
 export class VariableModifier extends AbstractModifier {
     constructor(props) {
         super(props);
+        this.customPriority = props.customPriority;
         this.object = props.object || null;
         this.keys = props.keys || null;
         if (this.keys && !Array.isArray(this.keys)) {
@@ -72,7 +85,7 @@ export class VariableModifier extends AbstractModifier {
             throw Error('inconsistent')
         }
         this.variable = props.variable;
-        if (this.variable === undefined && !(this.keys && this.object)) {
+        if (!this.variable && !(this.keys && this.object)) {
             this.variable = new Variable(props);
         }
         this.resubscribeToVariable();
@@ -100,17 +113,33 @@ export class VariableModifier extends AbstractModifier {
                 text: `Multiplied by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
                 variable: this.variable
             };
+        } else if (this.type === division) {
+            return {
+                result: value/this.variable.currentValue, 
+                text: `Divided by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
+                variable: this.variable
+            }; 
+        } else if (this.type === min) {
+            return {
+                result: Math.max(value, this.variable.currentValue), 
+                text: `Maxed with ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
+                variable: this.variable
+            }; 
+        } else if (this.type === max) {
+            return {
+                result: Math.min(value, this.variable.currentValue), 
+                text: `Mined with ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
+                variable: this.variable
+            }; 
         } else {
             throw Error("what");
         }
     }
     priority() {
-        if (this.type === addition) {
-            return 0;
-        } else if (this.type === subtraction) {
-            return 1;
-        } else if (this.type === multiplication) {
-            return 2;
+        if (this.customPriority) {
+            return this.customPriority;
+        } else if (this.type in priority) {
+            return priority[this.type];
         } else {
             throw Error("what");
         }

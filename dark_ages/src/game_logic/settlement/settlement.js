@@ -2,7 +2,7 @@ import {VariableModifier, multiplication, subtraction, Variable, castInt, additi
 import Grid from  '@mui/material/Grid';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Farm, LumberjacksHut, ResourceBuilding, ResourceBuildingComponent} from './building.js'
+import {Farm, LumberjacksHut, CharcoalKiln, Quarry, ResourceBuilding, ResourceBuildingComponent, Stonecutters} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
 import { UnaryModifier } from '../variable/modifier.js';
@@ -44,18 +44,19 @@ export class Settlement {
         }); 
         this.storageSize = new Variable({owner: this, name:`storage size`, startingValue: 1});
         this.resourceStorages = Object.entries(Resources).map(([resourceName, resource]) => {
-            return new ResourceStorage({resource: resource, size: this.storageSize, startingAmount: 200, gameClock: this.gameClock})
+            return new ResourceStorage({resource: resource, size: this.storageSize, startingAmount: 100 / resource.prod, gameClock: this.gameClock})
         });
         this.buildings = []
         this.jobsTaken = new Variable({owner: this, name:`jobs taken`, startingValue: 0, modifiers: []});
-        this.addBuilding(new Farm({startingSize: 3, productivityModifiers: []}));
-        this.addBuilding(new LumberjacksHut({startingSize: 3, productivityModifiers: []}));
+        this.addBuilding(new Farm({startingSize: 3, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new LumberjacksHut({startingSize: 3, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new CharcoalKiln({startingSize: 3, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Quarry({startingSize: 3, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Stonecutters({startingSize: 3, productivityModifiers: [], resourceStorages: this.resourceStorages}));
     }
     addBuilding(building) {
         this.buildings.push(building);
         if (building instanceof ResourceBuilding) {
-            let resourceStorage = this.resourceStorages.find(resourceStorage => building.resource === resourceStorage.resource);
-            resourceStorage.amount.addModifier(new VariableModifier({variable: building.production, type:addition}));
             this.jobsTaken.addModifier(new VariableModifier({variable: building.filledJobs, type:addition}));
         }
     }
@@ -65,13 +66,13 @@ export class SettlementComponent extends UIBase {
     constructor(props) {
         super(props);
         this.settlement = props.settlement;
-        //this.addVariables([this.settlement.tax]);
+        this.addVariables([this.settlement.tax]);
     }
     addToBuilding(building, amount) {
         building.setNewFilledJobs(building.filledJobs.currentValue + amount);
     }
-    render() {
-        return <Grid container>
+    childRender() {
+        return <Grid container justifyContent="center" alignItems="center"  style={{alignItems: "center", justifyContent: "center"}} >
         <Grid item xs={12}>
             <h4>Information</h4>
             <span>{this.settlement.name}</span><br />
@@ -79,9 +80,9 @@ export class SettlementComponent extends UIBase {
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeExternal} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeChange} />
         </Grid>
-        <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", alignItems: "center", justifyContent: "center"}}>
+        <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", padding:"5px", textAlign:"center", alignItems: "center", justifyContent: "center"}}>
             <h4>Buildings</h4>
-            <Grid container spacing={2} justifyContent="center" alignItems="center">
+            <Grid container spacing={3} justifyContent="center" alignItems="center" style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
                 {this.settlement.buildings.map((building, i) => {
                     return <Grid item xs={4} key={i} style={{alignItems: "center", justifyContent: "center"}}>
                         <ResourceBuildingComponent building={building} addWorkers={this.addToBuilding.bind(this.addToBuilding, building)}/>
