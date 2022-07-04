@@ -4,7 +4,7 @@ import {Timer} from './timer'
 
 class Game {
     constructor(gameClock) {
-        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day"});
+        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 800});
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 40}),
         ];

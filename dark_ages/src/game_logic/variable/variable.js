@@ -41,6 +41,10 @@ export class Variable {
         this.subscriptions = [];
     }
     setNewBaseValue(baseValue, explanations) {
+        if (isNaN(baseValue)) {
+            debugger;
+            throw Error("nan number");
+        }
         if (this.max && baseValue > this.max.currentValue) {
             baseValue = this.max.currentValue;
         } else if (this.min && baseValue < this.min.currentValue) {
@@ -156,6 +160,7 @@ export class Variable {
             }
             this.currentDepth = 0;
             if (isNaN(this.currentValue)) {
+                debugger;
                 throw Error("nan number");
             }
         }
@@ -230,7 +235,7 @@ export class VariableComponent extends React.Component {
         let displayValue = roundNumber(this.variable.currentValue, this.variable.displayRound);
         let explanations = this.variable.explanations.map((explanation, i) => {
             if (explanation.variable) {
-                return <span  key={i}>{titleCase(explanation.type)} with <VariableComponent variable={explanation.variable}/><br /></span>
+                return <span  key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.type)} with <VariableComponent variable={explanation.variable}/><br /></span>
             } else if (explanation.text) {
                 return <span key={i} >{titleCase(explanation.text)}<br /></span>
             } else if (typeof(explanation) === 'string') {
@@ -243,13 +248,15 @@ export class VariableComponent extends React.Component {
         });
         if (!this.props.expanded) {
             return <HTMLTooltip title={explanations}>
-                <span style={{"textAlign": "center"}} onClick={() => {Logger.setInspect(this.variable)}}>
-                    {ownerText}{nameText}{displayValue}{this.props.children}
+                <span style={{"textAlign": "center", ...this.props.style}}>
+                    <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
+                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}</span>
                 </span>
                 </HTMLTooltip>
         } else {
-            return <span style={{"textAlign": "center", ...this.props.style}} onClick={() => {Logger.setInspect(this.variable)}}>
-                    {ownerText}{nameText}{displayValue}{this.props.children}
+            return <span style={{"textAlign": "center", ...this.props.style}}>
+                    <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
+                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}</span>
                     <br/>
                     Explanation: <br/>
                     {explanations}

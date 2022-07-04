@@ -2,6 +2,7 @@ import {VariableModifier, Variable, Cumulator, subtraction, addition, CumulatorC
 import { titleCase, CustomTooltip } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
+import {Logger} from '../logger.js';
 
 export class Resource {
     constructor(props) {
@@ -58,7 +59,7 @@ export class ResourceStorage {
         this.supply.variable.addModifier(new VariableModifier({variable: supplyVariable, type:addition}));
     }
     updateDemands() {
-        let totalSupply = this.amount.currentValue + this.supply.currentValue;
+        let totalSupply = this.amount.currentValue + this.supply.variable.currentValue;
         this.demands.forEach(demandObj => {
             let demand = demandObj.totalDemand.currentValue * demandObj.desiredProp.currentValue;
             if (demand === 0) {
@@ -69,6 +70,10 @@ export class ResourceStorage {
             } else {
                 demandObj.demandPropFulfilled.setNewBaseValue(demandObj.desiredProp.currentValue * totalSupply / demand, "new demand calculated");
                 totalSupply = 0;
+            }
+            if (isNaN(demand) || isNaN(totalSupply)) {
+                debugger;
+                throw Error('nans');
             }
         });
     }
@@ -85,7 +90,7 @@ export class ResourceStorageComponent extends UIBase {
     }
     childRender() {
         return <span style={{alignItems: "center", justifyContent: "center"}}>
-            <CustomTooltip items={this.toolTipVars}><span>{titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
+            <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>{titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
             <CumulatorComponent variable={this.resourceStorage.amount} showName={false}/>
         </span>
     }

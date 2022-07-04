@@ -6,6 +6,7 @@ import {Resources} from './resource.js'
 import Box from '@mui/material/Box';
 import Grid from  '@mui/material/Grid';
 import Button from '@mui/material/Button';
+import {Logger} from '../logger.js';
 
 
 export class Building {
@@ -65,37 +66,37 @@ export class ResourceBuilding extends Building {
         });
         this.inputResources = props.inputResources || [];
         var self = this;
-        this.propDemandSatisfied = [];
+        this.propDemandsDesired = [];
         this.minPropDemandSatisfied = []
         this.inputResources.forEach((input, i) => {
             if (!input.resource || !input.multiplier) {
                 throw Error("need this stuff");
             }
-            let minPropDemandSatisfied = new Variable({name: "satisfied input resource demand", startingValue: 1,
+            let propDemandDesired = new Variable({name: "satisfied input resource demand", startingValue: 1,
                 modifiers: []
             });
-            this.minPropDemandSatisfied.push(minPropDemandSatisfied);
+            self.propDemandsDesired.push(propDemandDesired);
             let resourceStorage = self.resourceStorages.find(resourceStorage => input.resource === resourceStorage.resource);
-            self.propDemandSatisfied.push(resourceStorage.addDemand(
-                this.name,
+            self.propDemandsDesired.push(resourceStorage.addDemand(
+                self.name,
                 new Variable({ owner: self, name: `${resourceStorage.resource.name} demand from ${self.name}`,
                     startingValue: input.multiplier, modifiers: [
-                        new VariableModifier({variable: self.production, type: multiplication}),
+                        new VariableModifier({variable: self.totalProduction, type: multiplication}),
                         new VariableModifier({variable: self.efficiency, type: division})
                     ]
                 }), 
-                minPropDemandSatisfied,
+                propDemandDesired,
                 1)
             );
         });
-        this.minPropDemandSatisfied.forEach((demand, i) => {
-            demand.setModifiers(self.propDemandSatisfied.filter((_, j) => {return i !== j}).map(variable => {
-                return new VariableModifier({variable: variable, type: min, priority: 5})
+        this.propDemandsDesired.forEach((demand, i) => {
+            demand.setModifiers(self.propDemandsDesired.filter((_, j) => {return i !== j}).map(variable => {
+                return new VariableModifier({variable: variable, type: min, customPriority: 5})
             }
         ))});
         this.minPropDemandSatisfied = new Variable({owner: this, name: "proportion of demand satisfied",startingValue: 1, 
-            modifiers: this.propDemandSatisfied.map(demandSatisfied => {
-                return new VariableModifier({variable: demandSatisfied, type: min});
+            modifiers: self.propDemandsDesired.map(demandSatisfied => {
+                return new VariableModifier({variable: demandSatisfied, type: min, customPriority: 5});
             })
         })
         // add these to actual Production
@@ -125,7 +126,7 @@ export class ResourceBuildingComponent extends UIBase {
         return <Grid container spacing={0.5} style={{border:"2px solid #2196f3", borderRadius:"7px", alignItems: "center", justifyContent: "center"}} >
         <Grid item xs={9}>
             <CustomTooltip items={this.toolTipVars} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                <span>{titleCase(this.building.name)} {this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span>
+                <span onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.name)} {this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span>
             </CustomTooltip>
         </Grid>
         <Grid item xs={3} style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>

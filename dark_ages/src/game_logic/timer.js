@@ -8,6 +8,7 @@ export class Timer extends Variable {
     constructor(props) {
         super(props);
         this.started = false;
+        this.every = props.every;
         this.timerNumber = Timer.timerNumber;
         this.unit = props.unit || 'time units';
         this.meaning = props.meaning || 'no timer meaning set';
@@ -25,7 +26,7 @@ export class Timer extends Variable {
             let self = this;
             this.intervalID = setInterval(() => {
                 self.setNewBaseValue(self.currentValue + 1, [this.meaning]);
-            }, 800);
+            }, this.every);
             this.started = true;
         }
     };

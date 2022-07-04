@@ -1,5 +1,6 @@
 import UIBase from "./UIBase";
 import {Variable,VariableComponent} from './variable/variable';
+import Button from '@mui/material/Button'
 
 export class Logger {
     static logger = null;
@@ -21,6 +22,7 @@ export class Logger {
     constructor() {
         this.lines = [];
         this.inspect = null;
+        this.inspects = [];
         this.subscriptions = [];
     }
     addLine(line) {
@@ -28,6 +30,10 @@ export class Logger {
         this.callSubscribers();
     }
     setInspect(inspect) {
+        this.inspects.push(inspect);
+        if (this.inspects.length > 35) {
+            this.inspects.shift();
+        }
         this.inspect = inspect;
         this.callSubscribers();
     }
@@ -40,6 +46,12 @@ export class Logger {
     }
     callSubscribers(depth) {
         this.subscriptions.forEach(subscription => subscription(depth))
+    }
+    backOne() {
+        if (this.inspects.length >= 2) {
+            this.inspects.pop();
+            this.setInspect(this.inspects.pop());
+        }
     }
 }
 
@@ -71,13 +83,17 @@ export class LoggerComponent extends UIBase {
             return '';
         }
         return <div>
-            {Object.entries(obj).map(([key, v]) => {
+            {Object.entries(obj).map(([key, v], i) => {
                 if (v instanceof Variable) {
-                    return <VariableComponent variable={this.logger.inspect}/>
-                } else if (typeof(obj) === "object") {
-                    return self.renderObject(obj);
-                } else {
-                    return `${key}: ${v}`;
+                    return <span  key={i}><VariableComponent variable={v} style={{fontSize: 10}}/>< br/></span>
+                } else if (typeof(v) === "function") {
+                    return ''
+                }  else if (typeof(v) === "string") {
+                    return <span  style={{fontSize: 10}} key={i}>{key}: {v}<br /></span>
+                } else if (typeof(v) === "object") {
+                    return <span style={{fontSize: 10}} key={i} onClick={()=>{this.logger.setInspect(v)}}>{key}: {'{object}'}<br /></span>
+                } else{
+                    return <span style={{fontSize: 10}} key={i}>{key}: {v}<br /></span>
                 }
             })}
         </div>
@@ -91,8 +107,11 @@ export class LoggerComponent extends UIBase {
     }
     childRender() {
         return <div>
-            <div>{this.renderInspect()}</div>
-            {this.logger.lines.map(line => <span>line<br /></span>)}
+            <div style={{textAlign:'right', paddingRight: '5px'}}>{this.renderInspect()}</div>
+            <div style={{textAlign:'center'}}>
+                <Button onClick={() => {this.logger.backOne()}} variant='outlined' style={{fontSize:12}}>Go Back</Button>
+            </div>
+            {this.logger.lines.map((line, i) => <span key={i}>line<br /></span>)}
         </div>
     }
 }
