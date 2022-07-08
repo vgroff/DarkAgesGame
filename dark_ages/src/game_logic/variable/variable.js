@@ -241,7 +241,7 @@ export class VariableComponent extends React.Component {
     render () {
         let ownerText = (this.variable.owner && this.props.showOwner) ? `${this.variable.owner.name}'s ` : '';
         let nameText = this.props.showName ? <span>{this.props.showOwner && this.variable.owner ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
-        let displayValue = roundNumber(this.variable.currentValue, this.variable.displayRound);
+        let displayValue = roundNumber(this.props.showBase ? this.variable.baseValue : this.variable.currentValue, this.variable.displayRound);
         let explanations = this.variable.explanations.map((explanation, i) => {
             if (explanation.variable) {
                 return <span  key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.type)} with <VariableComponent variable={explanation.variable}/><br /></span>
@@ -281,6 +281,7 @@ Variable.defaultProps = {
 VariableComponent.defaultProps = {
     showName: true,
     showOwner: true,
+    showBase: false,
     expanded: false
 };
 

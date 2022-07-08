@@ -11,7 +11,8 @@ export class Cumulator extends Variable {
         }
         let self = this;
         this.previousAgg = -1;
-        this.lastChange = 0;
+        this.expectedChange = 0;
+        this.valueAtTurnStart = 0;
         this.timer.subscribe(() => {
             console.log("aggregated on timer");
             self.aggregate();
@@ -21,18 +22,15 @@ export class Cumulator extends Variable {
         });
     }
     recalculateLastChange() {
-        this.lastChange = this.currentValue - this.baseValue;
-    }
+        this.expectedChange = this.currentValue - this.valueAtTurnStart;
+    } // lastChange, previousAgg
     aggregate() {
+        this.valueAtTurnStart = this.currentValue;
         this.recalculateLastChange();
-        if (this.baseValue !== this.currentValue || this.baseValue !== this.previousAgg) {
-            this.setNewBaseValue(this.currentValue, `Last turn: ${roundNumber(this.previousAgg, this.displayRound)}`);
+        if (this.baseValue !== this.currentValue) {
+            this.setNewBaseValue(this.currentValue, `Turn start: ${roundNumber(this.valueAtTurnStart, this.displayRound)}`);
         } else {
             return;
-        }
-        this.previousAgg = JSON.parse(JSON.stringify(this.currentValue)); // Make a copy you never know
-        if (this.previousAgg === undefined || this.previousAgg === null) {
-            throw Error("Probably shouldnt JSON whatever type this is"); // Shouldnt happen I don't think
         }
     }
 }
@@ -43,14 +41,14 @@ export class CumulatorComponent extends VariableComponent {
         this.variable = props.variable;
     }
     render () {
-        let lastChange = 0;
+        let expectedChange = 0;
         if (this.variable) {
-            lastChange = parseFloat(this.state.variable.lastChange.toFixed(3));
+            expectedChange = parseFloat(this.state.variable.expectedChange.toFixed(3));
         }
         return <span>
-            <VariableComponent variable={this.props.variable} {...this.props} children={[
+            <VariableComponent showBase={true} variable={this.props.variable} {...this.props} children={[
                 <span key={1}>{this.props.showMax && this.props.variable.max ? `/${this.props.variable.max.currentValue}` : ''}</span>,
-                <span key={2}>{this.props.showChange ? (lastChange > 0 ? `(+${lastChange})`: `(${lastChange})`) : ''}</span>
+                <span key={2}>{this.props.showChange ? (expectedChange > 0 ? `(+${expectedChange})`: `(${expectedChange})`) : ''}</span>
             ]}/> 
         </span>
     }

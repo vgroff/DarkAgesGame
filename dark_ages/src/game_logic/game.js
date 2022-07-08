@@ -40,8 +40,7 @@ class Game {
 export default Game;
 
 // - Inputs into resource buildings => going well, but need to:
-//   a) fix the cumulator component so that it shows amountTurnStart and change
-//   b) some weird behaviour going on for the quarry+stonecutters near 0 -> should investigate
+//    - some weird behaviour going on for the quarry+stonecutters near 0 -> should investigate - try removing the zero min on storage
 // - Add building upkeep - going to need that trending cumulator variable
 // - Settlement.jobsTaken is a great candidate for the SumAggregetor
 // - Deal with the fuel variable issue - give it infinite storage? 

@@ -110,7 +110,6 @@ export class ResourceStorageComponent extends UIBase {
         return <span style={{alignItems: "center", justifyContent: "center"}}>
             <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>{titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
             <CumulatorComponent variable={this.resourceStorage.amount} showName={false}/><br />
-            <span>{this.resourceStorage.amountAtTurnStart} {this.resourceStorage.change.currentValue} {this.resourceStorage.amount.currentValue - this.resourceStorage.amountAtTurnStart}</span>
         </span>
     }
 }
