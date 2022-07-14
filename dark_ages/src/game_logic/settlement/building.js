@@ -104,6 +104,18 @@ export class ResourceBuilding extends Building {
         ];
         productionModifiers.push(new VariableModifier({variable: this.minPropDemandSatisfied,type: multiplication}))
         this.totalProduction.setModifiers(productionModifiers);
+        this.alerts = [];
+        this.minPropDemandSatisfied.subscribe(() => {
+            let alert = "Insufficient input resources to work at full capacity!";
+            if (self.minPropDemandSatisfied.currentValue < 0.999) {
+                if (!this.alerts.includes(alert)) {
+                    this.alerts.push(alert)
+                }
+            } else {
+                this.alerts = this.alerts.filter(a => {return a !== alert;})
+            }
+            console.log(this.alerts);
+        });
     }
     setNewFilledJobs(villagers) {
         this.filledJobs.setNewBaseValue(villagers, "Set by leader");
@@ -121,15 +133,23 @@ export class ResourceBuildingComponent extends UIBase {
         this.addVariables([this.building.filledJobs,this.building.totalJobs,...this.toolTipVars]);
     }
     childRender() {
+        let extraStyle = {};
+        let extraVars = [];
+        if (this.building.alerts.length > 0) {
+            extraStyle = {"color": "red"}
+            this.building.alerts.forEach(alert => {
+                extraVars.push({text: alert, style: extraStyle})
+            })
+        }
         return <Grid container spacing={0.5} style={{border:"2px solid #2196f3", borderRadius:"7px", alignItems: "center", justifyContent: "center"}} >
         <Grid item xs={9}>
-            <CustomTooltip items={this.toolTipVars} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                <span onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.name)} {this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span>
+            <CustomTooltip items={this.toolTipVars.concat(extraVars)} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+                <span style={extraStyle} onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.name)} {this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span>
             </CustomTooltip>
         </Grid>
         <Grid item xs={3} style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
-            <Button variant={"outlined"} onClick={() => this.props.addWorkers(1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
-            <Button variant={"outlined"} onClick={() => this.props.addWorkers(-1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>
+            <Button variant={"outlined"} onClick={(e) => this.props.addWorkers(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
+            <Button variant={"outlined"} onClick={(e) => this.props.addWorkers(e, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>
         </Grid>
         <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
             <Button variant={"outlined"}  sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Build</Button>

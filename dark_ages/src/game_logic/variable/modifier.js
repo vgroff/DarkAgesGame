@@ -88,6 +88,9 @@ export class VariableModifier extends AbstractModifier {
         if (!this.variable && !(this.keys && this.object)) {
             this.variable = new Variable(props);
         }
+        if (!(this.variable instanceof Variable)) {
+            throw Error("variable should be a variable, is it a modifier? pass modifier.variable instead")
+        }
         this.resubscribeToVariable();
     }   
     modify(value) {

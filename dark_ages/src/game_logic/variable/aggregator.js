@@ -22,7 +22,7 @@ export class AggregatorModifier extends VariableModifier {
         }
         this.variableSubscriptions = [];
         this.variables = [];
-        this.variables = this.resubscribeToVariables();
+        this.resubscribeToVariables();
     }
 
     modify(value) {
@@ -69,7 +69,7 @@ export class AggregatorModifier extends VariableModifier {
         }
         this.variables = this.getVariables(this.aggregatorList, this.keys);
         this.variableSubscriptions = [];
-        this.variableSubscriptions = this.variables.map(variable => variable.subscribe(() => this.aggregate()));
+        this.variableSubscriptions = this.variables.map(variable => variable.subscribe(() => {this.aggregate()}));
         this.aggregate();
     }
 }

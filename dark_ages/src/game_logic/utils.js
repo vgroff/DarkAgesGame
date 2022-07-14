@@ -1,5 +1,6 @@
 import { styled } from '@mui/material/styles';
 import Tooltip, { tooltipClasses } from '@mui/material/Tooltip';
+import React from 'react';
 import { Variable, VariableComponent } from "./variable/variable";
 
 export function titleCase(str) {
@@ -23,7 +24,7 @@ export const HTMLTooltip = styled(({ className, ...props }) => (
         maxWidth: 400,
         fontSize: theme.typography.pxToRem(12),
         border: '1px solid #dadde9',
-        textAlign: 'center'
+        textAlign: 'right'
     },
 }));
 
@@ -33,7 +34,9 @@ export const CustomTooltip = (props) => {
             if (item instanceof Variable) {
                 return <span  key={i}><VariableComponent variable={item}/><br /></span>
             } else if (typeof(item) === 'string') {
-                return <span key={i} style={{fontStyle: 'italics'}}>{item}<br /></span>;
+                return <span key={i} style={{fontStyle: 'italics'}}>{item}<br /></span>
+            } else if (item.text) {
+                return <span key={i} style={item.style}>{item.text}</span>
             } else {
                 throw Error('what');
             }

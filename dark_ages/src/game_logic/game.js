@@ -1,6 +1,7 @@
 import {Settlement, } from "./settlement/settlement";
 import {ListAggModifier, VariableModifier, Cumulator, addition} from './UIUtils';
 import {Timer} from './timer'
+import { SumAggModifier } from "./variable/sumAgg";
 
 class Game {
     constructor(gameClock) {
@@ -8,7 +9,7 @@ class Game {
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 40}),
         ];
-        this.totalTax = new ListAggModifier(
+        this.totalTax = new SumAggModifier(
             {
                 name: "Total tax",
                 aggregate: this,
@@ -16,19 +17,7 @@ class Game {
                     ["settlements"],
                     ["tax"],
                 ],
-                type: addition,
-                aggregatorCallback: (variable, variables, modifiers=true) => {
-                    if (!modifiers) {
-                        return {
-                            value: variables.reduce((partial_sum, variable) => partial_sum + variable.currentValue, 0),
-                            text: variables.reduce((partial_sum, variable) => `${partial_sum} ${variable.owner.name} ${variable.name}: ${variable.currentValue},`, "Sum of: "),
-                        }
-                    } else {
-                        return {
-                            modifiers: variables.map(variable => new VariableModifier({variable, type:'addition'}))
-                        };
-                    }
-                }
+                type: addition
             }
         );
 
@@ -39,17 +28,16 @@ class Game {
 
 export default Game;
 
-// - Inputs into resource buildings => going well, but need to:
-//    - some weird behaviour going on for the quarry+stonecutters near 0 -> should investigate - try removing the zero min on storage
 // - Add building upkeep - going to need that trending cumulator variable
-// - Settlement.jobsTaken is a great candidate for the SumAggregetor
-// - Deal with the fuel variable issue - give it infinite storage? 
-//   Don't bother with making it a resource? Would be easier to apply demand though perhaps? Maybe leave until demand sorted
+// - Build should go red when it doesn't have full demand
+// - Build a basic demand system for the population
+// - Build a rationing system
+// - Build housing?
+
 // - Now build a demand system:
 //   - 2 classes: artisans and labourers. Both have the same demand system, but they get different wages
 //   - Demand is broken up by priority - simply a resource, an amount and a happiness achieved
 //   - always fulfill the best price-value ratio for a given priority
-// - Build housing?
 // - variables
 //   - Making a trending variable - gonna be very similar to cumulator
 //   - Need some more specific aggregators - use ListAggregator to make Sum, Mean etc...

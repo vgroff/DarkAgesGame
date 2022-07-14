@@ -244,11 +244,11 @@ export class VariableComponent extends React.Component {
         let displayValue = roundNumber(this.props.showBase ? this.variable.baseValue : this.variable.currentValue, this.variable.displayRound);
         let explanations = this.variable.explanations.map((explanation, i) => {
             if (explanation.variable) {
-                return <span  key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.type)} with <VariableComponent variable={explanation.variable}/><br /></span>
+                return <span style={{textAlign: "right"}} key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.type)} with <VariableComponent variable={explanation.variable}/><br /></span>
             } else if (explanation.text) {
-                return <span key={i} >{titleCase(explanation.text)}<br /></span>
+                return <span style={{textAlign: "right"}} key={i} >{titleCase(explanation.text)}<br /></span>
             } else if (typeof(explanation) === 'string') {
-                return <span key={i} >{titleCase(explanation)}<br /></span>;
+                return <span style={{textAlign: "right"}} key={i} >{titleCase(explanation)}<br /></span>;
             } else if (explanation === null) {
                 return null;
             } else {
@@ -256,7 +256,7 @@ export class VariableComponent extends React.Component {
             }
         });
         if (!this.props.expanded) {
-            return <HTMLTooltip title={explanations}>
+            return <HTMLTooltip title={explanations} style={{textAlign: "right"}}>
                 <span style={{"textAlign": "center", ...this.props.style}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
                     <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}</span>
