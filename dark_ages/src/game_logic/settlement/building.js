@@ -86,7 +86,7 @@ export class ResourceBuilding extends Building {
                     ]
                 }), 
                 propDemandDesired,
-                1)
+                2)
             );
         });
         this.propDemandsDesired.forEach((demand, i) => {

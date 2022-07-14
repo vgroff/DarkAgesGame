@@ -7,6 +7,7 @@ import { Resources, ResourceStorage, ResourceStorageComponent } from './resource
 import { Cumulator } from '../UIUtils.js';
 import { UnaryModifier } from '../variable/modifier.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
+import { getBasePopDemands, RationingComponent } from './rationing.js';
 
 
 export class Settlement {
@@ -80,6 +81,26 @@ export class Settlement {
             new VariableModifier({variable: this.populationSizeExternal, type:addition}),
             new VariableModifier({variable: this.jobsTaken.variable, type:subtraction})
         ]})
+        let basePopDemands = getBasePopDemands();
+        this.rationsDemanded = [];
+        this.rationsAchieved = [];
+        let zero = new Variable({name: "zero", startingValue: 0});
+        for (const [key, demand] of Object.entries(basePopDemands)) {
+            let desiredRationProp = new Variable({name: `${demand.resource.name} ration`, startingValue: 0, max: demand.idealAmount, min: zero});
+            let desiredRation = new Variable({name: `${demand.resource.name} ration`, startingValue: 0, min: zero, modifiers: [
+                    new VariableModifier({variable: desiredRationProp, type: addition}),
+                    new VariableModifier({variable: this.populationSizeExternal, type: multiplication})
+                ]
+            });
+            let proportion = new Variable({name: `${demand.resource.name} proportion`, startingValue: 1});
+            let resourceStorage = this.resourceStorages.find(resourceStorage => resourceStorage.resource === demand.resource);
+            let actualRationProp = resourceStorage.addDemand(`${demand.resource.name} ration`, desiredRation, proportion, 1); // 1 because citizens go before businesses
+            this.rationsAchieved.push(new Variable({name: `Actual ${demand.resource.name} ration`, startingValue: 0, modifiers: [
+                new VariableModifier({variable:desiredRationProp, type: addition}),
+                new VariableModifier({variable:actualRationProp, type: multiplication})
+            ]}));
+            this.rationsDemanded.push(desiredRationProp);
+        }
     }
     addBuilding(building) {
         if (building instanceof ResourceBuilding) {
@@ -92,6 +113,9 @@ export class Settlement {
         }
         building.setNewFilledJobs(building.filledJobs.currentValue + amount);
     }
+    addToDesiredRation(ration, amount) {
+        ration.setNewBaseValue(ration.currentValue + amount, "user set new ration");
+    }
     getBuildings() {
         return this.resourceBuildings;
     }
@@ -103,17 +127,21 @@ export class SettlementComponent extends UIBase {
         this.settlement = props.settlement;
         this.addVariables([this.settlement.tax]);
     }
-    addToBuilding(event, building, direction) {
-
+    getAmount(event, direction, multiplier) {
         event.stopPropagation();
-     
         let amount = 1;
         if (event.ctrlKey) {
             amount = 5;
         } else if (event.shiftKey) {
             amount = 10;
         }
-        this.settlement.addWorkersToBuilding(building, amount*direction)
+        return amount*multiplier*direction;
+    }
+    addToBuilding(event, building, direction) {
+        this.settlement.addWorkersToBuilding(building, this.getAmount(event, direction, 1));
+    }
+    addToRation(event, ration, direction) {
+        this.settlement.addToDesiredRation(ration, this.getAmount(event, direction, 0.01));
     }
     childRender() {
         return <Grid container justifyContent="center" alignItems="center"  style={{alignItems: "center", justifyContent: "center"}} >
@@ -139,6 +167,16 @@ export class SettlementComponent extends UIBase {
             <Grid container spacing={2} justifyContent="center" alignItems="center">
                 <Grid item xs={12}><br/></Grid>
             </Grid>
+        </Grid>
+        <Grid item xs={12}>
+            <h4>Rationing</h4>
+                <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
+                    {this.settlement.rationsDemanded.map((ration, i) => {
+                        return  <Grid item xs={4} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
+                            <RationingComponent demandedRation={ration} recievedRation={this.settlement.rationsAchieved[i]} addRations={(e, direction) => {this.addToRation(e, ration, direction)}}/>
+                        </Grid>
+                    })}
+                </Grid>
         </Grid>
         <Grid item xs={12}>
             <h4>Resources</h4>

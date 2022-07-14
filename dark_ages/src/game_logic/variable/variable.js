@@ -138,7 +138,7 @@ export class Variable {
     }
     recalculate(force=false) {
         this.modifiers.sort((a, b) => {
-            return a.priority() > b.priority();
+            return a.priority() - b.priority();
         });
         let value = this.baseValue;
         let explanations = this.baseValueExplanations.map(val => val); // Need to copy the array

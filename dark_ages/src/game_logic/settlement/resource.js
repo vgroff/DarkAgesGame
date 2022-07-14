@@ -63,7 +63,7 @@ export class ResourceStorage {
         totalDemand.subscribe(() => this.updateDemands());
         desiredProp.subscribe(() => this.updateDemands());
         this.demands.sort((a, b) => {
-            return a.priority > b.priority;
+            return a.priority - b.priority;
         });
         this.demand.variable.addModifier(new VariableModifier({name: `${name} demand`, startingValue:0, type:addition, modifiers: [
             new VariableModifier({variable: totalDemand, type: addition}),

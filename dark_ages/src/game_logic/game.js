@@ -29,9 +29,13 @@ class Game {
 export default Game;
 
 // - Add building upkeep - going to need that trending cumulator variable
-// - Build should go red when it doesn't have full demand
-// - Build a basic demand system for the population
-// - Build a rationing system
+// - Build a basic demand system for the population + a rationing system
+//     - Show the ideal ration along the other two
+//     - Create+display happiness variable
+//     - Health needs to be a trending variable
+//     - Some resources aren't cumulative (e.g. construction time/hygiene) might actually be easier to keep construciton time cumulative
+//     - Coal demand will need to depend on season (notes in rationing)
+// - Hook up the "upgrade" button - add a construction building/resource?
 // - Build housing?
 
 // - Now build a demand system:
