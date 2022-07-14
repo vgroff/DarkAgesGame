@@ -1,11 +1,11 @@
-import {VariableModifier, multiplication, subtraction, Variable, castInt, addition, VariableComponent} from '../UIUtils.js';
+import {VariableModifier, multiplication, subtraction, division, Variable, castInt, addition, VariableComponent} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Farm, LumberjacksHut, CharcoalKiln, Quarry, ResourceBuilding, ResourceBuildingComponent, Stonecutters} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
-import { UnaryModifier } from '../variable/modifier.js';
+import { exponentiation, UnaryModifier } from '../variable/modifier.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
 import { getBasePopDemands, RationingComponent } from './rationing.js';
 
@@ -31,7 +31,7 @@ export class Settlement {
             modifiers: [
                 new VariableModifier({variable: this.populationSizeGrowth, type: addition}),
                 new VariableModifier({variable: this.populationSizeDecline, type: subtraction}),
-                new VariableModifier({variable: this.immigrationFactor, type: multiplication}) // Causes higher growth and higher decline intentionally
+                new VariableModifier({variable: this.immigrationFactor, type: multiplication}) // Causes higher growth and higher decline intentionally - not sure if we want this?
             ]
         });
         this.populationSizeInternal = new Cumulator({owner: this, name:`population_size_internal`, startingValue: props.startingPopulation,
@@ -84,6 +84,8 @@ export class Settlement {
         let basePopDemands = getBasePopDemands();
         this.rationsDemanded = [];
         this.rationsAchieved = [];
+        this.idealRations = [];
+        this.happiness = new Variable({name: "happiness", startingValue: 0});
         let zero = new Variable({name: "zero", startingValue: 0});
         for (const [key, demand] of Object.entries(basePopDemands)) {
             let desiredRationProp = new Variable({name: `${demand.resource.name} ration`, startingValue: 0, max: demand.idealAmount, min: zero});
@@ -95,11 +97,41 @@ export class Settlement {
             let proportion = new Variable({name: `${demand.resource.name} proportion`, startingValue: 1});
             let resourceStorage = this.resourceStorages.find(resourceStorage => resourceStorage.resource === demand.resource);
             let actualRationProp = resourceStorage.addDemand(`${demand.resource.name} ration`, desiredRation, proportion, 1); // 1 because citizens go before businesses
-            this.rationsAchieved.push(new Variable({name: `Actual ${demand.resource.name} ration`, startingValue: 0, modifiers: [
+            let rationAchieved = new Variable({name: `Actual ${demand.resource.name} ration`, startingValue: 0, modifiers: [
                 new VariableModifier({variable:desiredRationProp, type: addition}),
                 new VariableModifier({variable:actualRationProp, type: multiplication})
-            ]}));
+            ]})
+            this.rationsAchieved.push(rationAchieved);
             this.rationsDemanded.push(desiredRationProp);
+            this.idealRations.push(demand.idealAmount);
+            if (demand.additiveHappiness) {
+                let happinessAdditiveModifier = new Variable({ name: `Happiness from ${demand.resource.name}`, startingValue: 0, modifiers: [
+                    new VariableModifier({ type: addition,
+                        variable: new Variable({name: "Exponentiated demand prop", startingValue: 0, modifiers: [
+                            new VariableModifier({variable: rationAchieved, type:addition}),
+                            new VariableModifier({variable: demand.idealAmount, type:division}),
+                            new VariableModifier({variable: demand.additiveHappiness.exponent, type:exponentiation})
+                        ]})
+                    }),
+                    new VariableModifier({name: "Coefficient", type: multiplication, variable: demand.additiveHappiness.coefficient}),
+                ]});
+                this.happiness.addModifier(new VariableModifier({variable:happinessAdditiveModifier, type:addition}));
+            }
+            if (demand.multiplicativeHappiness) {
+                let expCoeff = 1 - demand.multiplicativeHappiness.offset;
+                let happinessMultiplicativeModifier = new Variable({ name: `Happiness from ${demand.resource.name}`, startingValue: 0, modifiers: [
+                    new VariableModifier({type: addition, variable: new Variable({name: `Happiness mult offset ${demand.resource.name}`,startingValue: demand.multiplicativeHappiness.offset})}),
+                    new VariableModifier({ type: addition,
+                        variable: new Variable({name: "Exponentiated demand prop", startingValue: 0, modifiers: [
+                            new VariableModifier({variable: rationAchieved, type:addition}),
+                            new VariableModifier({variable: demand.idealAmount, type:division}),
+                            new VariableModifier({variable: demand.multiplicativeHappiness.exponent, type:exponentiation}),
+                            new VariableModifier({variable: new Variable({name: "normalising for offset", startingValue: expCoeff}), type:multiplication, customPriority:99})
+                        ]})
+                    })
+                ]})
+                this.happiness.addModifier(new VariableModifier({variable:happinessMultiplicativeModifier, type:multiplication}));
+            }
         }
     }
     addBuilding(building) {
@@ -125,7 +157,7 @@ export class SettlementComponent extends UIBase {
     constructor(props) {
         super(props);
         this.settlement = props.settlement;
-        this.addVariables([this.settlement.tax]);
+        this.addVariables([this.settlement.tax, this.settlement.happiness]);
     }
     getAmount(event, direction, multiplier) {
         event.stopPropagation();
@@ -154,6 +186,7 @@ export class SettlementComponent extends UIBase {
             <VariableComponent showOwner={false} variable={this.settlement.jobsTaken.variable} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.jobsAvailable.variable} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.unemployed} /><br />
+            <VariableComponent showOwner={false} variable={this.settlement.happiness} /><br />
         </Grid>
         <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", padding:"5px", textAlign:"center", alignItems: "center", justifyContent: "center"}}>
             <h4>Buildings</h4>
@@ -173,7 +206,7 @@ export class SettlementComponent extends UIBase {
                 <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
                     {this.settlement.rationsDemanded.map((ration, i) => {
                         return  <Grid item xs={4} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
-                            <RationingComponent demandedRation={ration} recievedRation={this.settlement.rationsAchieved[i]} addRations={(e, direction) => {this.addToRation(e, ration, direction)}}/>
+                            <RationingComponent demandedRation={ration} recievedRation={this.settlement.rationsAchieved[i]} idealRation={this.settlement.idealRations[i]} addRations={(e, direction) => {this.addToRation(e, ration, direction)}}/>
                         </Grid>
                     })}
                 </Grid>

@@ -15,7 +15,8 @@ export const priority = {
     addition: 1,
     subtraction: 2,
     multiplication: 3,
-    division: 4
+    division: 4,
+    exponentiation: 5
 };
 
 export class AbstractModifier {
@@ -91,6 +92,9 @@ export class VariableModifier extends AbstractModifier {
         if (!(this.variable instanceof Variable)) {
             throw Error("variable should be a variable, is it a modifier? pass modifier.variable instead")
         }
+        if (this.name === 'unnamed modifier') {
+            this.name = `${this.variable.name} based modifier`
+        }
         this.resubscribeToVariable();
     }   
     modify(value) {
@@ -117,12 +121,21 @@ export class VariableModifier extends AbstractModifier {
                 variable: this.variable
             };
         } else if (this.type === division) {
+            if (this.variable.currentValue === 0) {
+                throw Error("dividing by zero");
+            }
             return {
                 result: value/this.variable.currentValue, 
                 text: `Divided by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
                 variable: this.variable
             }; 
-        } else if (this.type === max) {
+        } else if (this.type === exponentiation) {
+            return {
+                result: value**this.variable.currentValue, 
+                text: `To the power of ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
+                variable: this.variable
+            }; 
+        }  else if (this.type === max) {
             return {
                 result: Math.max(value, this.variable.currentValue), 
                 text: `Maxed with ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,

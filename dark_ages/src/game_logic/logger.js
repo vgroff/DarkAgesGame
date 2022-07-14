@@ -82,6 +82,9 @@ export class LoggerComponent extends UIBase {
         if (!obj) {
             return '';
         }
+        if (obj.logVar) {
+            obj = obj.logVar;
+        }
         return <div>
             {Object.entries(obj).map(([key, v], i) => {
                 if (v instanceof Variable) {
@@ -107,7 +110,7 @@ export class LoggerComponent extends UIBase {
     }
     childRender() {
         return <div>
-            <div style={{textAlign:'right', paddingRight: '5px'}}>{this.renderInspect()}</div>
+            <div style={{ paddingRight: '5px'}}>{this.renderInspect()}</div>
             <br />
             <div style={{textAlign:'center'}}>
                 <Button onClick={() => {this.logger.backOne()}} variant='outlined' style={{fontSize:12}}>Go Back</Button>

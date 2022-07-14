@@ -108,7 +108,7 @@ export class ResourceBuilding extends Building {
         this.minPropDemandSatisfied.subscribe(() => {
             let alert = "Insufficient input resources to work at full capacity!";
             if (self.minPropDemandSatisfied.currentValue < 0.999) {
-                if (!this.alerts.includes(alert)) {
+                if (!this.alerts.includes(alert) && this.filledJobs.currentValue > 0) {
                     this.alerts.push(alert)
                 }
             } else {

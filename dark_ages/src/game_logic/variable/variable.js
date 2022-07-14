@@ -153,7 +153,7 @@ export class Variable {
             value = this.min.currentValue;
         }
         if (this.currentValue !== value) {
-            if (this.name.includes("stone daily demand")) {
+            if (this.name.includes("appiness")) {
                 // debugger;
                 console.log(`${this.name} modification calculated as ${value}`);
             }
@@ -163,7 +163,7 @@ export class Variable {
             if (this.currentDepth < 5) {
                 this.callSubscribers(this.currentDepth);
             }
-            if (this.name.includes("stone daily demand")) {
+            if (this.name.includes("appiness")) {
                 // debugger;
                 console.log(`${this.name} finally set to ${this.currentValue}`);
             }
@@ -263,13 +263,22 @@ export class VariableComponent extends React.Component {
                 </span>
                 </HTMLTooltip>
         } else {
-            return <span style={{"textAlign": "center", ...this.props.style}}>
+            return <div>
+                <div style={{"textAlign": "right", ...this.props.style}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
                     <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}</span>
-                    <br/>
-                    Explanation: <br/>
+                </div>
+                <div style={{"textAlign": "center", "fontWeight": "bold", ...this.props.style}}>
+                    <span style={{}}>Explanation:</span> <br/>
+                </div>
+                <div style={{"textAlign": "right", ...this.props.style}}>
                     {explanations}
-            </span>
+                </div>
+                < br/>
+                <div style={{"textAlign": "left", ...this.props.style}} onClick={() => {Logger.setInspect({logVar:this.variable})}}>
+                    {nameText} Object access
+                </div>
+            </div>
         }
     }
 }
