@@ -22,7 +22,7 @@ export class Cumulator extends Variable {
         });
     }
     recalculateLastChange() {
-        this.expectedChange = this.currentValue - this.valueAtTurnStart;
+        this.expectedChange = this.currentValue - this.baseValue;
     } // lastChange, previousAgg
     aggregate() {
         this.valueAtTurnStart = this.currentValue;

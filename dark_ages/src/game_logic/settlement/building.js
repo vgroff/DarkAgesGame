@@ -1,4 +1,4 @@
-import {VariableModifier, Variable, addition, min, multiplication,division } from '../UIUtils.js';
+import {VariableModifier, Variable, addition, subtraction, min, multiplication,division } from '../UIUtils.js';
 import { titleCase, CustomTooltip } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
@@ -44,8 +44,14 @@ export class ResourceBuilding extends Building {
             modifiers:this.totalJobsModifiers
         });
         let zero = new Variable({startingValue: 0});
-        this.filledJobs = new Variable({owner: this, name:"filled jobs", startingValue: 1, max: this.totalJobs, min: zero,
+        this.filledJobs = new Variable({owner: this, name:"filled jobs", startingValue: props.startingFilledJobs || 0, max: this.totalJobs, min: zero,
             modifiers:[]
+        });
+        this.emptyJobs = new Variable({owner: this, name:"empty jobs", startingValue: 0, max: this.totalJobs, min: zero,
+            modifiers:[
+                new VariableModifier({variable: this.totalJobs, type:addition}),
+                new VariableModifier({variable: this.filledJobs, type:subtraction})
+            ]
         });
         this.productionModifiers = [
             new VariableModifier({name:"production from workers", startingValue:this.outputResource.productionRatio, type:addition, modifiers: [
@@ -86,7 +92,7 @@ export class ResourceBuilding extends Building {
                     ]
                 }), 
                 propDemandDesired,
-                2)
+                1)
             );
         });
         this.propDemandsDesired.forEach((demand, i) => {
@@ -105,20 +111,29 @@ export class ResourceBuilding extends Building {
         productionModifiers.push(new VariableModifier({variable: this.minPropDemandSatisfied,type: multiplication}))
         this.totalProduction.setModifiers(productionModifiers);
         this.alerts = [];
+        self.setDemandAlert();
         this.minPropDemandSatisfied.subscribe(() => {
-            let alert = "Insufficient input resources to work at full capacity!";
-            if (self.minPropDemandSatisfied.currentValue < 0.999) {
-                if (!this.alerts.includes(alert) && this.filledJobs.currentValue > 0) {
-                    this.alerts.push(alert)
-                }
-            } else {
-                this.alerts = this.alerts.filter(a => {return a !== alert;})
-            }
-            console.log(this.alerts);
+            self.setDemandAlert();
+        });
+        this.filledJobs.subscribe(() => {
+            self.setDemandAlert();
         });
     }
     setNewFilledJobs(villagers) {
         this.filledJobs.setNewBaseValue(villagers, "Set by leader");
+    }
+    setDemandAlert() {
+        let alert = "Insufficient input resources to work at full capacity!";
+        if (this.minPropDemandSatisfied.currentValue < 0.999) {
+            if (!this.alerts.includes(alert) && this.filledJobs.currentValue > 0) {
+                this.alerts.push(alert)
+            }
+        } else {
+            this.alerts = this.alerts.filter(a => {return a !== alert;})
+        }
+        if (this.name.includes("rew")) {
+            console.log(this.alerts);
+        }
     }
 }
 
@@ -168,7 +183,6 @@ export class Farm extends ResourceBuilding {
     constructor(props) {
         super({name: "farm", 
             outputResource: Resources.food, 
-            productionRatio: 1.05, 
             sizeJobsMultiplier: 5,
             ...props
         })
@@ -179,7 +193,6 @@ export class HuntingCabin extends ResourceBuilding {
     constructor(props) {
         super({name: "hunter's cabin", 
             outputResource: Resources.food, 
-            productionRatio: 1.35, 
             sizeJobsMultiplier: 3,
             ...props
         })
@@ -190,7 +203,6 @@ export class LumberjacksHut extends ResourceBuilding {
     constructor(props) {
         super({name: "lumberjack's hut", 
             outputResource: Resources.wood, 
-            productionRatio: 1.0, 
             sizeJobsMultiplier: 3,
             ...props
         })
@@ -201,7 +213,18 @@ export class CharcoalKiln extends ResourceBuilding {
     constructor(props) {
         super({name: "charcoal kiln", 
             outputResource: Resources.coal, 
-            productionRatio: 1.0, 
+            inputResources: [{resource:Resources.wood, multiplier: 0.25}],
+            sizeJobsMultiplier: 3,
+            ...props
+        })
+    }
+}
+
+export class Brewery extends ResourceBuilding {
+    constructor(props) {
+        super({name: "brewery", 
+            outputResource: Resources.beer, 
+            inputResources: [{resource:Resources.food, multiplier: 0.2}],
             sizeJobsMultiplier: 3,
             ...props
         })
@@ -212,7 +235,6 @@ export class Quarry extends ResourceBuilding {
     constructor(props) {
         super({name: "quarry", 
             outputResource: Resources.stone, 
-            productionRatio: 1.0, 
             sizeJobsMultiplier: 3,
             ...props
         })
@@ -224,7 +246,6 @@ export class Stonecutters extends ResourceBuilding {
         super({name: "Stonecutter's workshop", 
             outputResource: Resources.stoneBricks, 
             inputResources: [{resource:Resources.stone, multiplier: 2}],
-            productionRatio: 1.0, 
             sizeJobsMultiplier: 3,
             ...props
         })

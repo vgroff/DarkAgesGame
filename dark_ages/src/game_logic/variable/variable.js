@@ -30,6 +30,12 @@ export class Variable {
         this.printSubs = props.printSubs || false;
         this.displayRound = props.displayRound || 2;
 
+        this.trending = props.trending || false;
+        this.trendingSpeed = props.trendingSpeed;
+        if (this.trending) {
+
+        }
+
         this.modifiers = [];
         this.modifierCallbacks = [];
         let startingValue = props.startingValue || 0

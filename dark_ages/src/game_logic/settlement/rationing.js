@@ -11,7 +11,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
             resource: Resources.food,
             idealAmount: new Variable({name: "Ideal Food", startingValue: 1}),
             additiveHappiness: {
-                coefficient: new Variable({name: "Additive Food Happiness Coeff", startingValue: 0.3}),
+                coefficient: new Variable({name: "Additive Food Happiness Coeff", startingValue: 0.2}),
                 exponent: new Variable({name: "Additive Food Happiness Exp", startingValue: 1.25})
             },
             additiveHealth: {
@@ -20,14 +20,14 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
             },
             multiplicativeHealth: {
                 offset: 0,
-                exponent: new Variable({name: "Multiplicative Food Health Exp", startingValue: 1})
+                exponent: new Variable({name: "Multiplicative Food Health Exp", startingValue: 0.5})
             },           
         },
         coal: {
             resource: Resources.coal,
             idealAmount: new Variable({name: "Ideal Coal", startingValue: 1}), // This should change with weather
             additiveHappiness: {
-                coefficient: new Variable({name: "Additive Coal Happiness Coeff", startingValue: 0.3}),
+                coefficient: new Variable({name: "Additive Coal Happiness Coeff", startingValue: 0.25}),
                 exponent: new Variable({name: "Additive Coal Happiness Exp", startingValue: 1.25})
             },
             multiplicativeHappiness: {
@@ -39,9 +39,21 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
                 exponent: new Variable({name: "Additive Coal Health Exp", startingValue: 2})
             },
             multiplicativeHealth: {
-                offset: 0.5, // This should change with weather, could make it a variable and manually subscribe?
+                offset: 0.35,
                 exponent: new Variable({name: "Multiplicative Coal Health Exp", startingValue: 0.5})
             },           
+        },
+        beer: {
+            resource: Resources.beer,
+            idealAmount: new Variable({name: "Ideal Beer", startingValue: 1}), // This should change with weather
+            additiveHappiness: {
+                coefficient: new Variable({name: "Additive Beer Happiness Coeff", startingValue: 0.3}),
+                exponent: new Variable({name: "Additive Beer Happiness Exp", startingValue: 0.5})
+            },
+            additiveHealth: {
+                coefficient: new Variable({name: "Additive Beer Health Coeff", startingValue: -0.1}),
+                exponent: new Variable({name: "Additive Beer Health Exp", startingValue: 2})
+            }        
         }
     };
     return basePopDemands;
