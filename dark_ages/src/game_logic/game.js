@@ -30,21 +30,22 @@ export default Game;
 
 // Stuff for now:
 // - Build a basic demand system for the population + a rationing system
-//     - For health effects, introduce an inverse logit modifier y=1/(1+(x^0.9/(1-x^0.9))^-2), y=.5 at x0 set r=-log(2)/log(x0)
-//          - Do they need to be variables? Seems overkill but I guess not a real issue
 //     - Hook up health to population growth/death
 //     - Health needs to be a trending variable
 //     - Some resources aren't cumulative (e.g. construction time/hygiene) might actually be easier to keep construciton time cumulative
-//     - Coal demand will need to depend on season (notes in rationing)
+//     - Coal demand will need to depend on season (notes in rationing) - make the ideal demand change is the nicest way of doing this
+//          - Makes more sense for rations to be set as a proportion of ideal demand - change the ration behaviour to do this
 // - Hook up the "upgrade" button - add a construction building/resource?
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - Deal with people born/dying from jobs - remove someone at random/add someone at random - do it with probabilities
 // - Build housing?
 // - Amount of input resources should also depend on productivity (if it doesnt already?)
+// - Introduce research
+// - Could have conditional variables -> they take either a single true/false variable or two variables to compare and then return different results depending on the outcome
 
 
 // Stuff for later builds:
-// - Add building upkeep - going to need that trending cumulator variable
+// - Add building upkeep
 
 //  Stuff for way later builds:
 // - Now build a demand system:

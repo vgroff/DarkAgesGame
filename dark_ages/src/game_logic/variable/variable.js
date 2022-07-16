@@ -7,7 +7,6 @@ const unnamedVariableName = 'unnamed variable';
 
 export class Variable {
     constructor(props) {
-        // console.log('new var created ' + this.name);
         this.name = props.name || unnamedVariableName;
         if (this.name === unnamedVariableName) {
             console.log('Unnamed variable;')
@@ -29,12 +28,6 @@ export class Variable {
         }
         this.printSubs = props.printSubs || false;
         this.displayRound = props.displayRound || 2;
-
-        this.trending = props.trending || false;
-        this.trendingSpeed = props.trendingSpeed;
-        if (this.trending) {
-
-        }
 
         this.modifiers = [];
         this.modifierCallbacks = [];
@@ -106,7 +99,7 @@ export class Variable {
                 }
             }
             if (sameArray) {
-                console.log("Ignoring call to set modiifers")
+                // console.log("Ignoring call to set modiifers")
                 return; // No need to update
             }
         }
@@ -147,7 +140,8 @@ export class Variable {
         // console.log("Calling subs "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
         this.subscriptions.forEach(subscription => subscription(depth))
     }
-    recalculate(force=false) {
+    recalculate(quietly=false) {
+        this.currentDepth += 1;
         this.modifiers.sort((a, b) => {
             return a.priority() - b.priority();
         });
@@ -156,7 +150,10 @@ export class Variable {
         for (let modifier of this.modifiers) {
             let result = modifier.modify(value);
             value = result.result;
-            explanations.push({text: result.text, variable: result.variable, type:modifier.type});
+            if (isNaN(result.result)) {
+                throw Error("nan number");
+            }
+            explanations.push({text: result.text, variable: result.variable, type:modifier.type, textPriority: result.textPriority});
         }
         if (this.max && value > this.max.currentValue) {
             value = this.max.currentValue;
@@ -164,26 +161,17 @@ export class Variable {
             value = this.min.currentValue;
         }
         if (this.currentValue !== value) {
-            if (this.name.includes("appiness")) {
-                // debugger;
-                console.log(`${this.name} modification calculated as ${value}`);
-            }
             this.currentValue = value;
             this.explanations = explanations;
-            this.currentDepth += 1;
-            if (this.currentDepth < 5) {
+            if (this.currentDepth < 5 && !quietly) {
                 this.callSubscribers(this.currentDepth);
             }
-            if (this.name.includes("appiness")) {
-                // debugger;
-                console.log(`${this.name} finally set to ${this.currentValue}`);
-            }
-            this.currentDepth = 0;
             if (isNaN(this.currentValue)) {
                 debugger;
                 throw Error("nan number");
             }
         }
+        this.currentDepth = 0;
     }
 }
 
@@ -249,12 +237,14 @@ export class VariableComponent extends React.Component {
             }
         }
     }
-    render () {
+    render (extraChildren) {
         let ownerText = (this.variable.owner && this.props.showOwner && this.variable.owner.name !== unnamedVariableName) ? `${this.variable.owner.name}'s ` : '';
         let nameText = (this.props.showName && this.variable.name !== unnamedVariableName) ? <span>{ownerText ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
         let displayValue = roundNumber(this.props.showBase ? this.variable.baseValue : this.variable.currentValue, this.variable.displayRound);
         let explanations = this.variable.explanations.map((explanation, i) => {
-            if (explanation.variable) {
+            if (explanation.variable && explanation.textPriority) {
+                return <span style={{textAlign: "right"}} key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.text)}<br /></span> 
+            } else if (explanation.variable) {
                 return <span style={{textAlign: "right"}} key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.type)} with <VariableComponent variable={explanation.variable}/><br /></span>
             } else if (explanation.text) {
                 return <span style={{textAlign: "right"}} key={i} >{titleCase(explanation.text)}<br /></span>
@@ -270,14 +260,14 @@ export class VariableComponent extends React.Component {
             return <HTMLTooltip title={explanations} style={{textAlign: "right"}}>
                 <span style={{"textAlign": "center", ...this.props.style}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
-                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}</span>
+                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}{extraChildren}</span>
                 </span>
                 </HTMLTooltip>
         } else {
             return <div>
                 <div style={{"textAlign": "right", ...this.props.style}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
-                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}</span>
+                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}{extraChildren}</span>
                 </div>
                 <div style={{"textAlign": "center", "fontWeight": "bold", ...this.props.style}}>
                     <span style={{}}>Explanation:</span> <br/>

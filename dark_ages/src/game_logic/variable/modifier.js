@@ -11,11 +11,16 @@ export const invLogit = 'invLogit'; // From https://stats.stackexchange.com/ques
 export const min = 'min';
 export const max = 'max';
 export const castInt = 'castInt';
+export const scaledAddition = 'scaledAddition';
+export const scaledMultiplication = 'scaledMultiplication';
+
 
 export const priority = {
     addition: 1,
+    scaledAddition: 1,
     subtraction: 2,
     multiplication: 3,
+    scaledMultiplication: 3,
     division: 4,
     exponentiation: 5
 };
@@ -32,14 +37,12 @@ export class AbstractModifier {
     subscribe(callback) {
         this.subscriptions.push(callback);
         return callback;
-        // console.log("subs to "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
     }
     callSubscribers(callback, depth) {
         this.subscriptions.forEach(subscription => subscription())
     }
     unsubscribe(callback) {
         this.subscriptions = this.subscriptions.filter(c => c !== callback);
-        // console.log("subs to "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
     }
     render () {
         return <div>
@@ -98,9 +101,31 @@ export class VariableModifier extends AbstractModifier {
         }
         if (this.type === invLogit) {
             this.invLogitSpeed = props.invLogitSpeed;
+            if (this.invLogitSpeed === undefined) {throw Error("need dinvLogitSpeed");}
+        }
+        if (this.type === scaledAddition || this.type === scaledMultiplication) {
+            this.scale = props.scale || 1;
+            this.bias = props.bias || 0;
+            this.exponent = props.exponent || 1;
         }
         this.resubscribeToVariable();
-    }   
+    }
+    scaleValue() {
+        let scaledValue = this.bias + this.scale*(this.variable.currentValue**this.exponent);
+        let scaleText = roundNumber(this.scale, this.variable.displayRound);
+        let biasText = '';
+        if (this.bias) {
+            biasText = `with bias ${this.bias}`;
+        }
+        let expText = '';
+        if (this.exp !== 1) {
+            expText = `with exp ${this.exponent}`;
+        }
+        if (isNaN(scaledValue)) {
+            throw Error("nan number");
+        }
+        return {value: scaledValue, text:`${scaleText}${biasText}${expText}`}
+    }
     modify(value) {
         if (this.keys && this.object) {
             this.resubscribeToVariable();
@@ -110,6 +135,15 @@ export class VariableModifier extends AbstractModifier {
             return {
                 result: value + this.variable.currentValue, 
                 text: `Added ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`, 
+                variable: this.variable
+            };
+        } else if (this.type === scaledAddition) {
+            const scaledValue = this.scaleValue();
+            const result = value + scaledValue.value;
+            return {
+                result: result, 
+                textPriority: true,
+                text: `Added ${ownerText}${this.variable.name} scaled by ${scaledValue.text} -> ${roundNumber(result, this.variable.displayRound + 1)}`, 
                 variable: this.variable
             };
         } else if (this.type === subtraction) {
@@ -124,7 +158,16 @@ export class VariableModifier extends AbstractModifier {
                 text: `Multiplied by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
                 variable: this.variable
             };
-        } else if (this.type === division) {
+        } else if (this.type === scaledMultiplication) {
+            const scaledValue = this.scaleValue();
+            const result = value*scaledValue.value;
+            return {
+                result: result, 
+                textPriority: true,
+                text: `Multiplied by ${ownerText}${this.variable.name} scaled by ${scaledValue.text} -> ${roundNumber(result, this.variable.displayRound + 1)}`, 
+                variable: this.variable
+            };
+        }  else if (this.type === division) {
             if (this.variable.currentValue === 0) {
                 throw Error("dividing by zero");
             }
@@ -142,7 +185,17 @@ export class VariableModifier extends AbstractModifier {
         } else if (this.type === invLogit) {
             // From https://stats.stackexchange.com/questions/214877/is-there-a-formula-for-an-s-shaped-curve-with-domain-and-range-0-1
             let r = -Math.log(2) / Math.log(this.variable.currentValue);
-            let sCurveResult = 1/(1+(value**r/(1-value**r))**(-this.invLogitSpeed));
+            let sCurveResult;
+            if (value <= 0) {
+                sCurveResult = 0;
+            } else if (value >= 1) {
+                sCurveResult = 1;
+            } else {
+                sCurveResult = 1/(1+(value**r/(1-value**r))**(-this.invLogitSpeed));
+            }
+            if (isNaN(sCurveResult)) {
+                throw Error("nan");
+            }
             return {
                 result: sCurveResult, 
                 text: `S curve with speed ${this.invLogitSpeed} and midpoint ${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)} -> ${roundNumber(sCurveResult, this.variable.displayRound)}`,
@@ -205,66 +258,3 @@ export class VariableModifier extends AbstractModifier {
     }
 }
 
-// Dont think the below serves any purpose - can just use the VariableComponent instead
-// export class VariableModifierComponent extends React.Component {
-//     constructor(props) {
-//         if (props.modifier === undefined) {
-//             throw Error('need a variable to show')
-//         }
-//         super(props);
-//         this.subscribed = false;
-//         this.ingestProps(props, false);
-//         if (this.modifier) {
-//             this.state = {currentValue: this.modifier.variable.currentValue};
-//         } else {
-//             this.state = {currentValue: 'nan'};
-//         }
-//         // console.log('new var created ' + this.variable.name + ' subbed: ' + this.variable.subscriptions);
-//     }
-//     ingestProps(props, forceSubscribe=false) {
-//         let wasSubscribed = this.subscribed;
-//         if (wasSubscribed) {
-//             this.modifier.unsubscribe(this.callback);
-//             this.subscribed = false
-//         }
-//         this.modifier = props.modifier;
-//         if (wasSubscribed || forceSubscribe) {
-//             this.trySubscribe();
-//         }
-//         // console.log('new props on var ' + this.variable.name);
-//     }
-//     componentDidUpdate(prevProps) {
-//         if (prevProps.modifier !== this.props.modifier) {
-//             if (!this.props.modifier) {
-//                 throw Error('no modifier');
-//             }
-//             this.ingestProps(this.props);
-//         }
-//     }
-//     componentDidMount() {
-//         this.trySubscribe();
-//     }
-//     componentWillUnmount() {
-//         if (this.subscribed) {
-//             this.modifier.unsubscribe(this.callback);
-//             this.subscribed = false            
-//         }
-//     }
-//     trySubscribe() {
-//         if (!this.subscribed) {
-//             let self = this;
-//             if (this.modifier) {
-//                 this.callback = this.modifier.subscribe(() => {
-//                     self.setState({currentValue:self.modifier.variable.currentValue})
-//                 }, 'display');
-//                 this.subscribed = true;
-//             }
-//         }
-//     }
-//     render () {
-//         return <VariableComponent variable={this.variable}/>
-//         // return <CustomTooltip title={''}>
-//         //     {this.props.showName ? <span>{this.variable.name}</span> : ''}{this.variable.currentValue} 
-//         // </CustomTooltip>
-//     }
-// }

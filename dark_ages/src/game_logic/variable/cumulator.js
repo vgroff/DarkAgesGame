@@ -1,4 +1,4 @@
-import {Variable, VariableComponent} from './variable.js'
+import {Variable, VariableComponent} from './variable.js';
 import { roundNumber } from '../utils';
 
 
@@ -14,7 +14,7 @@ export class Cumulator extends Variable {
         this.expectedChange = 0;
         this.valueAtTurnStart = 0;
         this.timer.subscribe(() => {
-            console.log("aggregated on timer");
+            // console.log("aggregated on timer");
             self.aggregate();
         });
         this.subscribe(() => {
@@ -43,18 +43,21 @@ export class CumulatorComponent extends VariableComponent {
     render () {
         let expectedChange = 0;
         if (this.variable) {
-            expectedChange = parseFloat(this.state.variable.expectedChange.toFixed(3));
+            expectedChange = parseFloat(this.variable.expectedChange.toFixed(3));
         }
-        return <span>
-            <VariableComponent showBase={true} variable={this.props.variable} {...this.props} children={[
-                <span key={1}>{this.props.showMax && this.props.variable.max ? `/${this.props.variable.max.currentValue}` : ''}</span>,
-                <span key={2}>{this.props.showChange ? (expectedChange > 0 ? `(+${expectedChange})`: `(${expectedChange})`) : ''}</span>
-            ]}/> 
-        </span>
+        return super.render([
+            <span key={1}>{this.props.showMax && this.props.variable.max ? `/${this.props.variable.max.currentValue}` : ''}</span>,
+            <span key={2}>{this.props.showChange ? (expectedChange > 0 ? `(+${expectedChange})`: `(${expectedChange})`) : ''}</span>
+        ]);
     }
 }
 
 CumulatorComponent.defaultProps = {
     showChange: true,
-    showMax: true
+    showMax: true,
+    // Variable props 
+    showName: true,
+    showOwner: true,
+    showBase: false,
+    expanded: false
 };

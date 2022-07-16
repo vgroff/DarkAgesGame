@@ -1,11 +1,11 @@
-import {VariableModifier, multiplication, subtraction, division, invLogit, min, Variable, castInt, addition, VariableComponent} from '../UIUtils.js';
+import {VariableModifier, multiplication, subtraction, division, scaledMultiplication, invLogit, min, Variable, castInt, addition, TrendingVariable, TrendingVariableComponent, VariableComponent} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
-import { exponentiation, max, priority, UnaryModifier } from '../variable/modifier.js';
+import { exponentiation, max, priority, scaledAddition, UnaryModifier } from '../variable/modifier.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
 import { getBasePopDemands, RationingComponent, applyRationingModifiers } from './rationing.js';
 
@@ -15,11 +15,11 @@ export class Settlement {
         this.name = props.name;
         this.tax = new Variable({owner: this, name:`tax`, startingValue: 1});
         this.gameClock = props.gameClock;
-        this.populationSizeDecline = new Variable({owner:this, name:"population decline", startingValue: 0.0001,
+        this.populationSizeDecline = new Variable({owner:this, name:"population decline", startingValue: 0.00005,
             displayRound: 5,
             modifiers: []
         });
-        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 1.00015,
+        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 0.00015,
             displayRound: 5,
             modifiers: []
         });
@@ -29,13 +29,16 @@ export class Settlement {
         this.populationSizeChange = new Variable({owner:this, name:"population rate of change", startingValue: 0,
             displayRound: 5,
             modifiers: [
+                new VariableModifier({startingValue: 1, type: addition}),
                 new VariableModifier({variable: this.populationSizeGrowth, type: addition}),
                 new VariableModifier({variable: this.populationSizeDecline, type: subtraction}),
                 new VariableModifier({variable: this.immigrationFactor, type: multiplication}) // Causes higher growth and higher decline intentionally - not sure if we want this?
             ]
         });
         this.populationSizeInternal = new Cumulator({owner: this, name:`population_size_internal`, startingValue: props.startingPopulation,
-            modifiers: [new VariableModifier({variable: this.populationSizeGrowth, type: multiplication})],
+            modifiers: [
+                new VariableModifier({variable: this.populationSizeChange, type: multiplication}),
+            ],
             timer: this.gameClock
         });
         this.populationSizeExternal = new Variable({owner:this, name:"population size", startingValue: 0,
@@ -89,7 +92,14 @@ export class Settlement {
         this.idealRations = [];
         let baseHappiness = 0.05; // Neutral happiness boost (could change with difficulty)
         this.happiness = new Variable({name: "happiness", startingValue: baseHappiness});
-        this.health = new Variable({name: "health", startingValue: 1});
+        this.health = new TrendingVariable({name: "health", timer: this.gameClock, startingValue: 1, trendingUpSpeed: 0.1, trendingDownSpeed: 0.35});
+        this.unhealth = new Variable({name: "unhealth", startingValue: 1, modifiers: [
+            new VariableModifier({variable: this.health, type: subtraction}),
+            new VariableModifier({startingValue: 1, type: min, customPriority: priority.exponentiation + 5}),
+        ]})
+        this.populationSizeGrowth.addModifier(new VariableModifier({variable: this.health, type: scaledMultiplication, priority: addition, bias: 1.0, scale: 0.1, exp:1.5}));
+        let maxPopSizeDecline = 0.1; // 10% populationd death is as bad as it gets
+        this.populationSizeDecline.addModifier(new VariableModifier({variable: this.unhealth, type: scaledAddition, priority: addition, bias: 0.0, scale: maxPopSizeDecline, exponent:3}));
         let zero = new Variable({name: "zero", startingValue: 0});
         for (const [key, demand] of Object.entries(basePopDemands)) {
             let desiredRationProp = new Variable({name: `${demand.resource.name} ration`, startingValue: 1, max: demand.idealAmount, min: zero});
@@ -180,7 +190,7 @@ export class SettlementComponent extends UIBase {
             <VariableComponent showOwner={false} variable={this.settlement.jobsAvailable.variable} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.unemployed} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.happiness} /><br />
-            <VariableComponent showOwner={false} variable={this.settlement.health} /><br />
+            <TrendingVariableComponent showOwner={false} variable={this.settlement.health} /><br />
         </Grid>
         <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", padding:"5px", textAlign:"center", alignItems: "center", justifyContent: "center"}}>
             <h4>Buildings</h4>
