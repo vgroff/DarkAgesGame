@@ -7,6 +7,7 @@ export const addition = 'addition';
 export const subtraction = 'subtraction';
 export const division = 'division';
 export const exponentiation = 'exponentiation';
+export const invLogit = 'invLogit'; // From https://stats.stackexchange.com/questions/214877/is-there-a-formula-for-an-s-shaped-curve-with-domain-and-range-0-1
 export const min = 'min';
 export const max = 'max';
 export const castInt = 'castInt';
@@ -95,6 +96,9 @@ export class VariableModifier extends AbstractModifier {
         if (this.name === 'unnamed modifier') {
             this.name = `${this.variable.name} based modifier`
         }
+        if (this.type === invLogit) {
+            this.invLogitSpeed = props.invLogitSpeed;
+        }
         this.resubscribeToVariable();
     }   
     modify(value) {
@@ -135,7 +139,15 @@ export class VariableModifier extends AbstractModifier {
                 text: `To the power of ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
                 variable: this.variable
             }; 
-        }  else if (this.type === max) {
+        } else if (this.type === invLogit) {
+            // From https://stats.stackexchange.com/questions/214877/is-there-a-formula-for-an-s-shaped-curve-with-domain-and-range-0-1
+            let r = -Math.log(2) / Math.log(this.variable.currentValue);
+            let sCurveResult = 1/(1+(value**r/(1-value**r))**(-this.invLogitSpeed));
+            return {
+                result: sCurveResult, 
+                text: `S curve with speed ${this.invLogitSpeed} and midpoint ${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)} -> ${roundNumber(sCurveResult, this.variable.displayRound)}`,
+            }; 
+        }    else if (this.type === max) {
             return {
                 result: Math.max(value, this.variable.currentValue), 
                 text: `Maxed with ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,

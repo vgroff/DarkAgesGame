@@ -28,10 +28,11 @@ class Game {
 
 export default Game;
 
-// - Add building upkeep - going to need that trending cumulator variable
+// Stuff for now:
 // - Build a basic demand system for the population + a rationing system
 //     - For health effects, introduce an inverse logit modifier y=1/(1+(x^0.9/(1-x^0.9))^-2), y=.5 at x0 set r=-log(2)/log(x0)
 //          - Do they need to be variables? Seems overkill but I guess not a real issue
+//     - Hook up health to population growth/death
 //     - Health needs to be a trending variable
 //     - Some resources aren't cumulative (e.g. construction time/hygiene) might actually be easier to keep construciton time cumulative
 //     - Coal demand will need to depend on season (notes in rationing)
@@ -41,12 +42,13 @@ export default Game;
 // - Build housing?
 // - Amount of input resources should also depend on productivity (if it doesnt already?)
 
+
+// Stuff for later builds:
+// - Add building upkeep - going to need that trending cumulator variable
+
+//  Stuff for way later builds:
 // - Now build a demand system:
 //   - 2 classes: artisans and labourers. Both have the same demand system, but they get different wages
 //   - Demand is broken up by priority - simply a resource, an amount and a happiness achieved
 //   - always fulfill the best price-value ratio for a given priority
-// - variables
-//   - Making a trending variable - gonna be very similar to cumulator
-//   - Need some more specific aggregators - use ListAggregator to make Sum, Mean etc...
-//   - Don't show it in the tooltip when adding 0 or multiplying by 1 -> i.e. give an empty explain
 // - Aggregator has to constantly re-subscribe - not obvious that there's a better way to do this, besides writing cusotm List/Objects with subscribe methods

@@ -3,13 +3,13 @@ import { AbstractModifier } from './modifier';
 import { roundNumber, HTMLTooltip, titleCase } from '../utils';
 import {Logger} from '../logger'
 
+const unnamedVariableName = 'unnamed variable';
 
 export class Variable {
     constructor(props) {
         // console.log('new var created ' + this.name);
-        const unnamed = 'unnamed variable'
-        this.name = props.name || unnamed;
-        if (this.name === unnamed) {
+        this.name = props.name || unnamedVariableName;
+        if (this.name === unnamedVariableName) {
             console.log('Unnamed variable;')
         }
         this.owner = props.owner || '';
@@ -78,6 +78,11 @@ export class Variable {
         }
         if (recalculate) {
             this.recalculate();
+        }
+    }
+    addModifiers(modifiers) {
+        for (const modifier of modifiers) {
+            this.addModifier(modifier)
         }
     }
     addModifier(modifier) {
@@ -245,8 +250,8 @@ export class VariableComponent extends React.Component {
         }
     }
     render () {
-        let ownerText = (this.variable.owner && this.props.showOwner) ? `${this.variable.owner.name}'s ` : '';
-        let nameText = this.props.showName ? <span>{this.props.showOwner && this.variable.owner ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
+        let ownerText = (this.variable.owner && this.props.showOwner && this.variable.owner.name !== unnamedVariableName) ? `${this.variable.owner.name}'s ` : '';
+        let nameText = (this.props.showName && this.variable.name !== unnamedVariableName) ? <span>{ownerText ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
         let displayValue = roundNumber(this.props.showBase ? this.variable.baseValue : this.variable.currentValue, this.variable.displayRound);
         let explanations = this.variable.explanations.map((explanation, i) => {
             if (explanation.variable) {

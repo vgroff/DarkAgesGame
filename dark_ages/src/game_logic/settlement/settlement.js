@@ -1,13 +1,13 @@
-import {VariableModifier, multiplication, subtraction, division, Variable, castInt, addition, VariableComponent} from '../UIUtils.js';
+import {VariableModifier, multiplication, subtraction, division, invLogit, min, Variable, castInt, addition, VariableComponent} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
-import { exponentiation, UnaryModifier } from '../variable/modifier.js';
+import { exponentiation, max, priority, UnaryModifier } from '../variable/modifier.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
-import { getBasePopDemands, RationingComponent } from './rationing.js';
+import { getBasePopDemands, RationingComponent, applyRationingModifiers } from './rationing.js';
 
 
 export class Settlement {
@@ -87,7 +87,7 @@ export class Settlement {
         this.rationsDemanded = [];
         this.rationsAchieved = [];
         this.idealRations = [];
-        let baseHappiness = 0.1; // Neutral happiness boost (could change with difficulty)
+        let baseHappiness = 0.05; // Neutral happiness boost (could change with difficulty)
         this.happiness = new Variable({name: "happiness", startingValue: baseHappiness});
         this.health = new Variable({name: "health", startingValue: 1});
         let zero = new Variable({name: "zero", startingValue: 0});
@@ -108,63 +108,16 @@ export class Settlement {
             this.rationsAchieved.push(rationAchieved);
             this.rationsDemanded.push(desiredRationProp);
             this.idealRations.push(demand.idealAmount);
-            if (demand.additiveHappiness) {
-                let happinessAdditiveModifier = new Variable({ name: `Happiness from ${demand.resource.name}`, startingValue: 0, modifiers: [
-                    new VariableModifier({ type: addition,
-                        variable: new Variable({name: "Exponentiated demand prop", startingValue: 0, modifiers: [
-                            new VariableModifier({variable: rationAchieved, type:addition}),
-                            new VariableModifier({variable: demand.idealAmount, type:division}),
-                            new VariableModifier({variable: demand.additiveHappiness.exponent, type:exponentiation})
-                        ]})
-                    }),
-                    new VariableModifier({name: "Coefficient", type: multiplication, variable: demand.additiveHappiness.coefficient}),
-                ]});
-                this.happiness.addModifier(new VariableModifier({variable:happinessAdditiveModifier, type:addition}));
-            }
-            if (demand.multiplicativeHappiness) {
-                let expCoeff = 1 - demand.multiplicativeHappiness.offset;
-                let happinessMultiplicativeModifier = new Variable({ name: `Happiness from ${demand.resource.name}`, startingValue: 0, modifiers: [
-                    new VariableModifier({type: addition, variable: new Variable({name: `Happiness mult offset ${demand.resource.name}`,startingValue: demand.multiplicativeHappiness.offset})}),
-                    new VariableModifier({ type: addition,
-                        variable: new Variable({name: "Exponentiated demand prop", startingValue: 0, modifiers: [
-                            new VariableModifier({variable: rationAchieved, type:addition}),
-                            new VariableModifier({variable: demand.idealAmount, type:division}),
-                            new VariableModifier({variable: demand.multiplicativeHappiness.exponent, type:exponentiation}),
-                            new VariableModifier({variable: new Variable({name: "normalising for offset", startingValue: expCoeff}), type:multiplication, customPriority:99})
-                        ]})
-                    })
-                ]})
-                this.happiness.addModifier(new VariableModifier({variable:happinessMultiplicativeModifier, type:multiplication}));
-            }
-            if (demand.additiveHealth) {
-                let healthAdditiveModifier = new Variable({ name: `Health from ${demand.resource.name}`, startingValue: 0, modifiers: [
-                    new VariableModifier({ type: addition,
-                        variable: new Variable({name: "Health demand prop", startingValue: 0, modifiers: [
-                            new VariableModifier({variable: rationAchieved, type:addition}),
-                            new VariableModifier({variable: demand.idealAmount, type:division}),
-                            new VariableModifier({variable: demand.additiveHealth.exponent, type:exponentiation})
-                        ]})
-                    }),
-                    new VariableModifier({name: "Coefficient", type: multiplication, variable: demand.additiveHealth.coefficient}),
-                ]});
-                this.health.addModifier(new VariableModifier({variable:healthAdditiveModifier, type:addition}));
-            }
-            if (demand.multiplicativeHealth) {
-                let expCoeff = 1 - demand.multiplicativeHealth.offset;
-                let healthMultiplicativeModifier = new Variable({ name: `Health from ${demand.resource.name}`, startingValue: 0, modifiers: [
-                    new VariableModifier({type: addition, variable: new Variable({name: `Health mult offset ${demand.resource.name}`,startingValue: demand.multiplicativeHealth.offset})}),
-                    new VariableModifier({ type: addition,
-                        variable: new Variable({name: "Exponentiated demand prop", startingValue: 0, modifiers: [
-                            new VariableModifier({variable: rationAchieved, type:addition}),
-                            new VariableModifier({variable: demand.idealAmount, type:division}),
-                            new VariableModifier({variable: demand.multiplicativeHealth.exponent, type:exponentiation}),
-                            new VariableModifier({variable: new Variable({name: "normalising for offset", startingValue: expCoeff}), type:multiplication, customPriority:99})
-                        ]})
-                    })
-                ]})
-                this.health.addModifier(new VariableModifier({variable:healthMultiplicativeModifier, type:multiplication}));
-            }
+            applyRationingModifiers(rationAchieved, demand, this.health, this.happiness);
         }
+        this.happiness.addModifier(new VariableModifier({type: multiplication, variable: new Variable({name: "Penalty from health", startingValue: 0,
+            modifiers: [
+                new VariableModifier({startingValue: 0.1, type: addition}), // offset
+                new VariableModifier({variable: this.health, type: addition}),
+                new VariableModifier({startingValue: 1, type: min, customPriority: priority.addition+1}),
+                new VariableModifier({startingValue: 0.45, type: invLogit, invLogitSpeed: 2.5, customPriority: priority.addition+2})
+            ]
+        })}));
         this.populateBuildings(this.resourceBuildings);
     }
     addBuilding(building) {
