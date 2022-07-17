@@ -28,7 +28,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
         },
         coal: {
             resource: Resources.coal,
-            idealAmount: new Variable({name: "Ideal Coal", startingValue: 1}), // This should change with weather
+            idealAmount: new Variable({name: "Ideal Coal", startingValue: 1.0}), // This should change with weather
             additiveHappiness: {
                 coefficient: new Variable({name: "Additive Coal Happiness Coeff", startingValue: 0.25}),
                 exponent: new Variable({name: "Additive Coal Happiness Exp", startingValue: 1.25})

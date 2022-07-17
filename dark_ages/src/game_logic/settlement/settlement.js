@@ -118,9 +118,10 @@ export class Settlement {
             new VariableModifier({type: invLogit, customPriority: priority.exponentiation + 1, invLogitSpeed: 4, bias: 1 - maxHappinessProductivityPenalty, scale: maxHappinessProductivityPenalty, startingValue: 0.15})
         ]}))
         for (const [key, demand] of Object.entries(basePopDemands)) {
-            let desiredRationProp = new Variable({name: `${demand.resource.name} ration`, startingValue: 1, max: demand.idealAmount, min: zero});
+            let desiredRationProp = new Variable({name: `${demand.resource.name} ration (% of ideal)`, startingValue: 1, max: one, min: zero});
             let desiredRation = new Variable({name: `${demand.resource.name} ration`, startingValue: 0, min: zero, modifiers: [
                     new VariableModifier({variable: desiredRationProp, type: addition}),
+                    new VariableModifier({variable: demand.idealAmount, type: multiplication}),
                     new VariableModifier({variable: this.populationSizeExternal, type: multiplication})
                 ]
             });
@@ -129,6 +130,7 @@ export class Settlement {
             let actualRationProp = resourceStorage.addDemand(`${demand.resource.name} ration`, desiredRation, proportion, 2); // 1 because citizens go before businesses
             let rationAchieved = new Variable({name: `Actual ${demand.resource.name} ration`, startingValue: 0, modifiers: [
                 new VariableModifier({variable:desiredRationProp, type: addition}),
+                new VariableModifier({variable: demand.idealAmount, type: multiplication}),
                 new VariableModifier({variable:actualRationProp, type: multiplication})
             ]})
             this.rationsAchieved.push(rationAchieved);
