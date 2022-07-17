@@ -30,12 +30,6 @@ export default Game;
 
 // Stuff for now:
 // - Build a basic demand system for the population + a rationing system
-//     - add a inv logit addition/multiplication like scaledAddition/multiplication? or maybe just allow passing in regular numbers to logit
-//     - Hook up health to population growth/death - check this is working properly!
-//     - Hook up health to happiness
-//     - Hook up health and happiness to productivity (not too aggressively - use S curves?) 
-//         - something like y=(1/(1+(x^0.5/(1-x^0.5))^-5))^0.5 (note has post-exponent) with a bias?
-//     - Happiness should also trend, but faster
 //     - Some resources aren't cumulative (e.g. construction time/hygiene) might actually be easier to keep construciton time cumulative
 //     - Coal demand will need to depend on season (notes in rationing) - make the ideal demand change is the nicest way of doing this
 //          - Makes more sense for rations to be set as a proportion of ideal demand - change the ration behaviour to do this
@@ -43,14 +37,18 @@ export default Game;
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - Deal with people born/dying from jobs - remove someone at random/add someone at random - do it with probabilities
 // - Build housing?
-// - Amount of input resources should also depend on productivity (if it doesnt already?)
-// - Introduce research
+// - Research system
 // - Could have conditional variables -> they take either a single true/false variable or two variables to compare and then return different results depending on the outcome
-
 
 // Stuff for later builds:
 // - Add building upkeep
 // - Add food decay
+
+// AI reinforcement learning:
+// - job setting: iterate through buildings, one NN each, inputs are: demand, stockpile, productivity, unemployed, happiness, health, behaviour/strategy inputs. output is % of unemployed to set to job
+// - ration setting: iterate through rations, one NN each, inputs are happiness, health, demand. output is ration %
+//    - this one could be trained by running many "simulations" where it has to optimally distributed resources given supply+production
+// - building/upgrading: have a nn who's job it is to decide what to build/upgrade (if anything) and to pass that onto job setting NN?
 
 //  Stuff for way later builds:
 // - Now build a demand system:
@@ -58,3 +56,4 @@ export default Game;
 //   - Demand is broken up by priority - simply a resource, an amount and a happiness achieved
 //   - always fulfill the best price-value ratio for a given priority
 // - Aggregator has to constantly re-subscribe - not obvious that there's a better way to do this, besides writing cusotm List/Objects with subscribe methods
+

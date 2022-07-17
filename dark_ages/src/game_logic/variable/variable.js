@@ -157,13 +157,15 @@ export class Variable {
         }
         if (this.max && value > this.max.currentValue) {
             value = this.max.currentValue;
+            explanations.push({text: `max value is ${this.max.currentValue}`})
         } else if (this.min && value < this.min.currentValue) {
             value = this.min.currentValue;
+            explanations.push({text: `min value is ${this.min.currentValue}`})
         }
         if (this.currentValue !== value) {
             this.currentValue = value;
             this.explanations = explanations;
-            if (this.currentDepth < 5 && !quietly) {
+            if (this.currentDepth < 3 && !quietly) {
                 this.callSubscribers(this.currentDepth);
             }
             if (isNaN(this.currentValue)) {

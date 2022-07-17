@@ -28,7 +28,7 @@ export class TrendingVariable extends Variable {
     }
     trend() {
         this.currentlyTrendingTo = this.currentValue;
-        if (this.trendingValueAtTurnStart === undefined || this.timerStartVal === undefined || this.timer.currentValue === this.timerStartVal) {
+        if (this.trendingValueAtTurnStart === undefined || this.timerStartVal === undefined) {// || this.timer.currentValue === this.timerStartVal) {
             this.trendingValueAtTurnStart = this.currentlyTrendingTo; // Reset trending as many times as needed on the first turn its created
         }
         let speed;
@@ -40,7 +40,7 @@ export class TrendingVariable extends Variable {
             speed = 1;
         }
         this.currentValue = speed*this.currentlyTrendingTo + (1 - speed)*this.trendingValueAtTurnStart;
-        let textExpl = `Trending at speed:${speed} from ${roundNumber(this.trendingValueAtTurnStart, this.displayRound)} to ${roundNumber(this.currentValue, this.displayRound)}`;
+        let textExpl = `Trending at speed:${speed} from ${roundNumber(this.trendingValueAtTurnStart, this.displayRound)} to ${roundNumber(this.currentValue, this.displayRound)} towards ${this.currentlyTrendingTo}`;
         if (this.explanations[this.explanations.length - 1].text !== textExpl) {
             this.explanations.push({"text": textExpl});
         }
@@ -51,7 +51,12 @@ export class TrendingVariable extends Variable {
     }
     storeCurrentValue() {
         this.trendingValueAtTurnStart = this.currentValue;
-        this.trend();
+        this.recalculate();
+    }
+    forceResetTrend() {
+        super.recalculate(true);
+        this.trendingValueAtTurnStart = this.currentValue;
+        this.recalculate();       
     }
 }
 
@@ -67,7 +72,7 @@ export class TrendingVariableComponent extends VariableComponent {
         }
         return super.render([
             <span key={1}>{this.props.showMax && this.props.variable.max ? `/${this.props.variable.max.currentValue}` : ''}</span>,
-            <span key={2}>{this.props.showTrending ? `(${trendingValue})` : ''}</span>,
+            <span key={2}>{this.props.showTrending ? ` (${trendingValue})` : ''}</span>,
         ]);
     }
 }

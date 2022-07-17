@@ -109,7 +109,7 @@ export class VariableModifier extends AbstractModifier {
             this.invLogitSpeed = props.invLogitSpeed;
             if (this.invLogitSpeed === undefined) {throw Error("need dinvLogitSpeed");}
         }
-        if (this.type === scaledAddition || this.type === scaledMultiplication) {
+        if (this.type === invLogit || this.type === scaledAddition || this.type === scaledMultiplication) {
             this.scale = props.scale || 1;
             this.bias = props.bias || 0;
             this.offset = props.offset || null;
@@ -117,10 +117,9 @@ export class VariableModifier extends AbstractModifier {
         }
         this.resubscribeToVariable();
     }
-    scaleValue() {
+    scaleValue(x) {
         let scaledValue;
-        let x = this.variable.currentValue;
-        if (this.offset && this.variable.currentValue < this.offset) { // Offset only works in one direction but could work in either with an extra parameter
+        if (this.offset && this.variable.currentValue < this.offset) { 
             x = this.offset;
         }
         if (this.offset) {
@@ -128,14 +127,17 @@ export class VariableModifier extends AbstractModifier {
         }
         scaledValue = this.bias + this.scale*(x)**this.exponent;
 
-        let scaleText = roundNumber(this.scale, this.variable.displayRound);
+        let scaleText = '';
+        if (this.scale !== 1) {
+            scaleText = ` with scale ${roundNumber(this.scale, this.variable.displayRound)}`;
+        }
         let biasText = '';
         if (this.bias) {
-            biasText = `with bias ${this.bias}`;
+            biasText = ` with bias ${roundNumber(this.bias, this.variable.displayRound)}`;
         }
         let expText = '';
         if (this.exp !== 1) {
-            expText = `with exp ${this.exponent}`;
+            expText = ` with exp ${roundNumber(this.exponent, this.variable.displayRound)}`;
         }
         if (isNaN(scaledValue)) {
             throw Error("nan number");
@@ -154,7 +156,7 @@ export class VariableModifier extends AbstractModifier {
                 variable: this.variable
             };
         } else if (this.type === scaledAddition) {
-            const scaledValue = this.scaleValue();
+            const scaledValue = this.scaleValue(this.variable.currentValue);
             const result = value + scaledValue.value;
             return {
                 result: result, 
@@ -175,7 +177,7 @@ export class VariableModifier extends AbstractModifier {
                 variable: this.variable
             };
         } else if (this.type === scaledMultiplication) {
-            const scaledValue = this.scaleValue();
+            const scaledValue = this.scaleValue(this.variable.currentValue);
             const result = value*scaledValue.value;
             return {
                 result: result, 
@@ -209,12 +211,13 @@ export class VariableModifier extends AbstractModifier {
             } else {
                 sCurveResult = 1/(1+(value**r/(1-value**r))**(-this.invLogitSpeed));
             }
-            if (isNaN(sCurveResult)) {
+            sCurveResult = this.scaleValue(sCurveResult);
+            if (isNaN(sCurveResult.value)) {
                 throw Error("nan");
             }
             return {
-                result: sCurveResult, 
-                text: `S curve with speed ${this.invLogitSpeed} and midpoint ${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)} -> ${roundNumber(sCurveResult, this.variable.displayRound)}`,
+                result: sCurveResult.value, 
+                text: `S curve with speed ${this.invLogitSpeed} and midpoint ${this.variable.name} and ${sCurveResult.text}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)} -> ${roundNumber(sCurveResult.value, this.variable.displayRound)}`,
             }; 
         }    else if (this.type === max) {
             return {
