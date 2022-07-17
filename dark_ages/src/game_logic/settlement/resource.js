@@ -1,4 +1,4 @@
-import {VariableModifier, Variable, Cumulator, subtraction, addition, CumulatorComponent, multiplication } from '../UIUtils.js';
+import {VariableModifier, Variable, VariableComponent, Cumulator, subtraction, addition, CumulatorComponent, multiplication } from '../UIUtils.js';
 import { titleCase, CustomTooltip } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
@@ -16,6 +16,7 @@ export class Resource {
 export class ResourceStorage {
     constructor(props) {
         this.resource = props.resource;
+        this.cumulates = props.cumulates  ? props.cumulates !== undefined : true;
         this.size = props.size;
         if (!(this.size instanceof Variable)) {
             throw Error("need storage size");
@@ -30,8 +31,14 @@ export class ResourceStorage {
         this.supply = new VariableModifier({name: `${this.resource.name} daily production`, startingValue:0, type:addition, modifiers:[]});
         this.demand = new VariableModifier({name: `${this.resource.name} daily demand`, startingValue:0,  type:subtraction, modifiers:[]});
         this.change = new Variable({name: "prospective change", startingValue:0,  type:subtraction, modifiers:[this.supply, this.demand]})
-        this.amount = new Cumulator({name: `${this.resource.name} amount`, startingValue: props.startingAmount || 0, 
-            min: zero, max: this.totalStorage, timer:props.gameClock, modifiers: [this.supply, this.demand]});
+        let amountProps = {name: `${this.resource.name} amount`, startingValue: props.startingAmount || 0, 
+        min: zero, max: props.storageMultiplier ? this.totalStorage : undefined, timer:props.gameClock, modifiers: [this.supply, this.demand]};
+        if (this.resource.storageMultiplier) {
+            this.amount = new Cumulator(amountProps);
+        } else {
+            amountProps.name = `Excess ${this.resource.name}`
+            this.amount = new Variable(amountProps);
+        }
         this.amountAtTurnStart = this.amount.baseValue;
         props.gameClock.subscribe(() => {
             if (this.amountAtTurnStart !== this.amount.currentValue) {
@@ -107,16 +114,24 @@ export class ResourceStorageComponent extends UIBase {
         this.addVariables([this.resourceStorage.amount]);
     }
     childRender() {
-        return <span style={{alignItems: "center", justifyContent: "center"}}>
-            <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>{titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
-            <CumulatorComponent variable={this.resourceStorage.amount} showName={false}/><br />
-        </span>
+        if (this.resourceStorage.totalStorage.currentValue > 0) {
+            return <span style={{alignItems: "center", justifyContent: "center"}}>
+                <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>{titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
+                <CumulatorComponent variable={this.resourceStorage.amount} showName={false}/><br />
+            </span>
+        } else {
+            return <span style={{alignItems: "center", justifyContent: "center"}}>
+                <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>Excess {titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
+                <VariableComponent variable={this.resourceStorage.amount} showName={false}/><br />
+            </span>
+        }
     }
 }
 
 export const Resources = {
-    food: new Resource({name: "food", storageMultiplier: 450, productionRatio: 1.05, description: "keeps your villagers alive"}),
+    food: new Resource({name: "food", storageMultiplier: 450, productionRatio: 1.0, description: "keeps your villagers alive"}),
     coal: new Resource({name: "coal", storageMultiplier: 200, productionRatio: 3.0, description: "for smithing and keeping warm"}),
+    housing: new Resource({name: "housing", storageMultiplier: null, productionRatio: 1.0, description: "for living in"}),
     beer: new Resource({name: "beer", storageMultiplier: 450, productionRatio: 3.0, description: "helps keep your villagers happy"}),
     medicinalHerbs: new Resource({name: "medicinal herbs", storageMultiplier: 200, productionRatio: 12.0, description: "helps keep your villagers healthy"}),
     wood: new Resource({name: "wood", storageMultiplier: 200, productionRatio: 1.5, description: "for building, upkeep and fuel"}),

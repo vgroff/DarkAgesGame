@@ -40,7 +40,7 @@ export class TrendingVariable extends Variable {
             speed = 1;
         }
         this.currentValue = speed*this.currentlyTrendingTo + (1 - speed)*this.trendingValueAtTurnStart;
-        let textExpl = `Trending at speed:${speed} from ${roundNumber(this.trendingValueAtTurnStart, this.displayRound)} to ${roundNumber(this.currentValue, this.displayRound)} towards ${this.currentlyTrendingTo}`;
+        let textExpl = `Trending at speed:${speed} from ${roundNumber(this.trendingValueAtTurnStart, this.displayRound)} to ${roundNumber(this.currentValue, this.displayRound)} towards ${roundNumber(this.currentlyTrendingTo, this.displayRound)}`;
         if (this.explanations[this.explanations.length - 1].text !== textExpl) {
             this.explanations.push({"text": textExpl});
         }

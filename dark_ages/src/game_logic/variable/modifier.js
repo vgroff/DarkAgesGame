@@ -61,7 +61,7 @@ export class UnaryModifier extends AbstractModifier {
     constructor(props) {
         super(props);
         this.customPriority = props.customPriority;
-        if (!props.priority) {
+        if (!props.customPriority) {
             throw Error("need priority");
         }
     }
@@ -245,6 +245,7 @@ export class VariableModifier extends AbstractModifier {
         }
     }
     resubscribeToVariable() {
+        let currentValue = this.variable.currentValue;
         if (this.keys && this.object) {
             let variable = this.getVariable();
             if (this.variable === variable) {
@@ -259,7 +260,9 @@ export class VariableModifier extends AbstractModifier {
         this.variableSubscription = this.variable.subscribe((depth) => {
             self.callSubscribers(depth);
         }, 'modifier value ' + this.name);
-        self.callSubscribers(0); // new variable -> call subs again
+        if (this.variable.currentValue !== currentValue) {
+            self.callSubscribers(0); // new variable -> call subs again
+        }
     }
     getVariable() {
         let variable = this.object;

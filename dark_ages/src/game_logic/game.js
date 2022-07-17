@@ -29,14 +29,14 @@ class Game {
 export default Game;
 
 // Stuff for now:
+// - Currently part the way through simulating homelessness
+// - Deal with people born/dying from jobs - add to last Job or remove/add at random if can't - do it with probabilities
+// - Colour trending variables green/red
 // - Build a basic demand system for the population + a rationing system
 //     - Some resources aren't cumulative (e.g. construction time/hygiene) might actually be easier to keep construciton time cumulative
 //     - Coal demand will need to depend on season (notes in rationing) - make the ideal demand change is the nicest way of doing this
-//          - Makes more sense for rations to be set as a proportion of ideal demand - change the ration behaviour to do this
 // - Hook up the "upgrade" button - add a construction building/resource?
 // - Add a history to variables - short term, long term and super long term. Plot them?
-// - Deal with people born/dying from jobs - remove someone at random/add someone at random - do it with probabilities
-// - Build housing?
 // - Research system
 // - Could have conditional variables -> they take either a single true/false variable or two variables to compare and then return different results depending on the outcome
 

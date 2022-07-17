@@ -165,7 +165,7 @@ export class Variable {
         if (this.currentValue !== value) {
             this.currentValue = value;
             this.explanations = explanations;
-            if (this.currentDepth < 3 && !quietly) {
+            if (this.currentDepth < 2 && !quietly) {
                 this.callSubscribers(this.currentDepth);
             }
             if (isNaN(this.currentValue)) {

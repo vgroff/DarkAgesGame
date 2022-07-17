@@ -26,6 +26,15 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
                 speed: 3
             },           
         },
+        housing: {
+            resource: Resources.housing,
+            alwaysFullRations: true,
+            idealAmount: new Variable({name: "Ideal Housing", startingValue: 1.0}), 
+            multiplicativeHealth: {
+                offset: 0.2,
+                exponent: new Variable({name: "Effect of homelessness", startingValue: 1.5})
+            },
+        },
         coal: {
             resource: Resources.coal,
             idealAmount: new Variable({name: "Ideal Coal", startingValue: 1.0}), // This should change with weather

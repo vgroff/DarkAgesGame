@@ -32,7 +32,7 @@ export class ResourceBuilding extends Building {
         this.productivity = new Variable({owner: this, name:"productivity", startingValue: props.startingProductivity || 1, modifiers:this.productivityModifiers});
         this.startingJobs = props.startingJobs || 0;
         this.sizeJobsMultiplier = props.sizeJobsMultiplier;
-        if (!this.sizeJobsMultiplier) {
+        if (this.sizeJobsMultiplier === undefined) {
             throw Error('Need a sizeJobsMultiplier');
         };    
         this.totalJobsModifiers = [
@@ -59,6 +59,12 @@ export class ResourceBuilding extends Building {
                 new VariableModifier({variable: this.productivity, type:multiplication})
             ]})
         ];
+        if (props.passiveProductionPerSize) {
+            this.passiveProduction = new Variable({name:"passive production", startingValue:props.passiveProductionPerSize, modifiers: [
+                new VariableModifier({variable: this.size, type:multiplication}),
+            ]})
+            this.productionModifiers.push(new VariableModifier({type: addition, variable: this.passiveProduction}));
+        }
         this.theoreticalProduction = new Variable({owner: this, name:"theoretical total production",
             modifiers: this.productionModifiers
         });
@@ -159,7 +165,7 @@ export class ResourceBuildingComponent extends UIBase {
         return <Grid container spacing={0.5} style={{border:"2px solid #2196f3", borderRadius:"7px", alignItems: "center", justifyContent: "center"}} >
         <Grid item xs={9}>
             <CustomTooltip items={this.toolTipVars.concat(extraVars)} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                <span style={extraStyle} onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.name)} {this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span>
+                <span style={extraStyle} onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.name)} {this.building.sizeJobsMultiplier ? <span>{this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span> : ''} </span>
             </CustomTooltip>
         </Grid>
         <Grid item xs={3} style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
@@ -194,7 +200,18 @@ export class HuntingCabin extends ResourceBuilding {
         super({name: "hunter's cabin", 
             outputResource: Resources.food, 
             sizeJobsMultiplier: 3,
-            startingProductivity: 1.65,
+            startingProductivity: 1.45,
+            ...props
+        })
+    }
+}
+
+export class Housing extends ResourceBuilding {
+    constructor(props) {
+        super({name: "housing", 
+            outputResource: Resources.housing, 
+            sizeJobsMultiplier: 0,
+            passiveProductionPerSize: 10,
             ...props
         })
     }

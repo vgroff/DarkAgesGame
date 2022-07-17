@@ -2,7 +2,7 @@ import {VariableModifier, multiplication, subtraction, division, greaterThan, le
 import Grid from  '@mui/material/Grid';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary} from './building.js'
+import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
 import { exponentiation, max, priority, scaledAddition, UnaryModifier } from '../variable/modifier.js';
@@ -19,7 +19,7 @@ export class Settlement {
             displayRound: 5,
             modifiers: []
         });
-        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 0.00015,
+        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 0.0001,
             displayRound: 5,
             modifiers: []
         });
@@ -44,7 +44,7 @@ export class Settlement {
         this.populationSizeExternal = new Variable({owner:this, name:"population size", startingValue: 0,
             modifiers: [
                 new VariableModifier({variable: this.populationSizeInternal, type:addition}),
-                new UnaryModifier({type: castInt, priority: 10})
+                new UnaryModifier({type: castInt, customPriority: 10})
             ]
         }); 
         this.storageSize = new Variable({owner: this, name:`storage size`, startingValue: 1});
@@ -56,6 +56,7 @@ export class Settlement {
         this.generalProductivityModifier = new VariableModifier({variable: this.generalProductivity, type: multiplication});
         this.jobsTaken = new Variable({owner: this, name:`jobs taken`, startingValue: 0, modifiers: []});
         this.addBuilding(new Farm({startingSize: 4, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Housing({startingSize: 4, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new HuntingCabin({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new CharcoalKiln({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new LumberjacksHut({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
@@ -133,9 +134,29 @@ export class Settlement {
                 new VariableModifier({variable: demand.idealAmount, type: multiplication}),
                 new VariableModifier({variable:actualRationProp, type: multiplication})
             ]})
-            this.rationsAchieved.push(rationAchieved);
-            this.rationsDemanded.push(desiredRationProp);
-            this.idealRations.push(demand.idealAmount);
+            if (demand.resource === Resources.housing) {
+                this.totalHousedInternal = new Variable({name: "Total housed", modifiers: [
+                    new VariableModifier({type: multiplication, variable: actualRationProp}),
+                    new VariableModifier({type: multiplication, variable: this.populationSizeInternal}),
+                ]});
+                this.homelessInternal = new Variable({name: "Homeless", min: zero, modifiers: [
+                    new VariableModifier({type: addition, variable: this.populationSizeInternal}),
+                    new VariableModifier({type: subtraction, variable: this.totalHoused}),
+                ]});
+                this.homelessnessInternal = new Variable({name: "Homeless", min: zero, modifiers: [
+                    new VariableModifier({type: addition, variable: this.homelessInternal}),
+                    new VariableModifier({type: division, variable: this.populationSizeInternal}),
+                ]});
+                this.homeless = new Variable({name: "Homeless", min: zero, modifiers: [
+                    new VariableModifier({type: addition, variable: this.homelessInternal}),
+                    new UnaryModifier({type: castInt, customPriority: priority.exponentiation + 1})
+                ]});
+            }
+            if (!demand.alwaysFullRations) {
+                this.rationsAchieved.push(rationAchieved);
+                this.rationsDemanded.push(desiredRationProp);
+                this.idealRations.push(demand.idealAmount);
+            }
             applyRationingModifiers(rationAchieved, demand, this.health, this.happiness);
         }
         this.happiness.addModifier(new VariableModifier({type: multiplication, variable: new Variable({name: "Penalty from health", startingValue: 0,
