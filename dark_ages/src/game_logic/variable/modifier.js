@@ -13,6 +13,12 @@ export const max = 'max';
 export const castInt = 'castInt';
 export const scaledAddition = 'scaledAddition';
 export const scaledMultiplication = 'scaledMultiplication';
+export const greaterThan = 'greaterThan';
+export const lesserThan = 'lesserThan';
+
+function compare(val1, comparator, val2) {
+    return val1 > val2 ? comparator === greaterThan : val1 < val2;
+}
 
 
 export const priority = {
@@ -106,12 +112,22 @@ export class VariableModifier extends AbstractModifier {
         if (this.type === scaledAddition || this.type === scaledMultiplication) {
             this.scale = props.scale || 1;
             this.bias = props.bias || 0;
+            this.offset = props.offset || null;
             this.exponent = props.exponent || 1;
         }
         this.resubscribeToVariable();
     }
     scaleValue() {
-        let scaledValue = this.bias + this.scale*(this.variable.currentValue**this.exponent);
+        let scaledValue;
+        let x = this.variable.currentValue;
+        if (this.offset && this.variable.currentValue < this.offset) { // Offset only works in one direction but could work in either with an extra parameter
+            x = this.offset;
+        }
+        if (this.offset) {
+            x = (x - this.offset);
+        }
+        scaledValue = this.bias + this.scale*(x)**this.exponent;
+
         let scaleText = roundNumber(this.scale, this.variable.displayRound);
         let biasText = '';
         if (this.bias) {
@@ -126,7 +142,7 @@ export class VariableModifier extends AbstractModifier {
         }
         return {value: scaledValue, text:`${scaleText}${biasText}${expText}`}
     }
-    modify(value) {
+    modify(value, displayRound = 3) {
         if (this.keys && this.object) {
             this.resubscribeToVariable();
         }
@@ -143,7 +159,7 @@ export class VariableModifier extends AbstractModifier {
             return {
                 result: result, 
                 textPriority: true,
-                text: `Added ${ownerText}${this.variable.name} scaled by ${scaledValue.text} -> ${roundNumber(result, this.variable.displayRound + 1)}`, 
+                text: `Added ${ownerText}${this.variable.name} scaled by ${scaledValue.text} ${roundNumber(value, displayRound)}+${roundNumber(scaledValue.value, this.displayRound)} -> ${roundNumber(result, displayRound + 1)}`, 
                 variable: this.variable
             };
         } else if (this.type === subtraction) {
@@ -155,7 +171,7 @@ export class VariableModifier extends AbstractModifier {
         } else if (this.type === multiplication) {
             return {
                 result: value*this.variable.currentValue, 
-                text: `Multiplied by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
+                text: `Multiplied by ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, displayRound)}`,
                 variable: this.variable
             };
         } else if (this.type === scaledMultiplication) {
@@ -164,7 +180,7 @@ export class VariableModifier extends AbstractModifier {
             return {
                 result: result, 
                 textPriority: true,
-                text: `Multiplied by ${ownerText}${this.variable.name} scaled by ${scaledValue.text} -> ${roundNumber(result, this.variable.displayRound + 1)}`, 
+                text: `Multiplied by ${ownerText}${this.variable.name} scaled by ${scaledValue.text} ${roundNumber(value, this.displayRound)}x${roundNumber(scaledValue.value, this.displayRound)} -> ${roundNumber(result, displayRound + 1)}`, 
                 variable: this.variable
             };
         }  else if (this.type === division) {

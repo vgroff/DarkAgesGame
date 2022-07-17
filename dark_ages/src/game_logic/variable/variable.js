@@ -148,7 +148,7 @@ export class Variable {
         let value = this.baseValue;
         let explanations = this.baseValueExplanations.map(val => val); // Need to copy the array
         for (let modifier of this.modifiers) {
-            let result = modifier.modify(value);
+            let result = modifier.modify(value, this.displayRound);
             value = result.result;
             if (isNaN(result.result)) {
                 throw Error("nan number");

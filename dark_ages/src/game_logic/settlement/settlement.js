@@ -1,8 +1,8 @@
-import {VariableModifier, multiplication, subtraction, division, scaledMultiplication, invLogit, min, Variable, castInt, addition, TrendingVariable, TrendingVariableComponent, VariableComponent} from '../UIUtils.js';
+import {VariableModifier, multiplication, subtraction, division, greaterThan, lesserThan, scaledMultiplication, invLogit, min, Variable, castInt, addition, TrendingVariable, TrendingVariableComponent, VariableComponent} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin} from './building.js'
+import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
 import { exponentiation, max, priority, scaledAddition, UnaryModifier } from '../variable/modifier.js';
@@ -35,7 +35,7 @@ export class Settlement {
                 new VariableModifier({variable: this.immigrationFactor, type: multiplication}) // Causes higher growth and higher decline intentionally - not sure if we want this?
             ]
         });
-        this.populationSizeInternal = new Cumulator({owner: this, name:`population_size_internal`, startingValue: props.startingPopulation,
+        this.populationSizeInternal = new Cumulator({owner: this, name:`population_size_internal`, startingValue: props.startingPopulation + 0.65,
             modifiers: [
                 new VariableModifier({variable: this.populationSizeChange, type: multiplication}),
             ],
@@ -58,6 +58,7 @@ export class Settlement {
         this.addBuilding(new CharcoalKiln({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new LumberjacksHut({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Brewery({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Apothecary({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Quarry({startingSize: 3, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Stonecutters({startingSize: 3, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.jobsAvailable = new SumAggModifier(
@@ -97,9 +98,12 @@ export class Settlement {
             new VariableModifier({variable: this.health, type: subtraction}),
             new VariableModifier({startingValue: 1, type: min, customPriority: priority.exponentiation + 5}),
         ]})
-        this.populationSizeGrowth.addModifier(new VariableModifier({variable: this.health, type: scaledMultiplication, priority: addition, bias: 1.0, scale: 0.1, exp:1.5}));
-        let maxPopSizeDecline = 0.1; // 10% populationd death is as bad as it gets
-        this.populationSizeDecline.addModifier(new VariableModifier({variable: this.unhealth, type: scaledAddition, priority: addition, bias: 0.0, scale: maxPopSizeDecline, exponent:3}));
+        this.populationSizeGrowth.addModifier(new VariableModifier({variable: this.health, type: scaledMultiplication, priority: addition, bias: 1.0, scale: 0.75, exponent:1.5}));
+        this.populationSizeGrowth.addModifier(new VariableModifier({variable: this.health, type: scaledMultiplication, priority: addition, bias: 0.0, scale: 1, exponent:0.3}));
+        let maxPopSizeDecline = 0.15; // 10% populationd death is as bad as it gets
+        let healthOffset = 0.4;
+        this.populationSizeDecline.addModifier(new VariableModifier({name: "Poor Health", variable: this.unhealth, type: scaledAddition, priority: addition, offset:healthOffset*0.66,  bias: 0.0, scale: 0.25*maxPopSizeDecline/(1-healthOffset), exponent:2}));
+        this.populationSizeDecline.addModifier(new VariableModifier({name: "Catastrophic Health", variable: this.unhealth, type: scaledAddition, priority: addition, offset:healthOffset, bias: 0.0, scale: maxPopSizeDecline/(1-healthOffset), exponent:3}));
         let zero = new Variable({name: "zero", startingValue: 0});
         for (const [key, demand] of Object.entries(basePopDemands)) {
             let desiredRationProp = new Variable({name: `${demand.resource.name} ration`, startingValue: 1, max: demand.idealAmount, min: zero});

@@ -30,7 +30,7 @@ export class Logger {
         this.callSubscribers();
     }
     setInspect(inspect) {
-        this.inspects.push(inspect);
+        this.inspects.push(this.inspect);
         if (this.inspects.length > 35) {
             this.inspects.shift();
         }

@@ -31,8 +31,6 @@ export class TrendingVariable extends Variable {
         if (this.trendingValueAtTurnStart === undefined || this.timerStartVal === undefined || this.timer.currentValue === this.timerStartVal) {
             this.trendingValueAtTurnStart = this.currentlyTrendingTo; // Reset trending as many times as needed on the first turn its created
         }
-        console.log(this.currentlyTrendingTo, this.trendingValueAtTurnStart);
-        if (this.timer) {console.log(this.timer.currentValue, this.timerStartVal)};
         let speed;
         if (this.currentlyTrendingTo < this.trendingValueAtTurnStart) {
             speed = this.trendingDownSpeed ? this.trendingDownSpeed : this.trendingSpeed;

@@ -7,7 +7,7 @@ class Game {
     constructor(gameClock) {
         this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 800});
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 35}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 36}),
         ];
         this.totalTax = new SumAggModifier(
             {
@@ -30,8 +30,12 @@ export default Game;
 
 // Stuff for now:
 // - Build a basic demand system for the population + a rationing system
-//     - Hook up health to population growth/death
-//     - Health needs to be a trending variable
+//     - add a inv logit addition/multiplication like scaledAddition/multiplication? or maybe just allow passing in regular numbers to logit
+//     - Hook up health to population growth/death - check this is working properly!
+//     - Hook up health to happiness
+//     - Hook up health and happiness to productivity (not too aggressively - use S curves?) 
+//         - something like y=(1/(1+(x^0.5/(1-x^0.5))^-5))^0.5 (note has post-exponent) with a bias?
+//     - Happiness should also trend, but faster
 //     - Some resources aren't cumulative (e.g. construction time/hygiene) might actually be easier to keep construciton time cumulative
 //     - Coal demand will need to depend on season (notes in rationing) - make the ideal demand change is the nicest way of doing this
 //          - Makes more sense for rations to be set as a proportion of ideal demand - change the ration behaviour to do this
@@ -46,6 +50,7 @@ export default Game;
 
 // Stuff for later builds:
 // - Add building upkeep
+// - Add food decay
 
 //  Stuff for way later builds:
 // - Now build a demand system:

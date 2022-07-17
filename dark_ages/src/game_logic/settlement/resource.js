@@ -118,6 +118,7 @@ export const Resources = {
     food: new Resource({name: "food", storageMultiplier: 450, productionRatio: 1.05, description: "keeps your villagers alive"}),
     coal: new Resource({name: "coal", storageMultiplier: 200, productionRatio: 3.0, description: "for smithing and keeping warm"}),
     beer: new Resource({name: "beer", storageMultiplier: 450, productionRatio: 3.0, description: "helps keep your villagers happy"}),
+    medicinalHerbs: new Resource({name: "medicinal herbs", storageMultiplier: 200, productionRatio: 12.0, description: "helps keep your villagers healthy"}),
     wood: new Resource({name: "wood", storageMultiplier: 200, productionRatio: 1.5, description: "for building, upkeep and fuel"}),
     stone: new Resource({name: "stone", storageMultiplier: 150, productionRatio: 1.0, description: "for building and bricks"}),
     stoneBricks: new Resource({name: "stone bricks", storageMultiplier: 200, productionRatio: 1.0, description: "for building and upkeep"}),

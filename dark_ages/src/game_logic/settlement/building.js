@@ -29,7 +29,7 @@ export class ResourceBuilding extends Building {
         if (!this.productivityModifiers) {
             throw Error('Need a productivity modifier');
         };
-        this.productivity = new Variable({owner: this, name:"productivity", startingValue: 1, modifiers:this.productivityModifiers});
+        this.productivity = new Variable({owner: this, name:"productivity", startingValue: props.startingProductivity || 1, modifiers:this.productivityModifiers});
         this.startingJobs = props.startingJobs || 0;
         this.sizeJobsMultiplier = props.sizeJobsMultiplier;
         if (!this.sizeJobsMultiplier) {
@@ -194,6 +194,7 @@ export class HuntingCabin extends ResourceBuilding {
         super({name: "hunter's cabin", 
             outputResource: Resources.food, 
             sizeJobsMultiplier: 3,
+            startingProductivity: 1.65,
             ...props
         })
     }
@@ -226,6 +227,17 @@ export class Brewery extends ResourceBuilding {
             outputResource: Resources.beer, 
             inputResources: [{resource:Resources.food, multiplier: 0.2}],
             sizeJobsMultiplier: 3,
+            ...props
+        })
+    }
+}
+
+export class Apothecary extends ResourceBuilding {
+    constructor(props) {
+        super({name: "apothecary", 
+            outputResource: Resources.medicinalHerbs, 
+            inputResources: [],
+            sizeJobsMultiplier: 2,
             ...props
         })
     }

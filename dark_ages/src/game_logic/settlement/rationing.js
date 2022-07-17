@@ -16,7 +16,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
                 exponent: new Variable({name: "Additive Food Happiness Exp", startingValue: 1.25})
             },
             additiveHealth: {
-                offsetProportion: -0.25,
+                offsetProportion: -0.35,
                 coefficient: new Variable({name: "Additive Food Health Coeff", startingValue: 0.2}),
                 exponent: new Variable({name: "Additive Food Health Exp", startingValue: 2})
             },
@@ -38,7 +38,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
                 exponent: new Variable({name: "Multiplicative Coal Happiness Exp", startingValue: 0.5})
             },
             additiveHealth: {
-                offsetProportion: -0.25,
+                offsetProportion: -0.35,
                 coefficient: new Variable({name: "Additive Coal Health Coeff", startingValue: 0.2}),
                 exponent: new Variable({name: "Additive Coal Health Exp", startingValue: 2})
             },
@@ -58,6 +58,14 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
             additiveHealth: {
                 coefficient: new Variable({name: "Additive Beer Health Coeff", startingValue: -0.12}),
                 exponent: new Variable({name: "Additive Beer Health Exp", startingValue: 1.5})
+            }        
+        },
+        medicinalHerbs: {
+            resource: Resources.medicinalHerbs,
+            idealAmount: new Variable({name: "Ideal Medicinal Herbs", startingValue: 1}), // This should change with weather
+            additiveHealth: {
+                coefficient: new Variable({name: "Additive Medicinal Herbs Health Coeff", startingValue: 0.25}),
+                exponent: new Variable({name: "Additive Medicinal Herbs Health Exp", startingValue: 1.35})
             }        
         }
     };
