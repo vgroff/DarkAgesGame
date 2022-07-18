@@ -29,7 +29,12 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Instead of recalculating e.g. every productivity on each happiness change, freeze recalculate, call all the subscribers first and then set a flag if any of them hit the recalculate, and if they do, recalculate afterwards yourself - set a higher depth?
+// - atm everything collapses in a single turn, unemployement is -1 and citizens arent using stored resources?
+//     - -1 unemployement: looks like unemployement isnt being calculated correctly
+// - Isn't population maybe better suited as a cumulator?
+// - Some turns it recalculates more than other turns, why? log recalculate to see it happens
+// - If trending variables are the problem, limit how small they can trend by -> or even better do a toFixed() modifier before using them
+// - Have priority on subscribers so that logic happens after calculations
 // - Have more stringent conditions on recalculate calling subcribers - how would this account for population or other small increasing ones
 // - Just remove from building if it causes prop demand issues 
 // - Hook up the build/upgrade buttons - add a construction site building/resource?

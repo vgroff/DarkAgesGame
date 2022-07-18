@@ -90,7 +90,7 @@ export class LoggerComponent extends UIBase {
                 if (v instanceof Variable) {
                     return <span  key={i}><VariableComponent variable={v} style={{fontSize: 10}}/>< br/></span>
                 } else if (typeof(v) === "function") {
-                    return ''
+                    return <span  style={{fontSize: 10}} key={i}>{`${v}`}<br /><br /></span>;
                 }  else if (typeof(v) === "string") {
                     return <span  style={{fontSize: 10}} key={i}>{key}: {v}<br /></span>
                 } else if (typeof(v) === "object") {

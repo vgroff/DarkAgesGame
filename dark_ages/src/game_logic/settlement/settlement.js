@@ -55,7 +55,6 @@ export class Settlement {
         this.resourceBuildings = [] // Keep resource buildings separate for jobsTaken
         this.generalProductivity = new Variable({name: "general productivity", owner: this, startingValue: 1});
         this.generalProductivityModifier = new VariableModifier({variable: this.generalProductivity, type: multiplication});
-        this.jobsTaken = new Variable({owner: this, name:`jobs taken`, startingValue: 0, modifiers: []});
         this.addBuilding(new Farm({startingSize: 4, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Housing({startingSize: 4, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new HuntingCabin({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
@@ -65,9 +64,9 @@ export class Settlement {
         this.addBuilding(new Apothecary({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Quarry({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Stonecutters({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.jobsAvailable = new SumAggModifier(
+        this.totalJobs = new SumAggModifier(
             {
-                name: "Jobs available",
+                name: "Total Jobs",
                 aggregate: this,
                 keys: [
                     ["resourceBuildings"],
@@ -87,21 +86,10 @@ export class Settlement {
                 type: addition
             }
         ); 
-        this.totalJobs = new SumAggModifier(
-            {
-                name: "Total Jobs",
-                aggregate: this,
-                keys: [
-                    ["resourceBuildings"],
-                    ["totalJobs"],
-                ],
-                type: addition
-            }
-        ); 
-        this.unemployed = new Variable({name: "Unemployed", startingValue: 0, modifiers: [
+        this.unemployed = new Variable({name: "Unemployed", startingValue: 0, printSubs: true, modifiers: [
             new VariableModifier({variable: this.populationSizeExternal, type:addition}),
             new VariableModifier({variable: this.jobsTaken.variable, type:subtraction})
-        ]})
+        ]});
         let baseHappiness = 0.05; // Neutral happiness boost (could change with difficulty)
         let zero = new Variable({name: "zero", startingValue: 0});
         let one = new Variable({name: "one", startingValue: 1});
@@ -226,7 +214,7 @@ export class Settlement {
         this.health.forceResetTrend();
     }
     addWorkersToBuilding(building, amount) {
-        if (amount > 0 && amount > this.unemployed.currentValue) {
+        if (amount > 0 && amount > this.unemployed.currentValue && this.unemployed.currentValue >= 0) {
             amount = this.unemployed.currentValue;
         }
         building.setNewFilledJobs(building.filledJobs.currentValue + amount);
@@ -268,9 +256,11 @@ export class Settlement {
             allJobsFilled = true;
             for (const priority of priorities) {
                 if (priority.building.emptyJobs.currentValue >= direction && priority.building.filledJobs.currentValue >= -direction) {
+                    // console.log(`trying to add ${direction} to ${priority.building.name}`);
                     this.addWorkersToBuilding(priority.building, direction);
                     if (this.unemployed.currentValue !== unemployed) {
                         allJobsFilled = false;
+                        // console.log(`added ${direction} to ${priority.building.name}`);
                         break;
                     }
                 }
@@ -321,7 +311,8 @@ export class SettlementComponent extends UIBase {
             <VariableComponent showOwner={false} variable={this.settlement.tax} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeExternal} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeChange} /><br /> 
-            <VariableComponent showOwner={false} variable={this.settlement.jobsAvailable.variable} /><br />
+            <VariableComponent showOwner={false} variable={this.settlement.totalJobs.variable} /><br />
+            <VariableComponent showOwner={false} variable={this.settlement.jobsTaken.variable} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.unemployed} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.homeless} /><br />
             <TrendingVariableComponent showOwner={false} variable={this.settlement.happiness} /><br />

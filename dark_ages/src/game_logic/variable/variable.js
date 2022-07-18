@@ -42,10 +42,10 @@ export class Variable {
         this.min = props.min;
         let self = this;
         if (this.max) {
-            this.max.subscribe((indent) => self.recalculate('max changed', indent));
+            this.max.subscribe((indent) => self.recalculate('max changed', indent), 'using as a max');
         }
         if (this.min) {
-            this.min.subscribe((indent) => self.recalculate('min changed', indent));
+            this.min.subscribe((indent) => self.recalculate('min changed', indent), 'using as a min');
         }
         this.printSubs = props.printSubs || false;
         this.displayRound = props.displayRound || 2;
@@ -125,10 +125,13 @@ export class Variable {
         }
         for (const [i, modifier] of this.modifiers.entries()) {
             modifier.unsubscribe(this.modifierCallbacks[i]);
-        }
+        } 
         this.modifierCallbacks = [];
         this.modifiers = modifiers;
         this.subscribeToModifiers();
+        if (this.modifierCallbacks.length !== this.modifiers.length || undefined in this.modifierCallbacks) {
+            throw Error("what");
+        }
         this.recalculate('new modifiers', 0);
     }
     subscribeToModifiers() {
@@ -139,7 +142,7 @@ export class Variable {
             }
             this.modifierCallbacks.push(modifier.subscribe((indent) => {
                 try {
-                    self.recalculate('modifier changed', indent);
+                    self.recalculate(`modifier ${modifier.name} changed`, indent);
                 } catch(error) {
                     debugger;
                     throw Error("error")
@@ -164,12 +167,6 @@ export class Variable {
         this.subscriptions.forEach(subscription => subscription(indent))
     }
     recalculate(reason='', indent=0, quietly=false) {
-        console.log('recalculating');
-        //var trace = printStackTrace();
-        // if (trace.length > Variable.maxStackTrace) {
-        //     Variable.maxStackTrace = trace.length;
-        //     console.log(Variable.maxStackTrace);
-        // } 
         if (!quietly) {
             this.currentDepth += 1;
         }
@@ -184,7 +181,7 @@ export class Variable {
             if (isNaN(result.result)) {
                 throw Error("nan number");
             }
-            explanations.push({text: result.text, variable: result.variable, type:modifier.type, textPriority: result.textPriority});
+            explanations.push({text: result.text, variable: result.variable, type:modifier.type, textPriority: true});
         }
         if (this.max && value > this.max.currentValue) {
             value = this.max.currentValue;
@@ -195,7 +192,7 @@ export class Variable {
         }
         let eps = 1e-8;
         let absChange = Math.abs(this.currentValue - value);
-        if (this.currentValue === undefined || (Math.abs(absChange) > eps && absChange / this.currentValue  > 2e-5)) {
+        if (this.currentValue === undefined || (Math.abs(absChange) > eps && absChange / Math.abs(this.currentValue)  > 2e-5)) {
             Variable.logText += '  '.repeat(indent);
             Variable.logText += `recalculated ${this.name} to ${roundNumber(value, 7)} ${ Math.abs(this.currentValue - value)} - ${reason}`;
             this.currentValue = value;
