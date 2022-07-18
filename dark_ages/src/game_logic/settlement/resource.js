@@ -30,7 +30,7 @@ export class ResourceStorage {
         this.supply = new VariableModifier({name: `${this.resource.name} daily production`, startingValue:0, type:addition, modifiers:[]});
         this.demand = new VariableModifier({name: `${this.resource.name} daily demand`, startingValue:0,  type:subtraction, modifiers:[]});
         this.change = new Variable({name: "prospective change", startingValue:0,  type:subtraction, modifiers:[this.supply, this.demand]})
-        let amountProps = {name: `${this.resource.name} amount`, startingValue: props.startingAmount || 0, 
+        let amountProps = {name: `${this.resource.name} amount`, startingValue: props.startingAmount || 50, 
         min: zero, max: props.storageMultiplier ? this.totalStorage : undefined, timer:props.gameClock, modifiers: [this.supply, this.demand]};
         if (this.resource.storageMultiplier) {
             this.amount = new Cumulator(amountProps);

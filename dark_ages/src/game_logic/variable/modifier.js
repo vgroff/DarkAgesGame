@@ -44,8 +44,8 @@ export class AbstractModifier {
         this.subscriptions.push(callback);
         return callback;
     }
-    callSubscribers(callback, depth) {
-        this.subscriptions.forEach(subscription => subscription())
+    callSubscribers(indent) {
+        this.subscriptions.forEach(subscription => subscription(indent))
     }
     unsubscribe(callback) {
         this.subscriptions = this.subscriptions.filter(c => c !== callback);
@@ -244,7 +244,7 @@ export class VariableModifier extends AbstractModifier {
             throw Error("what");
         }
     }
-    resubscribeToVariable() {
+    resubscribeToVariable(indent = 0) {
         let currentValue = this.variable.currentValue;
         if (this.keys && this.object) {
             let variable = this.getVariable();
@@ -257,11 +257,12 @@ export class VariableModifier extends AbstractModifier {
             this.variable = variable;
         }
         let self = this;
-        this.variableSubscription = this.variable.subscribe((depth) => {
-            self.callSubscribers(depth);
+        this.variableSubscription = this.variable.subscribe((indent) => {
+            self.callSubscribers(indent);
         }, 'modifier value ' + this.name);
-        if (this.variable.currentValue !== currentValue) {
-            self.callSubscribers(0); // new variable -> call subs again
+        let eps = 1e-8;
+        if (Math.abs(this.variable.currentValue - currentValue) > eps) {
+            self.callSubscribers(0, indent); // new variable -> call subs again
         }
     }
     getVariable() {

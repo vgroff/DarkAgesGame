@@ -22,13 +22,13 @@ export class TrendingVariable extends Variable {
         });
         this.timerStartVal = this.timer.currentValue;
     }
-    recalculate() {
+    recalculate(reason='', indent) {
         this.currentDepth += 1;
-        super.recalculate(true);
-        this.trend();
+        super.recalculate(`trending - ${reason}`, indent, true);
+        this.trend(indent);
         this.currentDepth = 0;
     }
-    trend() {
+    trend(indent) {
         this.currentlyTrendingTo = this.currentValue;
         if (this.trendingValueAtTurnStart === undefined || this.timerStartVal === undefined) {// || this.timer.currentValue === this.timerStartVal) {
             this.trendingValueAtTurnStart = this.currentlyTrendingTo; // Reset trending as many times as needed on the first turn its created
@@ -50,16 +50,16 @@ export class TrendingVariable extends Variable {
         if (isNaN(this.currentValue)) {
             throw Error("nan");
         }
-        this.callSubscribers(this.currentDepth);
+        this.callSubscribers(indent+1);
     }
     storeCurrentValue() {
         this.trendingValueAtTurnStart = this.currentValue;
-        this.recalculate();
+        this.recalculate('new turn', 0);
     }
     forceResetTrend() {
-        super.recalculate(true);
+        super.recalculate('force reset', 0, true);
         this.trendingValueAtTurnStart = this.currentValue;
-        this.recalculate();       
+        this.recalculate('force reset', 0);       
     }
 }
 

@@ -29,6 +29,9 @@ class Game {
 export default Game;
 
 // Stuff for now:
+// - Instead of recalculating e.g. every productivity on each happiness change, freeze recalculate, call all the subscribers first and then set a flag if any of them hit the recalculate, and if they do, recalculate afterwards yourself - set a higher depth?
+// - Have more stringent conditions on recalculate calling subcribers - how would this account for population or other small increasing ones
+// - Just remove from building if it causes prop demand issues 
 // - Hook up the build/upgrade buttons - add a construction site building/resource?
 // - Coal demand will need to depend on season (notes in rationing) - make a change to the ideal demand is the nicest way of doing this
 // - Research system

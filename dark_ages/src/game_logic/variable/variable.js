@@ -5,12 +5,32 @@ import {Logger} from '../logger'
 
 const unnamedVariableName = 'unnamed variable';
 
+
+var textFile;
+export function makeTextFile(text){
+    var data = new Blob([text], {type: 'text/plain'});
+
+    // If we are replacing a previously generated file we need to
+    // manually revoke the object URL to avoid memory leaks.
+    if (textFile !== null) {
+      window.URL.revokeObjectURL(textFile);
+    }
+
+    textFile = window.URL.createObjectURL(data);
+
+    // returns a URL you can use as a href
+    console.log(textFile);
+    return textFile;
+};
+
+
 export class Variable {
+    static logText = '';
     static maxStackTrack = 1;
     constructor(props) {
         this.name = props.name || unnamedVariableName;
         if (this.name === unnamedVariableName) {
-            console.log('Unnamed variable;')
+            // console.log('Unnamed variable;')
         }
         this.owner = props.owner || '';
         this.currentValue = this.baseValue;
@@ -22,10 +42,10 @@ export class Variable {
         this.min = props.min;
         let self = this;
         if (this.max) {
-            this.max.subscribe(() => self.recalculate());
+            this.max.subscribe((indent) => self.recalculate('max changed', indent));
         }
         if (this.min) {
-            this.min.subscribe(() => self.recalculate());
+            this.min.subscribe((indent) => self.recalculate('min changed', indent));
         }
         this.printSubs = props.printSubs || false;
         this.displayRound = props.displayRound || 2;
@@ -33,19 +53,18 @@ export class Variable {
         this.modifiers = [];
         this.modifierCallbacks = [];
         let startingValue = props.startingValue || 0
-        this.setNewBaseValue( startingValue, `base value: ${roundNumber(startingValue, this.displayRound)}`);
+        this.setNewBaseValue( startingValue, `init base value: ${roundNumber(startingValue, this.displayRound)}`);
         if (props.modifiers) {
             this.setModifiers(props.modifiers);
         }
-        this.recalculate();
+        this.recalculate('init', 0);
     }
     clearSubscriptions() {
         this.subscriptions = [];
     }
-    setNewBaseValue(baseValue, explanations) {
+    setNewBaseValue(baseValue, explanations, indent=0) {
         if (this.name.includes("stone daily demand")) {
             // debugger;
-            console.log(`${this.name} base being set to ${baseValue}`);
         }
         if (isNaN(baseValue)) {
             debugger;
@@ -71,7 +90,7 @@ export class Variable {
             this.baseValueExplanations = [explanations];
         }
         if (recalculate) {
-            this.recalculate();
+            this.recalculate(`set new base value - ${explanations}`, indent);
         }
     }
     addModifiers(modifiers) {
@@ -110,7 +129,7 @@ export class Variable {
         this.modifierCallbacks = [];
         this.modifiers = modifiers;
         this.subscribeToModifiers();
-        this.recalculate();
+        this.recalculate('new modifiers', 0);
     }
     subscribeToModifiers() {
         let self = this;
@@ -118,8 +137,13 @@ export class Variable {
             if (modifier === undefined) {
                 throw Error('undefined modifier');
             }
-            this.modifierCallbacks.push(modifier.subscribe((depth) => {
-                self.recalculate();
+            this.modifierCallbacks.push(modifier.subscribe((indent) => {
+                try {
+                    self.recalculate('modifier changed', indent);
+                } catch(error) {
+                    debugger;
+                    throw Error("error")
+                }
             }));
         }
     }
@@ -136,10 +160,11 @@ export class Variable {
             console.log("unsubs from "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
         }
     }
-    callSubscribers(depth) {
-        this.subscriptions.forEach(subscription => subscription(depth))
+    callSubscribers(indent) {
+        this.subscriptions.forEach(subscription => subscription(indent))
     }
-    recalculate(quietly=false) {
+    recalculate(reason='', indent=0, quietly=false) {
+        console.log('recalculating');
         //var trace = printStackTrace();
         // if (trace.length > Variable.maxStackTrace) {
         //     Variable.maxStackTrace = trace.length;
@@ -169,11 +194,17 @@ export class Variable {
             explanations.push({text: `min value is ${this.min.currentValue}`})
         }
         let eps = 1e-8;
-        if (!this.currentValue || Math.abs(this.currentValue - value) > eps) {
+        let absChange = Math.abs(this.currentValue - value);
+        if (this.currentValue === undefined || (Math.abs(absChange) > eps && absChange / this.currentValue  > 2e-5)) {
+            Variable.logText += '  '.repeat(indent);
+            Variable.logText += `recalculated ${this.name} to ${roundNumber(value, 7)} ${ Math.abs(this.currentValue - value)} - ${reason}`;
             this.currentValue = value;
             this.explanations = explanations;
-            if (this.currentDepth < 3 && !quietly) {
-                this.callSubscribers(this.currentDepth);
+            if (this.currentDepth < 2 && !quietly) {
+                Variable.logText += `- calling subscribers\n`;
+                this.callSubscribers(indent + 1);
+            } else {
+                Variable.logText += `- end recursion here\n`;
             }
             if (isNaN(this.currentValue)) {
                 debugger;

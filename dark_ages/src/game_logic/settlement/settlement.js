@@ -8,6 +8,7 @@ import { Cumulator } from '../UIUtils.js';
 import { exponentiation, max, priority, scaledAddition, UnaryModifier } from '../variable/modifier.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
 import { getBasePopDemands, RationingComponent, applyRationingModifiers } from './rationing.js';
+import { makeTextFile } from '../variable/variable.js';
 
 
 export class Settlement {
@@ -184,10 +185,28 @@ export class Settlement {
         ]});
         this.happiness.addModifier(new VariableModifier({variable: this.homelessness, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: -0.75, exponent:1 }));
 
-        this.populationSizeDecline.addModifier(new VariableModifier({name: "Homelessness", variable: this.homelessness, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: 0.05, exponent:1}));
+        this.populationSizeDecline.addModifier(new VariableModifier({name: "Homelessness", variable: this.homelessnessInternal, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: 0.05, exponent:1}));
+        Variable.logText += "\n\nSetting jobs here";
         this.populateBuildings(this.resourceBuildings);
-        this.populationSizeExternal.subscribe(() => {this.adjustJobsForPopChange();});
-        this.totalJobs.subscribe(() => {this.adjustJobsForPopChange();});
+        this.populationSizeExternal.subscribe(() => {
+            Variable.logText += `\n\nSetting jobs here ${this.gameClock.currentValue}`;
+            this.adjustJobsForPopChange();
+        });
+        this.totalJobs.subscribe(() => {
+            Variable.logText += `\n\nSetting jobs here ${this.gameClock.currentValue}`;
+            this.adjustJobsForPopChange();
+        });
+        this.unemployed.subscribe(() => {
+            // Searching for some kind of bug?
+            if (this.unemployed.currentVariable < 0) {
+                debugger;
+            }
+        });
+        this.logHref = makeTextFile(Variable.logText);
+        this.gameClock.subscribe(() => {
+            Variable.logText += `\n\nNew turn here ${this.gameClock.currentValue}`;
+            this.logHref = makeTextFile(Variable.logText);
+        });
     }
     addBuilding(building) {
         if (building instanceof ResourceBuilding) {
@@ -236,11 +255,11 @@ export class Settlement {
     }
     adjustJobsForPopChange() {
         if (this.unemployed.currentValue === 0) {
-            this.lastJobsPopulation  = this.populationSizeExternal.currentValue;
             return
         }
         let allJobsFilled = false;
         while (this.unemployed.currentValue !== 0 && !allJobsFilled) {
+            let unemployed = this.unemployed.currentValue;
             let direction = this.unemployed.currentValue / Math.abs(this.unemployed.currentValue);
             let priorities = this.resourceBuildings.map((building, i) => {
                 return this.calculateBuildingJobPriority(building, i);
@@ -250,15 +269,19 @@ export class Settlement {
             for (const priority of priorities) {
                 if (priority.building.emptyJobs.currentValue >= direction && priority.building.filledJobs.currentValue >= -direction) {
                     this.addWorkersToBuilding(priority.building, direction);
-                    allJobsFilled = false;
-                    break;
+                    if (this.unemployed.currentValue !== unemployed) {
+                        allJobsFilled = false;
+                        break;
+                    }
                 }
             }
         }
-        this.lastJobsPopulation  = this.populationSizeExternal.currentValue;
     }
     addToDesiredRation(ration, amount) {
         ration.setNewBaseValue(ration.currentValue + amount, "user set new ration");
+    }
+    addToBuildingSize(building, amount) {
+        building.size.setNewBaseValue(building.size.currentValue + amount, "user built");
     }
     getBuildings() {
         return this.resourceBuildings;
@@ -284,6 +307,9 @@ export class SettlementComponent extends UIBase {
     addToBuilding(event, building, direction) {
         this.settlement.addWorkersToBuilding(building, this.getAmount(event, direction, 1));
     }
+    addToBuildingSize(event, building, direction) {
+        this.settlement.addToBuildingSize(building, direction);
+    }
     addToRation(event, ration, direction) {
         this.settlement.addToDesiredRation(ration, this.getAmount(event, direction, 0.01));
     }
@@ -295,20 +321,23 @@ export class SettlementComponent extends UIBase {
             <VariableComponent showOwner={false} variable={this.settlement.tax} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeExternal} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeChange} /><br /> 
-            <VariableComponent showOwner={false} variable={this.settlement.jobsTaken.variable} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.jobsAvailable.variable} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.unemployed} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.homeless} /><br />
             <TrendingVariableComponent showOwner={false} variable={this.settlement.happiness} /><br />
             <TrendingVariableComponent showOwner={false} variable={this.settlement.health} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.generalProductivity} /><br />
+            <a href={this.settlement.logHref}>Calculation Log</a>
         </Grid>
         <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", padding:"5px", textAlign:"center", alignItems: "center", justifyContent: "center"}}>
             <h4>Buildings</h4>
             <Grid container spacing={3} justifyContent="center" alignItems="center" style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
                 {this.settlement.getBuildings().map((building, i) => {
                     return <Grid item xs={4} key={i} style={{alignItems: "center", justifyContent: "center"}}>
-                        <ResourceBuildingComponent building={building} addWorkers={(e, direction) => {this.addToBuilding(e, building, direction)}}/>
+                        <ResourceBuildingComponent building={building} 
+                            addWorkers={(e, direction) => {this.addToBuilding(e, building, direction)}}
+                            addToBuildingSize={(e, direction) => {this.addToBuildingSize(e, building, direction)}}
+                        />
                     </Grid>
                 })}
             </Grid>
