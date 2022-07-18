@@ -29,11 +29,8 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Some turns it recalculates more than other turns, why? log recalculate to see it happens
-// - If trending variables are the problem, limit how small they can trend by -> or even better do a toFixed() modifier before using them
+// - Add a "smallest trend" thing to trending variables where once they are within a certain distance of the target they will just switch to it
 // - Have priority on subscribers so that logic happens after calculations
-// - Have more stringent conditions on recalculate calling subcribers - how would this account for population or other small increasing ones
-// - Just remove from building if it causes prop demand issues 
 // - Hook up the build/upgrade buttons - add a construction site building/resource?
 // - Coal demand will need to depend on season (notes in rationing) - make a change to the ideal demand is the nicest way of doing this
 // - Research system
@@ -45,6 +42,7 @@ export default Game;
 // - Could have conditional variables -> they take either a single true/false variable or two variables to compare and then return different results depending on the outcome
 // - Add building upkeep
 // - Add food decay
+// - Get rid of the logging, no doubt it's expensive
 
 // AI reinforcement learning:
 // - job setting: iterate through buildings, one NN each, inputs are: demand, stockpile, productivity, unemployed, happiness, health, behaviour/strategy inputs. output is % of unemployed to set to job

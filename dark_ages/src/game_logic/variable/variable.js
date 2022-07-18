@@ -167,7 +167,6 @@ export class Variable {
         this.subscriptions.forEach(subscription => subscription(indent))
     }
     recalculate(reason='', indent=0, quietly=false) {
-        console.log('recalc');
         if (!quietly) {
             this.currentDepth += 1;
         }
