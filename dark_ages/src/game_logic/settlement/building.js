@@ -138,7 +138,6 @@ export class ResourceBuilding extends Building {
             this.alerts = this.alerts.filter(a => {return a !== alert;})
         }
         if (this.name.includes("rew")) {
-            console.log(this.alerts);
         }
     }
 }

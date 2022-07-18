@@ -5,7 +5,7 @@ import { SumAggModifier } from "./variable/sumAgg";
 
 class Game {
     constructor(gameClock) {
-        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 800});
+        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 600});
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 36}),
         ];
@@ -29,18 +29,15 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Currently part the way through simulating homelessness
-// - Deal with people born/dying from jobs - add to last Job or remove/add at random if can't - do it with probabilities
-// - Colour trending variables green/red
-// - Build a basic demand system for the population + a rationing system
-//     - Some resources aren't cumulative (e.g. construction time/hygiene) might actually be easier to keep construciton time cumulative
-//     - Coal demand will need to depend on season (notes in rationing) - make the ideal demand change is the nicest way of doing this
-// - Hook up the "upgrade" button - add a construction building/resource?
-// - Add a history to variables - short term, long term and super long term. Plot them?
+// - Hook up the build/upgrade buttons - add a construction site building/resource?
+// - Coal demand will need to depend on season (notes in rationing) - make a change to the ideal demand is the nicest way of doing this
 // - Research system
-// - Could have conditional variables -> they take either a single true/false variable or two variables to compare and then return different results depending on the outcome
+// - Potential simple/important buildings: storage(not trivial but important), weavers (trivial), tavern (trivial), library (trivial), construction site (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial), roads(not too trivial)
+// - Add a history to variables - short term, long term and super long term. Plot them?
 
 // Stuff for later builds:
+// - Should test balanced with tests -> set up conditions and measure happiness
+// - Could have conditional variables -> they take either a single true/false variable or two variables to compare and then return different results depending on the outcome
 // - Add building upkeep
 // - Add food decay
 

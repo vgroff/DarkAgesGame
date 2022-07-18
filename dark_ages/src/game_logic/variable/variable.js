@@ -6,6 +6,7 @@ import {Logger} from '../logger'
 const unnamedVariableName = 'unnamed variable';
 
 export class Variable {
+    static maxStackTrack = 1;
     constructor(props) {
         this.name = props.name || unnamedVariableName;
         if (this.name === unnamedVariableName) {
@@ -130,18 +131,23 @@ export class Variable {
         return callback;
     }
     unsubscribe(callback) {
-        // console.log("unsubs "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
         this.subscriptions = this.subscriptions.filter(c => c !== callback);
         if (this.printSubs) {
             console.log("unsubs from "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
         }
     }
     callSubscribers(depth) {
-        // console.log("Calling subs "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
         this.subscriptions.forEach(subscription => subscription(depth))
     }
     recalculate(quietly=false) {
-        this.currentDepth += 1;
+        //var trace = printStackTrace();
+        // if (trace.length > Variable.maxStackTrace) {
+        //     Variable.maxStackTrace = trace.length;
+        //     console.log(Variable.maxStackTrace);
+        // } 
+        if (!quietly) {
+            this.currentDepth += 1;
+        }
         this.modifiers.sort((a, b) => {
             return a.priority() - b.priority();
         });
@@ -162,18 +168,23 @@ export class Variable {
             value = this.min.currentValue;
             explanations.push({text: `min value is ${this.min.currentValue}`})
         }
-        if (this.currentValue !== value) {
+        let eps = 1e-8;
+        if (!this.currentValue || Math.abs(this.currentValue - value) > eps) {
             this.currentValue = value;
             this.explanations = explanations;
-            if (this.currentDepth < 2 && !quietly) {
+            if (this.currentDepth < 3 && !quietly) {
                 this.callSubscribers(this.currentDepth);
             }
             if (isNaN(this.currentValue)) {
                 debugger;
                 throw Error("nan number");
             }
+        } else if (explanations.length !== this.explanations.length) {
+            this.explanations = explanations;
         }
-        this.currentDepth = 0;
+        if (!quietly) {
+            this.currentDepth = 0;
+        }
     }
 }
 
@@ -239,7 +250,7 @@ export class VariableComponent extends React.Component {
             }
         }
     }
-    render (extraChildren) {
+    render (extraChildren, extraStyle) {
         let ownerText = (this.variable.owner && this.props.showOwner && this.variable.owner.name !== unnamedVariableName) ? `${this.variable.owner.name}'s ` : '';
         let nameText = (this.props.showName && this.variable.name !== unnamedVariableName) ? <span>{ownerText ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
         let displayValue = roundNumber(this.props.showBase ? this.variable.baseValue : this.variable.currentValue, this.variable.displayRound);
@@ -260,14 +271,14 @@ export class VariableComponent extends React.Component {
         });
         if (!this.props.expanded) {
             return <HTMLTooltip title={explanations} style={{textAlign: "right"}}>
-                <span style={{"textAlign": "center", ...this.props.style}}>
+                <span style={{"textAlign": "center", ...this.props.style, ...extraStyle}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
                     <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}{extraChildren}</span>
                 </span>
                 </HTMLTooltip>
         } else {
             return <div>
-                <div style={{"textAlign": "right", ...this.props.style}}>
+                <div style={{"textAlign": "right", ...this.props.style, ...extraStyle}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
                     <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}{extraChildren}</span>
                 </div>

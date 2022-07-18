@@ -23,8 +23,10 @@ export class TrendingVariable extends Variable {
         this.timerStartVal = this.timer.currentValue;
     }
     recalculate() {
+        this.currentDepth += 1;
         super.recalculate(true);
         this.trend();
+        this.currentDepth = 0;
     }
     trend() {
         this.currentlyTrendingTo = this.currentValue;
@@ -40,6 +42,7 @@ export class TrendingVariable extends Variable {
             speed = 1;
         }
         this.currentValue = speed*this.currentlyTrendingTo + (1 - speed)*this.trendingValueAtTurnStart;
+        this.trendingChange = this.currentValue - this.trendingValueAtTurnStart;
         let textExpl = `Trending at speed:${speed} from ${roundNumber(this.trendingValueAtTurnStart, this.displayRound)} to ${roundNumber(this.currentValue, this.displayRound)} towards ${roundNumber(this.currentlyTrendingTo, this.displayRound)}`;
         if (this.explanations[this.explanations.length - 1].text !== textExpl) {
             this.explanations.push({"text": textExpl});
@@ -67,13 +70,18 @@ export class TrendingVariableComponent extends VariableComponent {
     }
     render () {
         let trendingValue = 0;
+        let extraStyle = {};
         if (this.variable) {
             trendingValue = parseFloat(this.variable.currentlyTrendingTo.toFixed(3));
+            if (this.variable.trendingChange) {
+                let eps = this.variable.currentValue * 0.00001;
+                extraStyle.color = this.variable.trendingChange < - eps  ? 'red' : this.variable.trendingChange > eps ? 'green' : 'black';
+            }
         }
         return super.render([
             <span key={1}>{this.props.showMax && this.props.variable.max ? `/${this.props.variable.max.currentValue}` : ''}</span>,
             <span key={2}>{this.props.showTrending ? ` (${trendingValue})` : ''}</span>,
-        ]);
+        ], extraStyle);
     }
 }
 

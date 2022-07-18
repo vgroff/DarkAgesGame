@@ -19,7 +19,7 @@ export class Settlement {
             displayRound: 5,
             modifiers: []
         });
-        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 0.0001,
+        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 0.002, //0.00015
             displayRound: 5,
             modifiers: []
         });
@@ -62,8 +62,8 @@ export class Settlement {
         this.addBuilding(new LumberjacksHut({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Brewery({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Apothecary({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Quarry({startingSize: 3, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Stonecutters({startingSize: 3, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Quarry({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Stonecutters({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.jobsAvailable = new SumAggModifier(
             {
                 name: "Jobs available",
@@ -86,14 +86,21 @@ export class Settlement {
                 type: addition
             }
         ); 
+        this.totalJobs = new SumAggModifier(
+            {
+                name: "Total Jobs",
+                aggregate: this,
+                keys: [
+                    ["resourceBuildings"],
+                    ["totalJobs"],
+                ],
+                type: addition
+            }
+        ); 
         this.unemployed = new Variable({name: "Unemployed", startingValue: 0, modifiers: [
             new VariableModifier({variable: this.populationSizeExternal, type:addition}),
             new VariableModifier({variable: this.jobsTaken.variable, type:subtraction})
         ]})
-        let basePopDemands = getBasePopDemands();
-        this.rationsDemanded = [];
-        this.rationsAchieved = [];
-        this.idealRations = [];
         let baseHappiness = 0.05; // Neutral happiness boost (could change with difficulty)
         let zero = new Variable({name: "zero", startingValue: 0});
         let one = new Variable({name: "one", startingValue: 1});
@@ -118,7 +125,11 @@ export class Settlement {
             new VariableModifier({variable: this.happiness, type: addition}),
             new VariableModifier({type: invLogit, customPriority: priority.exponentiation + 1, invLogitSpeed: 4, bias: 1 - maxHappinessProductivityPenalty, scale: maxHappinessProductivityPenalty, startingValue: 0.15})
         ]}))
-        for (const [key, demand] of Object.entries(basePopDemands)) {
+        this.popDemands = getBasePopDemands();
+        this.rationsDemanded = [];
+        this.rationsAchieved = [];
+        this.idealRations = [];
+        for (const [key, demand] of Object.entries(this.popDemands)) {
             let desiredRationProp = new Variable({name: `${demand.resource.name} ration (% of ideal)`, startingValue: 1, max: one, min: zero});
             let desiredRation = new Variable({name: `${demand.resource.name} ration`, startingValue: 0, min: zero, modifiers: [
                     new VariableModifier({variable: desiredRationProp, type: addition}),
@@ -136,20 +147,8 @@ export class Settlement {
             ]})
             if (demand.resource === Resources.housing) {
                 this.totalHousedInternal = new Variable({name: "Total housed", modifiers: [
-                    new VariableModifier({type: multiplication, variable: actualRationProp}),
+                    new VariableModifier({type: addition, variable: actualRationProp}),
                     new VariableModifier({type: multiplication, variable: this.populationSizeInternal}),
-                ]});
-                this.homelessInternal = new Variable({name: "Homeless", min: zero, modifiers: [
-                    new VariableModifier({type: addition, variable: this.populationSizeInternal}),
-                    new VariableModifier({type: subtraction, variable: this.totalHoused}),
-                ]});
-                this.homelessnessInternal = new Variable({name: "Homeless", min: zero, modifiers: [
-                    new VariableModifier({type: addition, variable: this.homelessInternal}),
-                    new VariableModifier({type: division, variable: this.populationSizeInternal}),
-                ]});
-                this.homeless = new Variable({name: "Homeless", min: zero, modifiers: [
-                    new VariableModifier({type: addition, variable: this.homelessInternal}),
-                    new UnaryModifier({type: castInt, customPriority: priority.exponentiation + 1})
                 ]});
             }
             if (!demand.alwaysFullRations) {
@@ -167,7 +166,28 @@ export class Settlement {
                 new VariableModifier({startingValue: 0.4, exponent: 0.75, type: invLogit, invLogitSpeed: 2.5, customPriority: priority.addition+2})
             ]
         })}));
+        this.homelessInternal = new Variable({name: "Homeless internal", min: zero, modifiers: [
+            new VariableModifier({type: addition, variable: this.populationSizeInternal}),
+            new VariableModifier({type: subtraction, variable: this.totalHousedInternal}),
+        ]});
+        this.homelessnessInternal = new Variable({name: "Homelessness internal", min: zero, modifiers: [
+            new VariableModifier({type: addition, variable: this.homelessInternal}),
+            new VariableModifier({type: division, variable: this.populationSizeInternal}),
+        ]});
+        this.homeless = new Variable({name: "Homeless", min: zero, modifiers: [
+            new VariableModifier({type: addition, variable: this.homelessInternal}),
+            new UnaryModifier({type: castInt, customPriority: priority.exponentiation + 1})
+        ]});
+        this.homelessness = new Variable({name: "Homelessness", min: zero, modifiers: [
+            new VariableModifier({type: addition, variable: this.homeless}),
+            new VariableModifier({type: division, variable: this.populationSizeInternal})
+        ]});
+        this.happiness.addModifier(new VariableModifier({variable: this.homelessness, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: -0.75, exponent:1 }));
+
+        this.populationSizeDecline.addModifier(new VariableModifier({name: "Homelessness", variable: this.homelessness, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: 0.05, exponent:1}));
         this.populateBuildings(this.resourceBuildings);
+        this.populationSizeExternal.subscribe(() => {this.adjustJobsForPopChange();});
+        this.totalJobs.subscribe(() => {this.adjustJobsForPopChange();});
     }
     addBuilding(building) {
         if (building instanceof ResourceBuilding) {
@@ -176,11 +196,13 @@ export class Settlement {
         }
     }
     populateBuildings(buildings) {
-        buildings.forEach((building) => {
-            let availableWorkers = this.unemployed.currentValue;
-            let possibleWorkers = Math.min(availableWorkers, building.emptyJobs.currentValue);
-            this.addWorkersToBuilding(building, possibleWorkers);
-        });
+        // this.lastJobsPopulation = this.populationSizeExternal.currentValue;
+        // buildings.forEach((building) => {
+        //     let availableWorkers = this.unemployed.currentValue;
+        //     let possibleWorkers = Math.min(availableWorkers, building.emptyJobs.currentValue);
+        //     this.addWorkersToBuilding(building, possibleWorkers);
+        // });
+        this.adjustJobsForPopChange();
         this.happiness.forceResetTrend(); // Start health and happiness off with values from this
         this.health.forceResetTrend();
     }
@@ -189,6 +211,51 @@ export class Settlement {
             amount = this.unemployed.currentValue;
         }
         building.setNewFilledJobs(building.filledJobs.currentValue + amount);
+    }
+    calculateBuildingJobPriority(building, i) {
+        let priority = 0;
+        priority += -i / 20; // Prefer buildings lower down in the array
+        if (building.totalJobs.currentValue) {
+            priority += building.filledJobs.currentValue / (building.totalJobs.currentValue); // Prefer buildings with a lot of people already
+        }
+        let resourceStorage = this.resourceStorages.find((demand) => demand.resource === building.outputResource);
+        if (resourceStorage.resource.storageSizeMultiplier) {
+            priority -= 0.2*resourceStorage.amount.currentValue / resourceStorage.resource.storageSizeMultiplier;
+        } else {
+            priority -= resourceStorage.amount.currentValue / this.populationSizeExternal.currentValue;
+        }
+        let ration = Object.entries(this.popDemands).find(([key, demand]) => demand.resource === building.outputResource);
+        priority += ration ? 0.3 : 0;
+        priority *= ration ? 1.5 : 1;
+        let propDemandsSatisfied = building.minPropDemandSatisfied.currentValue;
+        priority *= propDemandsSatisfied ? 0.1 : 1;
+        return {
+            building,
+            priority
+        }
+    }
+    adjustJobsForPopChange() {
+        if (this.unemployed.currentValue === 0) {
+            this.lastJobsPopulation  = this.populationSizeExternal.currentValue;
+            return
+        }
+        let allJobsFilled = false;
+        while (this.unemployed.currentValue !== 0 && !allJobsFilled) {
+            let direction = this.unemployed.currentValue / Math.abs(this.unemployed.currentValue);
+            let priorities = this.resourceBuildings.map((building, i) => {
+                return this.calculateBuildingJobPriority(building, i);
+            });
+            priorities = priorities.sort((a, b) => {return direction*(b.priority - a.priority)});
+            allJobsFilled = true;
+            for (const priority of priorities) {
+                if (priority.building.emptyJobs.currentValue >= direction && priority.building.filledJobs.currentValue >= -direction) {
+                    this.addWorkersToBuilding(priority.building, direction);
+                    allJobsFilled = false;
+                    break;
+                }
+            }
+        }
+        this.lastJobsPopulation  = this.populationSizeExternal.currentValue;
     }
     addToDesiredRation(ration, amount) {
         ration.setNewBaseValue(ration.currentValue + amount, "user set new ration");
@@ -231,6 +298,7 @@ export class SettlementComponent extends UIBase {
             <VariableComponent showOwner={false} variable={this.settlement.jobsTaken.variable} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.jobsAvailable.variable} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.unemployed} /><br />
+            <VariableComponent showOwner={false} variable={this.settlement.homeless} /><br />
             <TrendingVariableComponent showOwner={false} variable={this.settlement.happiness} /><br />
             <TrendingVariableComponent showOwner={false} variable={this.settlement.health} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.generalProductivity} /><br />

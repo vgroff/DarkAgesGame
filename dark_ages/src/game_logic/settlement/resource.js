@@ -16,7 +16,6 @@ export class Resource {
 export class ResourceStorage {
     constructor(props) {
         this.resource = props.resource;
-        this.cumulates = props.cumulates  ? props.cumulates !== undefined : true;
         this.size = props.size;
         if (!(this.size instanceof Variable)) {
             throw Error("need storage size");
