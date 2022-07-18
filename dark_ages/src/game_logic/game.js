@@ -29,9 +29,6 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - atm everything collapses in a single turn, unemployement is -1 and citizens arent using stored resources?
-//     - -1 unemployement: looks like unemployement isnt being calculated correctly
-// - Isn't population maybe better suited as a cumulator?
 // - Some turns it recalculates more than other turns, why? log recalculate to see it happens
 // - If trending variables are the problem, limit how small they can trend by -> or even better do a toFixed() modifier before using them
 // - Have priority on subscribers so that logic happens after calculations

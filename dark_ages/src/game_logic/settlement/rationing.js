@@ -1,4 +1,4 @@
-import { Variable, VariableComponent, VariableModifier, addition, division, invLogit, multiplication, exponentiation } from "../UIUtils";
+import { Variable, VariableComponent, VariableModifier, addition, division, invLogit, roundTo, multiplication, exponentiation } from "../UIUtils";
 import { Resource, Resources } from "./resource";
 import UIBase from '../UIBase';
 import Button from '@mui/material/Button';
@@ -119,6 +119,7 @@ function getModifierVariables(rationAchieved, idealAmount, modifierData) {
     } else {
         throw Error("dont recognise this formaat");
     }
+    modifiers.push(new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200}));
     return modifiers;
 }
 

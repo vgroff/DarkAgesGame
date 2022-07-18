@@ -54,7 +54,7 @@ export class ResourceBuilding extends Building {
             ]
         });
         this.productionModifiers = [
-            new VariableModifier({name:"production from workers", startingValue:this.outputResource.productionRatio, type:addition, modifiers: [
+            new VariableModifier({name:"production from workers", owner: this, startingValue:this.outputResource.productionRatio, type:addition, modifiers: [
                 new VariableModifier({variable: this.filledJobs, type:multiplication}),
                 new VariableModifier({variable: this.productivity, type:multiplication})
             ]})
@@ -126,7 +126,7 @@ export class ResourceBuilding extends Building {
         });
     }
     setNewFilledJobs(villagers) {
-        this.filledJobs.setNewBaseValue(villagers, "Set by leader");
+        this.filledJobs.setNewBaseValue(villagers, "Set by leader", 0);
     }
     setDemandAlert() {
         let alert = "Insufficient input resources to work at full capacity!";

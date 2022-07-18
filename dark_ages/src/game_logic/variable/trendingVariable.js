@@ -10,6 +10,10 @@ export class TrendingVariable extends Variable {
         if (!this.timer) {
             throw Error("TrendingVariable needs timer");
         }
+        this.trendingRoundTo = props.trendingRoundTo;
+        if (!this.trendingRoundTo) {
+            throw Error("probably want this")
+        }
         this.trendingSpeed = props.trendingSpeed;
         this.trendingUpSpeed = props.trendingUpSpeed;
         this.trendingDownSpeed = props.trendingDownSpeed;
@@ -50,6 +54,7 @@ export class TrendingVariable extends Variable {
         if (isNaN(this.currentValue)) {
             throw Error("nan");
         }
+        this.currentValue = roundNumber(this.currentValue, this.trendingRoundTo) // Stops trending variables triggering too often
         this.callSubscribers(indent+1);
     }
     storeCurrentValue() {

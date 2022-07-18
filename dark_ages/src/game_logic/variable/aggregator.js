@@ -22,20 +22,20 @@ export class AggregatorModifier extends VariableModifier {
         }
         this.variableSubscriptions = [];
         this.variables = [];
-        this.resubscribeToVariables();
+        this.resubscribeToVariables(0);
     }
 
-    modify(value) {
-        this.resubscribeToVariables(); //  Need to resub in case the aggregates have changed?
-        return super.modify(value);
+    modify(value, indent=0) {
+        this.resubscribeToVariables(indent); //  Need to resub in case the aggregates have changed?
+        return super.modify(value, indent);
     }
 
-    aggregate() {
+    aggregate(indent=0) {
         let result = this.aggregatorCallback(this.variable, this.variables);
         if (result.modifiers) {
-            this.variable.setModifiers(result.modifiers);
+            this.variable.setModifiers(result.modifiers, indent);
         } else {
-            this.variable.setNewBaseValue(result.value, result.explanation);
+            this.variable.setNewBaseValue(result.value, result.explanation, indent);
         }
     }
 
@@ -63,13 +63,13 @@ export class AggregatorModifier extends VariableModifier {
         return variables;
     }
  
-    resubscribeToVariables() {
+    resubscribeToVariables(indent=0) {
         for (let i = 0; i < this.variable.length; i++) {
             this.variableSubscriptions.forEach(sub => this.variables[i].unsubscribe(sub));
         }
         this.variables = this.getVariables(this.aggregatorList, this.keys);
         this.variableSubscriptions = [];
-        this.variableSubscriptions = this.variables.map(variable => variable.subscribe(() => {this.aggregate()}, 'aggregator'));
-        this.aggregate();
+        this.variableSubscriptions = this.variables.map(variable => variable.subscribe((indent) => {this.aggregate(indent)}, 'aggregator'));
+        this.aggregate(indent);
     }
 }

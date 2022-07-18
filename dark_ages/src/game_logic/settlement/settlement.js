@@ -5,7 +5,7 @@ import UIBase from '../UIBase';
 import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
-import { exponentiation, max, priority, scaledAddition, UnaryModifier } from '../variable/modifier.js';
+import { exponentiation, max, priority, roundTo, scaledAddition, UnaryModifier } from '../variable/modifier.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
 import { getBasePopDemands, RationingComponent, applyRationingModifiers } from './rationing.js';
 import { makeTextFile } from '../variable/variable.js';
@@ -93,8 +93,8 @@ export class Settlement {
         let baseHappiness = 0.05; // Neutral happiness boost (could change with difficulty)
         let zero = new Variable({name: "zero", startingValue: 0});
         let one = new Variable({name: "one", startingValue: 1});
-        this.happiness = new TrendingVariable({name: "happiness", startingValue: baseHappiness, timer: this.gameClock, trendingUpSpeed: 0.1, trendingDownSpeed: 0.35});
-        this.health = new TrendingVariable({name: "health", timer: this.gameClock, startingValue: 1, trendingUpSpeed: 0.1, trendingDownSpeed: 0.35});
+        this.happiness = new TrendingVariable({name: "happiness", startingValue: baseHappiness, trendingRoundTo: 3, timer: this.gameClock, trendingUpSpeed: 0.1, trendingDownSpeed: 0.35});
+        this.health = new TrendingVariable({name: "health", timer: this.gameClock, trendingRoundTo: 3, startingValue: 1, trendingUpSpeed: 0.1, trendingDownSpeed: 0.35});
         this.unhealth = new Variable({name: "unhealth", startingValue: 1, min: zero, max: one, modifiers: [
             new VariableModifier({variable: this.health, type: subtraction}),
         ]})
@@ -107,13 +107,14 @@ export class Settlement {
         let maxHealthProductivityPenalty = 0.65;
         this.generalProductivity.addModifier(new VariableModifier({type: multiplication, name: "health effect", startingValue: 0, modifiers: [
             new VariableModifier({variable: this.health, type: addition}),
-            new VariableModifier({type: invLogit, customPriority: priority.exponentiation + 1, invLogitSpeed: 3.5, bias: 1 - maxHealthProductivityPenalty, scale: maxHealthProductivityPenalty, startingValue: 0.2})
+            new VariableModifier({type: invLogit, customPriority: priority.exponentiation + 1, invLogitSpeed: 3.5, bias: 1 - maxHealthProductivityPenalty, scale: maxHealthProductivityPenalty, startingValue: 0.2}),
         ]}))
         let maxHappinessProductivityPenalty = 0.25;
         this.generalProductivity.addModifier(new VariableModifier({type: multiplication, name: "happiness effect", startingValue: 0, modifiers: [
             new VariableModifier({variable: this.happiness, type: addition}),
             new VariableModifier({type: invLogit, customPriority: priority.exponentiation + 1, invLogitSpeed: 4, bias: 1 - maxHappinessProductivityPenalty, scale: maxHappinessProductivityPenalty, startingValue: 0.15})
         ]}))
+        this.generalProductivity.addModifier(new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200}));
         this.popDemands = getBasePopDemands();
         this.rationsDemanded = [];
         this.rationsAchieved = [];
@@ -177,11 +178,11 @@ export class Settlement {
         Variable.logText += "\n\nSetting jobs here";
         this.populateBuildings(this.resourceBuildings);
         this.populationSizeExternal.subscribe(() => {
-            Variable.logText += `\n\nSetting jobs here ${this.gameClock.currentValue}`;
+            Variable.logText += `\nSetting jobs here ${this.gameClock.currentValue}`;
             this.adjustJobsForPopChange();
         });
         this.totalJobs.subscribe(() => {
-            Variable.logText += `\n\nSetting jobs here ${this.gameClock.currentValue}`;
+            Variable.logText += `\nSetting jobs here ${this.gameClock.currentValue}`;
             this.adjustJobsForPopChange();
         });
         this.unemployed.subscribe(() => {
@@ -191,8 +192,11 @@ export class Settlement {
             }
         });
         this.logHref = makeTextFile(Variable.logText);
-        this.gameClock.subscribe(() => {
-            Variable.logText += `\n\nNew turn here ${this.gameClock.currentValue}`;
+        this.logTextLength = 0;
+        this.gameClock.subscribe(() => { 
+            let extraLength = Variable.logText.length - this.logTextLength;
+            Variable.logText += `\n\nNew turn here ${this.gameClock.currentValue}, lines today: ${extraLength / 1000}\n`;
+            this.logTextLength = Variable.logText.length;
             this.logHref = makeTextFile(Variable.logText);
         });
     }
@@ -268,10 +272,10 @@ export class Settlement {
         }
     }
     addToDesiredRation(ration, amount) {
-        ration.setNewBaseValue(ration.currentValue + amount, "user set new ration");
+        ration.setNewBaseValue(ration.currentValue + amount, "user set new ration", 0);
     }
     addToBuildingSize(building, amount) {
-        building.size.setNewBaseValue(building.size.currentValue + amount, "user built");
+        building.size.setNewBaseValue(building.size.currentValue + amount, "user built", 0);
     }
     getBuildings() {
         return this.resourceBuildings;

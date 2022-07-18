@@ -39,14 +39,14 @@ export class ResourceStorage {
             this.amount = new Variable(amountProps);
         }
         props.gameClock.subscribe(() => {
-            this.updateDemands();
+            this.updateDemands(0);
         });
         let self = this;
-        this.supply.subscribe(() => {
-            self.updateDemands();
+        this.supply.subscribe((indent) => {
+            self.updateDemands(indent);
         })
-        this.demand.subscribe(() => {
-            self.updateDemands();
+        this.demand.subscribe((indent) => {
+            self.updateDemands(indent);
         })
         this.demands = [];
         // Stone has supply -> demand can come through -> amount goes down -> no more supply -> demand is zero
@@ -77,18 +77,18 @@ export class ResourceStorage {
     addSupply(supplyVariable) {
         this.supply.variable.addModifier(new VariableModifier({variable: supplyVariable, type:addition}));
     }
-    updateDemands() {
+    updateDemands(indent) {
         let amountAtTurnStart = this.resource.storageMultiplier ? this.amount.baseValue : 0;
         let totalSupply = amountAtTurnStart + this.supply.variable.currentValue;
         this.demands.forEach(demandObj => {
             let demand = demandObj.totalDemand.currentValue * demandObj.desiredProp.currentValue;
             if (demand === 0) {
-                demandObj.demandPropFulfilled.setNewBaseValue(0, "new demand calculated");
+                demandObj.demandPropFulfilled.setNewBaseValue(0, "new demand calculated", indent);
             } else if (totalSupply >= demand) {
                 totalSupply -= demand;
-                demandObj.demandPropFulfilled.setNewBaseValue(demandObj.desiredProp.currentValue, "new demand calculated");
+                demandObj.demandPropFulfilled.setNewBaseValue(demandObj.desiredProp.currentValue, "new demand calculated", indent);
             } else {
-                demandObj.demandPropFulfilled.setNewBaseValue(demandObj.desiredProp.currentValue * totalSupply / demand, "new demand calculated");
+                demandObj.demandPropFulfilled.setNewBaseValue(demandObj.desiredProp.currentValue * totalSupply / demand, "new demand calculated", indent);
                 totalSupply = 0;
             }
             if (isNaN(demand) || isNaN(totalSupply)) {

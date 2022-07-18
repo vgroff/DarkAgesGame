@@ -53,7 +53,7 @@ export class Variable {
         this.modifiers = [];
         this.modifierCallbacks = [];
         let startingValue = props.startingValue || 0
-        this.setNewBaseValue( startingValue, `init base value: ${roundNumber(startingValue, this.displayRound)}`);
+        this.setNewBaseValue( startingValue, `init base value: ${roundNumber(startingValue, this.displayRound)}`, 0);
         if (props.modifiers) {
             this.setModifiers(props.modifiers);
         }
@@ -106,7 +106,7 @@ export class Variable {
         modifiers.push(modifier);
         this.setModifiers(modifiers)
     }
-    setModifiers(modifiers) {
+    setModifiers(modifiers, indent=0) {
         if (modifiers.length === 0 && this.modifiers.length === 0) {
             return;
         }
@@ -132,7 +132,7 @@ export class Variable {
         if (this.modifierCallbacks.length !== this.modifiers.length || undefined in this.modifierCallbacks) {
             throw Error("what");
         }
-        this.recalculate('new modifiers', 0);
+        this.recalculate('new modifiers', indent);
     }
     subscribeToModifiers() {
         let self = this;
@@ -167,6 +167,7 @@ export class Variable {
         this.subscriptions.forEach(subscription => subscription(indent))
     }
     recalculate(reason='', indent=0, quietly=false) {
+        console.log('recalc');
         if (!quietly) {
             this.currentDepth += 1;
         }
@@ -176,12 +177,12 @@ export class Variable {
         let value = this.baseValue;
         let explanations = this.baseValueExplanations.map(val => val); // Need to copy the array
         for (let modifier of this.modifiers) {
-            let result = modifier.modify(value, this.displayRound);
+            let result = modifier.modify(value, indent, this.displayRound);
             value = result.result;
             if (isNaN(result.result)) {
                 throw Error("nan number");
             }
-            explanations.push({text: result.text, variable: result.variable, type:modifier.type, textPriority: true});
+            explanations.push({text: result.text, variable: result.variable, type:modifier.type, textPriority: result.textPriority});
         }
         if (this.max && value > this.max.currentValue) {
             value = this.max.currentValue;

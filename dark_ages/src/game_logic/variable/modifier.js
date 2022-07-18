@@ -11,6 +11,7 @@ export const invLogit = 'invLogit'; // From https://stats.stackexchange.com/ques
 export const min = 'min';
 export const max = 'max';
 export const castInt = 'castInt';
+export const roundTo = 'roundTo';
 export const scaledAddition = 'scaledAddition';
 export const scaledMultiplication = 'scaledMultiplication';
 export const greaterThan = 'greaterThan';
@@ -65,7 +66,7 @@ export class UnaryModifier extends AbstractModifier {
             throw Error("need priority");
         }
     }
-    modify(value) {
+    modify(value, indent=0) {
         if (this.type === castInt) {
             return {
                 result: parseInt(value), 
@@ -144,7 +145,7 @@ export class VariableModifier extends AbstractModifier {
         }
         return {value: scaledValue, text:`${scaleText}${biasText}${expText}`}
     }
-    modify(value, displayRound = 3) {
+    modify(value, indent=0, displayRound = 3) {
         if (this.keys && this.object) {
             this.resubscribeToVariable();
         }
@@ -231,7 +232,13 @@ export class VariableModifier extends AbstractModifier {
                 text: `Mined with ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
                 variable: this.variable
             }; 
-        } else {
+        } else if (this.type === roundTo) {
+            return {
+                result: roundNumber(value, this.variable.currentValue), 
+                text: `Rounded to ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
+                variable: this.variable
+            }; 
+        }  else {
             throw Error("what");
         }
     }

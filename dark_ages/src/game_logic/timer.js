@@ -25,13 +25,13 @@ export class Timer extends Variable {
         if (!this.started) {
             let self = this;
             this.intervalID = setInterval(() => {
-                self.setNewBaseValue(self.currentValue + 1, [this.meaning]);
+                self.setNewBaseValue(self.currentValue + 1, [this.meaning], 0);
             }, this.every);
             this.started = true;
         }
     };
     forceTick() {
-        this.setNewBaseValue(this.currentValue + 1, [this.meaning]);
+        this.setNewBaseValue(this.currentValue + 1, [this.meaning], 0);
     }
     killTimer() {
         this.stopTimer();
