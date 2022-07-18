@@ -86,7 +86,7 @@ export class Settlement {
                 type: addition
             }
         ); 
-        this.unemployed = new Variable({name: "Unemployed", startingValue: 0, printSubs: true, modifiers: [
+        this.unemployed = new Variable({name: "Unemployed", startingValue: 0, modifiers: [
             new VariableModifier({variable: this.populationSizeExternal, type:addition}),
             new VariableModifier({variable: this.jobsTaken.variable, type:subtraction})
         ]});
@@ -185,7 +185,7 @@ export class Settlement {
             this.adjustJobsForPopChange();
         });
         this.unemployed.subscribe(() => {
-            // Searching for some kind of bug?
+            // Searching for some kind of bug, should be fixed now
             if (this.unemployed.currentVariable < 0) {
                 debugger;
             }

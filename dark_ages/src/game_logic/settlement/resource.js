@@ -31,19 +31,15 @@ export class ResourceStorage {
         this.demand = new VariableModifier({name: `${this.resource.name} daily demand`, startingValue:0,  type:subtraction, modifiers:[]});
         this.change = new Variable({name: "prospective change", startingValue:0,  type:subtraction, modifiers:[this.supply, this.demand]})
         let amountProps = {name: `${this.resource.name} amount`, startingValue: props.startingAmount || 50, 
-        min: zero, max: props.storageMultiplier ? this.totalStorage : undefined, timer:props.gameClock, modifiers: [this.supply, this.demand]};
-        if (this.resource.storageMultiplier) {
+        min: zero, max: this.resource.storageMultiplier ? this.totalStorage : undefined, timer:props.gameClock, modifiers: [this.supply, this.demand]};
+            if (this.resource.storageMultiplier) {
             this.amount = new Cumulator(amountProps);
         } else {
             amountProps.name = `Excess ${this.resource.name}`
             this.amount = new Variable(amountProps);
         }
-        this.amountAtTurnStart = this.amount.baseValue;
         props.gameClock.subscribe(() => {
-            if (this.amountAtTurnStart !== this.amount.currentValue) {
-                this.amountAtTurnStart = this.amount.currentValue;
-                this.updateDemands();
-            }
+            this.updateDemands();
         });
         let self = this;
         this.supply.subscribe(() => {
@@ -82,8 +78,8 @@ export class ResourceStorage {
         this.supply.variable.addModifier(new VariableModifier({variable: supplyVariable, type:addition}));
     }
     updateDemands() {
-        // debugger;
-        let totalSupply = this.amountAtTurnStart + this.supply.variable.currentValue;
+        let amountAtTurnStart = this.resource.storageMultiplier ? this.amount.baseValue : 0;
+        let totalSupply = amountAtTurnStart + this.supply.variable.currentValue;
         this.demands.forEach(demandObj => {
             let demand = demandObj.totalDemand.currentValue * demandObj.desiredProp.currentValue;
             if (demand === 0) {

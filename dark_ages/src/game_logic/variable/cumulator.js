@@ -12,7 +12,7 @@ export class Cumulator extends Variable {
         let self = this;
         this.previousAgg = -1;
         this.expectedChange = 0;
-        this.valueAtTurnStart = 0;
+        this.valueAtTurnStart = this.baseValue;
         this.timer.subscribe(() => {
             // console.log("aggregated on timer");
             self.aggregate();
@@ -42,7 +42,7 @@ export class CumulatorComponent extends VariableComponent {
     }
     render () {
         let expectedChange = 0;
-        if (this.variable) {
+        if (this.variable.expectedChange) {
             expectedChange = parseFloat(this.variable.expectedChange.toFixed(3));
         }
         return super.render([
