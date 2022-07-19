@@ -8,7 +8,7 @@ import React from 'react';
 class App extends React.Component {
     constructor(props) {
         super(props);
-        this.timer = new Timer({name: 'Internal timer', every: 500});
+        this.timer = new Timer({name: 'Internal timer', every: 300});
         this.timer.startTimer();
         this.state = {ready: false};
     }

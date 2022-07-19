@@ -19,7 +19,7 @@ export class Cumulator extends Variable {
         });
         this.subscribe(() => {
             this.recalculateLastChange();
-        });
+        }, 1);
     }
     recalculateLastChange() {
         this.expectedChange = this.currentValue - this.baseValue;

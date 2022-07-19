@@ -27,6 +27,7 @@ export function makeTextFile(text){
 export class Variable {
     static logText = '';
     static maxStackTrack = 1;
+    static logging = false;
     constructor(props) {
         this.name = props.name || unnamedVariableName;
         if (this.name === unnamedVariableName) {
@@ -42,10 +43,10 @@ export class Variable {
         this.min = props.min;
         let self = this;
         if (this.max) {
-            this.max.subscribe((indent) => self.recalculate('max changed', indent), 'using as a max');
+            this.max.subscribe((indent) => self.recalculate('max changed', indent), 'using as a max', 1);
         }
         if (this.min) {
-            this.min.subscribe((indent) => self.recalculate('min changed', indent), 'using as a min');
+            this.min.subscribe((indent) => self.recalculate('min changed', indent), 'using as a min', 1);
         }
         this.printSubs = props.printSubs || false;
         this.displayRound = props.displayRound || 2;
@@ -147,24 +148,27 @@ export class Variable {
                     debugger;
                     throw Error("error")
                 }
-            }));
+            }, 10));
         }
     }
-    subscribe(callback, reason = '') {
-        this.subscriptions.push(callback);
+    subscribe(callback, priority, reason = '') {
+        let obj = {callback, priority};
+        this.subscriptions.push(obj);
+        this.subscriptions = this.subscriptions.sort((a,b) => b.priority - a.priority);
         if (this.printSubs) {
             console.log("sub to "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length + ' ' + reason)
         }
-        return callback;
+        return obj;
     }
     unsubscribe(callback) {
         this.subscriptions = this.subscriptions.filter(c => c !== callback);
+        this.subscriptions = this.subscriptions.sort((a,b) => b.priority - a.priority);
         if (this.printSubs) {
             console.log("unsubs from "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
         }
     }
     callSubscribers(indent) {
-        this.subscriptions.forEach(subscription => subscription(indent))
+        this.subscriptions.forEach(subscription => subscription.callback(indent))
     }
     recalculate(reason='', indent=0, quietly=false) {
         if (!quietly) {
@@ -193,15 +197,21 @@ export class Variable {
         let eps = 1e-8;
         let absChange = Math.abs(this.currentValue - value);
         if (this.currentValue === undefined || (Math.abs(absChange) > eps && absChange / Math.abs(this.currentValue)  > 2e-5)) {
-            Variable.logText += '  '.repeat(indent);
-            Variable.logText += `recalculated ${this.name} to ${roundNumber(value, 7)} ${ Math.abs(this.currentValue - value)} - ${reason}`;
+            if (Variable.logging) {
+                Variable.logText += '  '.repeat(indent);
+                Variable.logText += `recalculated ${this.name} to ${roundNumber(value, 7)} ${ Math.abs(this.currentValue - value)} - ${reason}`;
+            }
             this.currentValue = value;
             this.explanations = explanations;
             if (this.currentDepth < 2 && !quietly) {
-                Variable.logText += `- calling subscribers\n`;
+                if (Variable.logging) {
+                    Variable.logText += `- calling subscribers\n`;
+                }
                 this.callSubscribers(indent + 1);
             } else {
-                Variable.logText += `- end recursion here\n`;
+                if (Variable.logging) {
+                    Variable.logText += `- end recursion here\n`;
+                }
             }
             if (isNaN(this.currentValue)) {
                 debugger;
@@ -270,7 +280,7 @@ export class VariableComponent extends React.Component {
             if (this.variable) {
                 this.callback = this.variable.subscribe(() => {
                     self.setState({variable:self.variable})
-                }, 'display');
+                }, 0, 'display');
                 this.subscribed = true;
                 if (this.printSubs) {
                     console.log(`Component subscribed to ${this.variable.name}`)

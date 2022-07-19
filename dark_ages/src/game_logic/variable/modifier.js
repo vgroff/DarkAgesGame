@@ -41,15 +41,18 @@ export class AbstractModifier {
             throw Error('Need this');
         }
     }
-    subscribe(callback) {
-        this.subscriptions.push(callback);
-        return callback;
+    subscribe(callback, proiority=0) {
+        let obj = {callback, priority};
+        this.subscriptions.push(obj);
+        this.subscriptions = this.subscriptions.sort((a,b) => b.priority - a.priority);
+        return obj;
     }
     callSubscribers(indent) {
-        this.subscriptions.forEach(subscription => subscription(indent))
+        this.subscriptions.forEach(subscription => subscription.callback(indent))
     }
     unsubscribe(callback) {
         this.subscriptions = this.subscriptions.filter(c => c !== callback);
+        this.subscriptions = this.subscriptions.sort((a,b) => b.priority - a.priority);
     }
     render () {
         return <div>
@@ -266,7 +269,7 @@ export class VariableModifier extends AbstractModifier {
         let self = this;
         this.variableSubscription = this.variable.subscribe((indent) => {
             self.callSubscribers(indent);
-        }, 'modifier value ' + this.name);
+        }, 5, 'modifier value ' + this.name);
         let eps = 1e-8;
         if (Math.abs(this.variable.currentValue - currentValue) > eps) {
             self.callSubscribers(0, indent); // new variable -> call subs again

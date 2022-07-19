@@ -29,11 +29,13 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Add a "smallest trend" thing to trending variables where once they are within a certain distance of the target they will just switch to it
-// - Have priority on subscribers so that logic happens after calculations
-// - Hook up the build/upgrade buttons - add a construction site building/resource?
-// - Coal demand will need to depend on season (notes in rationing) - make a change to the ideal demand is the nicest way of doing this
 // - Research system
+//     - Make it actually cost research points and check it works properly
+//     - Split up the sections on the gui properly
+//     - Make research depend on other research do its enabled incrementally
+// - Add a "smallest trend" thing to trending variables where once they are within a certain distance of the target they will just switch to it
+// - Hook up the upgrade buttons
+// - Coal demand will need to depend on season (notes in rationing) - make a change to the ideal demand is the nicest way of doing this
 // - Potential simple/important buildings: storage(not trivial but important), weavers (trivial), tavern (trivial), library (trivial), construction site (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial), roads(not too trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
 

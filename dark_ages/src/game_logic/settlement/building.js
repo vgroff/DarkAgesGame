@@ -1,5 +1,5 @@
 import {VariableModifier, Variable, addition, subtraction, min, multiplication,division } from '../UIUtils.js';
-import { titleCase, CustomTooltip } from '../utils.js';
+import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Resources} from './resource.js'
@@ -14,6 +14,38 @@ export class Building {
         this.name = props.name;
         this.startingSize = props.startingSize || 0;
         this.size = new Variable({owner: this, name:"building size", startingValue: this.startingSize, modifiers:[]});
+        this.buildInputs = props.buildInputs;
+    }
+    canBuild(resourceStorages) {
+        for (const inputResource of this.buildInputs) {
+            let resourceStorage = resourceStorages.find(r => r.resource === inputResource[0]);
+            if (resourceStorage.amount.currentValue < inputResource[1]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    getBuildText(resourceStorages) {
+        let buildText = ['Will increase size by 1'];
+        for (const inputResource of this.buildInputs) {
+            let resourceStorage = resourceStorages.find(r => r.resource === inputResource[0]);
+            if (resourceStorage.amount.currentValue < inputResource[1]) {
+                buildText.push(`\nneed another ${roundNumber(inputResource[1] - resourceStorage.amount.currentValue, 3)} ${inputResource[0].name}`);
+            }
+        }
+        return buildText;
+    }
+    build(resourceStorages) {
+        if (this.canBuild(resourceStorages)) {
+            for (const inputResource of this.buildInputs) {
+                let resourceStorage = resourceStorages.find(r => r.resource === inputResource[0]);
+                resourceStorage.oneOffDemand(inputResource[1]);
+            }
+            this.size.setNewBaseValue(this.size.baseValue + 1, "build", 0);
+        }
+    }
+    demolish() {
+        this.size.setNewBaseValue(this.size.baseValue - 1, "demolish", 0);
     }
 }
 
@@ -130,8 +162,8 @@ export class ResourceBuilding extends Building {
     }
     setDemandAlert() {
         let alert = "Insufficient input resources to work at full capacity!";
-        if (this.minPropDemandSatisfied.currentValue < 0.999) {
-            if (!this.alerts.includes(alert) && this.filledJobs.currentValue > 0) {
+        if (this.minPropDemandSatisfied.currentValue < 0.999 && this.filledJobs.currentValue > 0) {
+            if (!this.alerts.includes(alert)) {
                 this.alerts.push(alert)
             }
         } else {
@@ -171,9 +203,11 @@ export class ResourceBuildingComponent extends UIBase {
             <Button variant={"outlined"} onClick={(e) => this.props.addWorkers(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
             <Button variant={"outlined"} onClick={(e) => this.props.addWorkers(e, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>
         </Grid>
+        <CustomTooltip items={this.props.buildText} style={{textAlign: "left"}}>
         <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
-            <Button variant={"outlined"} onClick={(e) => this.props.addToBuildingSize(e, 1)} sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Build</Button>
+                <Button variant={this.props.canBuild ? "outlined" : "disabled"} onClick={(e) => this.props.addToBuildingSize(e, 1)} sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Build</Button>
         </Grid>
+        </CustomTooltip>
         <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
             <Button variant={"outlined"} onClick={(e) => this.props.addToBuildingSize(e, -1)} sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Demolish</Button>
         </Grid>
@@ -185,9 +219,11 @@ export class ResourceBuildingComponent extends UIBase {
 }
 
 export class Farm extends ResourceBuilding {
+    static name = "farm";
     constructor(props) {
-        super({name: "farm", 
+        super({name: Farm.name, 
             outputResource: Resources.food, 
+            buildInputs: [[Resources.labourTime, 5], [Resources.wood, 5]],
             sizeJobsMultiplier: 5,
             ...props
         })
@@ -195,9 +231,11 @@ export class Farm extends ResourceBuilding {
 }
 
 export class HuntingCabin extends ResourceBuilding {
+    static name = "hunting cabin";
     constructor(props) {
-        super({name: "hunter's cabin", 
+        super({name: HuntingCabin.name, 
             outputResource: Resources.food, 
+            buildInputs: [[Resources.labourTime, 20], [Resources.wood, 25]],
             sizeJobsMultiplier: 3,
             startingProductivity: 1.45,
             ...props
@@ -206,9 +244,11 @@ export class HuntingCabin extends ResourceBuilding {
 }
 
 export class Housing extends ResourceBuilding {
+    static name = "housing";
     constructor(props) {
-        super({name: "housing", 
+        super({name: Housing.name, 
             outputResource: Resources.housing, 
+            buildInputs: [[Resources.labourTime, 50], [Resources.wood, 100]],
             sizeJobsMultiplier: 0,
             passiveProductionPerSize: 10,
             ...props
@@ -217,9 +257,11 @@ export class Housing extends ResourceBuilding {
 }
 
 export class LumberjacksHut extends ResourceBuilding {
+    static name = "lumberjack's hut";
     constructor(props) {
-        super({name: "lumberjack's hut", 
+        super({name: LumberjacksHut.name, 
             outputResource: Resources.wood, 
+            buildInputs: [[Resources.labourTime, 25], [Resources.wood, 40]],
             sizeJobsMultiplier: 3,
             ...props
         })
@@ -227,9 +269,11 @@ export class LumberjacksHut extends ResourceBuilding {
 }
 
 export class CharcoalKiln extends ResourceBuilding {
+    static name = "charcoal kiln";
     constructor(props) {
-        super({name: "charcoal kiln", 
+        super({name: CharcoalKiln.name, 
             outputResource: Resources.coal, 
+            buildInputs: [[Resources.labourTime, 20], [Resources.wood, 30]],
             inputResources: [{resource:Resources.wood, multiplier: 0.25}],
             sizeJobsMultiplier: 3,
             ...props
@@ -238,9 +282,11 @@ export class CharcoalKiln extends ResourceBuilding {
 }
 
 export class Brewery extends ResourceBuilding {
+    static name = "brewery";
     constructor(props) {
-        super({name: "brewery", 
+        super({name: Brewery.name, 
             outputResource: Resources.beer, 
+            buildInputs: [[Resources.labourTime, 35], [Resources.wood, 50]],
             inputResources: [{resource:Resources.food, multiplier: 0.2}],
             sizeJobsMultiplier: 3,
             ...props
@@ -249,9 +295,11 @@ export class Brewery extends ResourceBuilding {
 }
 
 export class Apothecary extends ResourceBuilding {
+    static name = "apothecary";
     constructor(props) {
-        super({name: "apothecary", 
+        super({name: Apothecary.name, 
             outputResource: Resources.medicinalHerbs, 
+            buildInputs: [[Resources.labourTime, 15], [Resources.wood, 25]],
             inputResources: [],
             sizeJobsMultiplier: 2,
             ...props
@@ -259,10 +307,36 @@ export class Apothecary extends ResourceBuilding {
     }
 }
 
-export class Quarry extends ResourceBuilding {
+export class Library extends ResourceBuilding {
+    static name = "library";
     constructor(props) {
-        super({name: "quarry", 
+        super({name: Library.name, 
+            outputResource: Resources.research, 
+            buildInputs: [[Resources.labourTime, 50], [Resources.wood, 35]],
+            sizeJobsMultiplier: 2,
+            ...props
+        })
+    }
+}
+
+export class ConstructionSite extends ResourceBuilding {
+    static name = "construction site";
+    constructor(props) {
+        super({name: ConstructionSite.name, 
+            outputResource: Resources.labourTime, 
+            buildInputs: [[Resources.labourTime, 5], [Resources.wood, 5]],
+            sizeJobsMultiplier: 5,
+            ...props
+        })
+    }
+}
+
+export class Quarry extends ResourceBuilding {
+    static name = "quarry";
+    constructor(props) {
+        super({name: Quarry.name, 
             outputResource: Resources.stone, 
+            buildInputs: [[Resources.labourTime, 100], [Resources.wood, 50]],
             sizeJobsMultiplier: 3,
             ...props
         })
@@ -270,9 +344,11 @@ export class Quarry extends ResourceBuilding {
 }
 
 export class Stonecutters extends ResourceBuilding {
+    static name = "stonecutter's workshop";
     constructor(props) {
-        super({name: "Stonecutter's workshop", 
+        super({name: Stonecutters.name, 
             outputResource: Resources.stoneBricks, 
+            buildInputs: [[Resources.labourTime, 25], [Resources.wood, 25]],
             inputResources: [{resource:Resources.stone, multiplier: 2}],
             sizeJobsMultiplier: 3,
             ...props

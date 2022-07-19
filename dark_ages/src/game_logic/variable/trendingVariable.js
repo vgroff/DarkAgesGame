@@ -79,7 +79,7 @@ export class TrendingVariableComponent extends VariableComponent {
         if (this.variable) {
             trendingValue = parseFloat(this.variable.currentlyTrendingTo.toFixed(3));
             if (this.variable.trendingChange) {
-                let eps = this.variable.currentValue * 0.00001;
+                let eps = Math.abs(this.variable.currentValue) * 0.0001;
                 extraStyle.color = this.variable.trendingChange < - eps  ? 'red' : this.variable.trendingChange > eps ? 'green' : 'black';
             }
         }

@@ -65,11 +65,11 @@ export class AggregatorModifier extends VariableModifier {
  
     resubscribeToVariables(indent=0) {
         for (let i = 0; i < this.variable.length; i++) {
-            this.variableSubscriptions.forEach(sub => this.variables[i].unsubscribe(sub));
+            this.variableSubscriptions.forEach(sub => this.variables[i].unsubscribe(sub, 'aggregator'));
         }
         this.variables = this.getVariables(this.aggregatorList, this.keys);
         this.variableSubscriptions = [];
-        this.variableSubscriptions = this.variables.map(variable => variable.subscribe((indent) => {this.aggregate(indent)}, 'aggregator'));
+        this.variableSubscriptions = this.variables.map(variable => variable.subscribe((indent) => {this.aggregate(indent)}, 1, 'aggregator'));
         this.aggregate(indent);
     }
 }
