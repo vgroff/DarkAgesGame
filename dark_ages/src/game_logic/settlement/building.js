@@ -29,9 +29,11 @@ export class Building {
         let buildText = ['Will increase size by 1'];
         for (const inputResource of this.buildInputs) {
             let resourceStorage = resourceStorages.find(r => r.resource === inputResource[0]);
+            let text = `\nCosts ${roundNumber(inputResource[1], 3)} ${inputResource[0].name}`;
             if (resourceStorage.amount.currentValue < inputResource[1]) {
-                buildText.push(`\nneed another ${roundNumber(inputResource[1] - resourceStorage.amount.currentValue, 3)} ${inputResource[0].name}`);
+                text += `, need another ${roundNumber(inputResource[1] - resourceStorage.amount.currentValue, 3)}`;
             }
+            buildText.push(text);
         }
         return buildText;
     }

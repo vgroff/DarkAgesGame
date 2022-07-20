@@ -38,13 +38,29 @@ export default Game;
 // - Coal demand will need to depend on season (notes in rationing) - make a change to the ideal demand is the nicest way of doing this
 // - Potential simple/important buildings: storage(not trivial but important), weavers (trivial), tavern (trivial), library (trivial), construction site (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial), roads(not too trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
+// - Add a world market for buying/selling at bad prices. Calculate prices from productionRatios. Limit the quantities that can be bought. Both price and quantity depend on some tradeFactor variable.
+
+// Next up:
+// - Add a world market for buying/selling at bad prices. Calculate prices from productionRatios. Limit the quantities that can be bought. Both price and quantity depend on some tradeFactor variable.
+// - Basic character/RPG system
+// - Basic combat system - have bandit raids
+// - Basic event system with user responses and success chances depending on character - crop failures, wolf attacks etc... check phone for ideas
+// - Add civilian and military rebellions - add a legitimacy system and low legitmacy+happiness triggers rebellions
+
+// Requirements for MVP:
+// - Should test balance with tests -> set up conditions and measure happiness
+// - Basic settlement management
+// - Basic character/RPG system
+// - Basic combat system - have bandit raids
+// - Saving/Loading system?
+// - Playtesting! Myself and friends
 
 // Stuff for later builds:
-// - Should test balanced with tests -> set up conditions and measure happiness
+// - Diplomacy system
+// - "Fake" AI settlements that are really just characters that do combat/diplomacy but don't actually do the settlement management
 // - Could have conditional variables -> they take either a single true/false variable or two variables to compare and then return different results depending on the outcome
 // - Add building upkeep
 // - Add food decay
-// - Get rid of the logging, no doubt it's expensive
 
 // AI reinforcement learning:
 // - job setting: iterate through buildings, one NN each, inputs are: demand, stockpile, productivity, unemployed, happiness, health, behaviour/strategy inputs. output is % of unemployed to set to job
@@ -52,10 +68,4 @@ export default Game;
 //    - this one could be trained by running many "simulations" where it has to optimally distributed resources given supply+production
 // - building/upgrading: have a nn who's job it is to decide what to build/upgrade (if anything) and to pass that onto job setting NN?
 
-//  Stuff for way later builds:
-// - Now build a demand system:
-//   - 2 classes: artisans and labourers. Both have the same demand system, but they get different wages
-//   - Demand is broken up by priority - simply a resource, an amount and a happiness achieved
-//   - always fulfill the best price-value ratio for a given priority
-// - Aggregator has to constantly re-subscribe - not obvious that there's a better way to do this, besides writing cusotm List/Objects with subscribe methods
 

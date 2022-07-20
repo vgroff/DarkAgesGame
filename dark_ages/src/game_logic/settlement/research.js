@@ -1,7 +1,7 @@
 import React from "react";
 import UIBase from "../UIBase";
 import { VariableModifier, multiplication } from "../UIUtils";
-import { Farm } from "./building";
+import { Farm, LumberjacksHut } from "./building";
 import Button from '@mui/material/Button';
 
 
@@ -84,13 +84,35 @@ export function createResearchTree() {
             }),
             new Research({
                 name: "Better irrigation",
-                researchCost: 350,
+                researchCost: 450,
                 researchBonuses: [new SpecificResourceProductivityBonus({building: Farm.name, amount: 1.05})],
             }),
             new Research({
                 name: "3 field rotation",
                 researchCost: 700,
                 researchBonuses: [new SpecificResourceProductivityBonus({building: Farm.name, amount: 1.1})],
+            })
+        ],
+        woodcutting: [
+            new Research({
+                name: "Larger Axes",
+                researchCost: 100,
+                researchBonuses: [new SpecificResourceProductivityBonus({building: LumberjacksHut.name, amount: 1.1})],
+            }),
+            new Research({
+                name: "Better Axes",
+                researchCost: 200,
+                researchBonuses: [new SpecificResourceProductivityBonus({building: LumberjacksHut.name, amount: 1.1})],
+            }),
+            new Research({
+                name: "Saws",
+                researchCost: 350,
+                researchBonuses: [new SpecificResourceProductivityBonus({building: LumberjacksHut.name, amount: 1.2})],
+            }),
+            new Research({
+                name: "Advanced Saws",
+                researchCost: 350,
+                researchBonuses: [new SpecificResourceProductivityBonus({building: LumberjacksHut.name, amount: 1.2})],
             })
         ]
     };

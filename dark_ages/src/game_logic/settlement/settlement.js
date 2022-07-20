@@ -8,6 +8,7 @@ import { Cumulator } from '../UIUtils.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
 import { getBasePopDemands, RationingComponent, applyRationingModifiers } from './rationing.js';
 import { createResearchTree, ResearchComponent, SettlementResearchBonus } from './research.js';
+import { titleCase } from '../utils.js';
 
 
 export class Settlement {
@@ -387,14 +388,14 @@ export class SettlementComponent extends UIBase {
             <h4>Research</h4>
                 <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
                     {Object.entries(this.settlement.research).map(([key, researchList], i) => {
-                        return researchList.map((research) => {
-                            return <Grid item xs={4} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
-                                <h5>{key}</h5>
-                                <ResearchComponent research={research} 
-                                    activateResearch={() => {this.settlement.activateResearch(research)}}
-                                />
-                            </Grid>
-                        });
+                        return <Grid item xs={6} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
+                            <h5>{titleCase(key)}</h5>
+                            {researchList.map((research) => {
+                                return <ResearchComponent research={research} 
+                                        activateResearch={() => {this.settlement.activateResearch(research)}}
+                                    />
+                            })}
+                        </Grid>
                     })}
                 </Grid>
         </Grid>
