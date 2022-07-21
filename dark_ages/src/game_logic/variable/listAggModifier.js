@@ -29,10 +29,10 @@ export class ListAggModifier extends AggregatorModifier {
         }
         let variableList = list.map(variable => {
             for (let key of keys[1]) {
-                variable = variable[key];
-                if (variable === undefined) {
+                if (variable[key] === undefined) {
                     throw Error("undefined variable");
                 }
+                variable = variable[key];
             }
             if (!(variable instanceof Variable)) {
                 throw Error("not a variable");

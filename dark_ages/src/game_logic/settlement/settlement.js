@@ -10,6 +10,7 @@ import { Cumulator } from '../UIUtils.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
 import { getBasePopDemands, RationingComponent, applyRationingModifiers } from './rationing.js';
 import { createResearchTree, ResearchComponent, SettlementResearchBonus } from './research.js';
+import { Market, MarketResourceComponent } from './market.js';
 import { titleCase } from '../utils.js';
 
 
@@ -23,7 +24,7 @@ export class Settlement {
             displayRound: 5,
             modifiers: []
         });
-        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 0.0005, //0.00015
+        this.populationSizeGrowth = new Variable({owner:this, name:"population growth", startingValue: 0.00035, //0.00015
             displayRound: 5,
             modifiers: []
         });
@@ -137,7 +138,7 @@ export class Settlement {
             });
             let proportion = new Variable({name: `${demand.resource.name} proportion`, startingValue: 1});
             let resourceStorage = this.resourceStorages.find(resourceStorage => resourceStorage.resource === demand.resource);
-            let actualRationProp = resourceStorage.addDemand(`${demand.resource.name} ration`, desiredRation, proportion, 2); // 1 because citizens go before businesses
+            let actualRationProp = resourceStorage.addDemand(`${demand.resource.name} ration`, desiredRation, proportion, 2); // 2 because citizens go after businesses
             let rationAchieved = new Variable({name: `Actual ${demand.resource.name} ration`, startingValue: 0, modifiers: [
                 new VariableModifier({variable:desiredRationProp, type: addition}),
                 new VariableModifier({variable: demand.idealAmount, type: multiplication}),
@@ -217,6 +218,23 @@ export class Settlement {
         this.happiness.forceResetTrend(); // Start health and happiness off with values from this
         this.health.forceResetTrend();
         this.happiness.forceResetTrend(); // Twice for good measure
+        let defaultBuildings = [
+            new Farm({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new LumberjacksHut({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new CharcoalKiln({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new LumberjacksHut({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new Brewery({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new Apothecary({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new Quarry({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new Stonecutters({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+        ];
+        this.idealPrices = {};
+        defaultBuildings.forEach(building => {
+            console.log(building.getIdealisedPrice());
+            this.idealPrices[building.outputResource.name] = building.getIdealisedPrice()
+        })
+        this.tradeFactor = new Variable({name:"trade influence", startingValue: 0});
+        this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor});
     }
     addBuilding(building) {
         if (building instanceof ResourceBuilding) {
@@ -352,6 +370,22 @@ export class SettlementComponent extends UIBase {
     addToRation(event, ration, direction) {
         this.settlement.addToDesiredRation(ration, this.getAmount(event, direction, 0.01));
     }
+    buyFromMarket(event, marketResource, direction) {
+        let amount = this.getAmount(event, direction, 0.01);
+        if (amount > 0) {
+            if (marketResource.buyProp.currentValue > 0 || marketResource.desiredSellProp.currentValue === 0) {
+                marketResource.buyProp.setNewBaseValue(marketResource.buyProp.baseValue + amount, 'set by player');
+            } else {
+                marketResource.desiredSellProp.setNewBaseValue(marketResource.desiredSellProp.baseValue - amount, 'set by player');
+            }
+        } else {
+            if (marketResource.desiredSellProp.currentValue > 0 || marketResource.buyProp.currentValue === 0) {
+                marketResource.desiredSellProp.setNewBaseValue(marketResource.desiredSellProp.baseValue - amount, 'set by player');
+            } else {
+                marketResource.buyProp.setNewBaseValue(marketResource.buyProp.baseValue + amount, 'set by player');
+            }
+        }
+    }
     childRender() {
         return <Grid container justifyContent="center" alignItems="center"  style={{alignItems: "center", justifyContent: "center"}} >
         <Grid item xs={12}>
@@ -401,6 +435,18 @@ export class SettlementComponent extends UIBase {
                     {this.settlement.rationsDemanded.map((ration, i) => {
                         return  <Grid item xs={4} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
                             <RationingComponent demandedRation={ration} recievedRation={this.settlement.rationsAchieved[i]} idealRation={this.settlement.idealRations[i]} addRations={(e, direction) => {this.addToRation(e, ration, direction)}}/>
+                        </Grid>
+                    })}
+                </Grid>
+        </Grid>
+        <Grid item xs={12}>
+            <h4>Market</h4>
+                <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
+                    {this.settlement.market.marketResources.map((marketResource, i) => {
+                        return  <Grid item xs={4} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
+                            <MarketResourceComponent marketResource={marketResource} 
+                            buyFromMarket={(e, direction) => {this.buyFromMarket(e, marketResource, direction)}}
+                            />
                         </Grid>
                     })}
                 </Grid>

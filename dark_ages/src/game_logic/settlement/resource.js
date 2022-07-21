@@ -145,7 +145,7 @@ export const Resources = {
     medicinalHerbs: new Resource({name: "medicinal herbs", storageMultiplier: 200, productionRatio: 12.0, description: "helps keep your villagers healthy"}),
     labourTime: new Resource({name: "labour time", storageMultiplier: 0, productionRatio: 1.0, startingAmount: 20, description: "used for building, upkeep and upgrading"}),
     research: new Resource({name: "research", storageMultiplier: null, productionRatio: 1.0, startingAmount: 1000, description: "for new research developements"}),
-    wood: new Resource({name: "wood", storageMultiplier: 200, productionRatio: 1.5, startingAmount: 50, description: "for building, upkeep and fuel"}),
+    wood: new Resource({name: "wood", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 50, description: "for building, upkeep and fuel"}),
     stone: new Resource({name: "stone", storageMultiplier: 150, productionRatio: 1.0, description: "for building and bricks"}),
     stoneBricks: new Resource({name: "stone bricks", storageMultiplier: 200, productionRatio: 1.0, description: "for building and upkeep"}),
 };

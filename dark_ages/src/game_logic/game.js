@@ -9,31 +9,32 @@ class Game {
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 36}),
         ];
-        this.totalTax = new SumAggModifier(
+        this.totalMarketIncome = new SumAggModifier(
             {
-                name: "Total tax",
+                name: "Total market income",
                 aggregate: this,
                 keys: [
                     ["settlements"],
-                    ["tax"],
+                    [ "market", "netMarketIncome"],
                 ],
                 type: addition
             }
         );
 
-        this.constModifier = new VariableModifier({name:'const modifier', type:addition, startingValue:3});
-        this.treasury = new Cumulator({name: 'Treasury', startingValue: 100, timer:this.gameClock, modifiers:[this.constModifier, this.totalTax]});
+        this.treasury = new Cumulator({name: 'Treasury', startingValue: 100, timer:this.gameClock, modifiers:[this.totalMarketIncome]});
     }
 }
 
 export default Game;
 
 // Stuff for now:
+// - World market almost done:
+//     - Set all buying to zero if user runs out of money? Have a bankruptcy variable that can be set to zero/one?
+//     - Show the max for some market stuff (e.g. amounts bought)
 // - Hook up the upgrade buttons?
 // - Coal demand will need to depend on season (notes in rationing) - make a change to the ideal demand is the nicest way of doing this
 // - Potential simple/important buildings: storage(not trivial but important), weavers (trivial), tavern (trivial), library (trivial), construction site (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial), roads(not too trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
-// - Add a world market for buying/selling at bad prices. Calculate prices from productionRatios. Limit the quantities that can be bought. Both price and quantity depend on some tradeFactor variable.
 
 // Next up:
 // - Add a world market for buying/selling at bad prices. Calculate prices from productionRatios. Limit the quantities that can be bought. Both price and quantity depend on some tradeFactor variable.
@@ -49,6 +50,7 @@ export default Game;
 // - Basic character/RPG system
 // - Basic combat system - have bandit raids
 // - Saving/Loading system?
+// - Do some UX improvement work
 // - Playtesting! Myself and friends
 
 // Stuff for later builds:

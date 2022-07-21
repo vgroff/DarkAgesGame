@@ -174,6 +174,11 @@ export class ResourceBuilding extends Building {
         if (this.name.includes("rew")) {
         }
     }
+    getIdealisedPrice() {
+        let outputProductionRatio = 1 / this.outputResource.productionRatio;
+        let inputCost = this.inputResources.reduce((prev, resource) => {return resource.multiplier/resource.resource.productionRatio}, 0)
+        return outputProductionRatio + inputCost;
+    }
 }
 
 export class ResourceBuildingComponent extends UIBase {
