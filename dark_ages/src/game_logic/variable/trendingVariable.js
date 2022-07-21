@@ -20,6 +20,10 @@ export class TrendingVariable extends Variable {
         if (this.trendingSpeed === undefined && !(this.trendingDownSpeed !== undefined && this.trendingUpSpeed !== undefined)) {
             throw Error("TrendingVariable needs trending speed")
         }
+        this.smallestTrend = props.smallestTrend;
+        if (!this.smallestTrend) {
+            throw Error("trending variable needs smallest trend")
+        }
         this.currentlyTrendingTo = this.currentValue;
         this.timer.subscribe(() => {
             this.storeCurrentValue();
@@ -55,6 +59,9 @@ export class TrendingVariable extends Variable {
             throw Error("nan");
         }
         this.currentValue = roundNumber(this.currentValue, this.trendingRoundTo) // Stops trending variables triggering too often
+        if (Math.abs(this.currentValue - this.currentlyTrendingTo) < this.smallestTrend) {
+            this.currentValue = this.currentlyTrendingTo;
+        }
         this.callSubscribers(indent+1);
     }
     storeCurrentValue() {

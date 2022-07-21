@@ -1,5 +1,7 @@
 import {VariableModifier, multiplication, subtraction, division, makeTextFile, greaterThan, lesserThan,  exponentiation, max, priority, roundTo, scaledAddition, UnaryModifier, scaledMultiplication, invLogit, min, Variable, castInt, addition, TrendingVariable, TrendingVariableComponent, VariableComponent} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
+import Checkbox from '@mui/material/Checkbox';
+import {FormControlLabel} from '@mui/material';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite} from './building.js'
@@ -14,6 +16,7 @@ import { titleCase } from '../utils.js';
 export class Settlement {
     constructor(props) {
         this.name = props.name;
+        this.autoManageUnemployed = false;
         this.tax = new Variable({owner: this, name:`tax`, startingValue: 1});
         this.gameClock = props.gameClock;
         this.populationSizeDecline = new Variable({owner:this, name:"population decline", startingValue: 0.00005,
@@ -95,8 +98,8 @@ export class Settlement {
         let baseHappiness = 0.05; // Neutral happiness boost (could change with difficulty)
         let zero = new Variable({name: "zero", startingValue: 0});
         let one = new Variable({name: "one", startingValue: 1});
-        this.happiness = new TrendingVariable({name: "happiness", startingValue: baseHappiness, trendingRoundTo: 3, timer: this.gameClock, trendingUpSpeed: 0.1, trendingDownSpeed: 0.35});
-        this.health = new TrendingVariable({name: "health", timer: this.gameClock, trendingRoundTo: 3, startingValue: 1, trendingUpSpeed: 0.1, trendingDownSpeed: 0.35});
+        this.happiness = new TrendingVariable({name: "happiness", startingValue: baseHappiness, trendingRoundTo: 3, timer: this.gameClock, trendingUpSpeed: 0.1, trendingDownSpeed: 0.2, smallestTrend: 0.009});
+        this.health = new TrendingVariable({name: "health", timer: this.gameClock, trendingRoundTo: 3, startingValue: 1, trendingUpSpeed: 0.05, trendingDownSpeed: 0.15, smallestTrend: 0.009});
         this.unhealth = new Variable({name: "unhealth", startingValue: 1, min: zero, max: one, modifiers: [
             new VariableModifier({variable: this.health, type: subtraction}),
             new VariableModifier({startingValue: 3, type: roundTo, customPriority: 99}),
@@ -179,15 +182,20 @@ export class Settlement {
         ]});
         this.happiness.addModifier(new VariableModifier({variable: this.homelessness, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: -0.75, exponent:1 }));
 
-        this.populationSizeDecline.addModifier(new VariableModifier({name: "Homelessness", variable: this.homelessnessInternal, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: 0.05, exponent:1}));
+        this.populationSizeDecline.addModifier(new VariableModifier({name: "Homelessness", variable: this.homelessnessInternal, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: 0.05, exponent:1.2}));
         Variable.logText += "\n\nSetting jobs here";
         this.populationSizeExternal.subscribe(() => {
-            Variable.logText += `\nSetting jobs here ${this.gameClock.currentValue}`;
-            this.adjustJobsForPopChange();
+            if (this.autoManageUnemployed) {
+                Variable.logText += `\nSetting jobs here ${this.gameClock.currentValue}`;
+                this.adjustJobs();
+            }
         });
         this.totalJobs.subscribe(() => {
-            Variable.logText += `\nSetting jobs here ${this.gameClock.currentValue}`;
-            this.adjustJobsForPopChange();
+            console.log(this.autoManageUnemployed)
+            if (this.autoManageUnemployed) {
+                Variable.logText += `\nSetting jobs here ${this.gameClock.currentValue}`;
+                this.adjustJobs();
+            }
         });
         this.unemployed.subscribe(() => {
             // Searching for some kind of bug, should be fixed now
@@ -217,7 +225,7 @@ export class Settlement {
         }
     }
     populateBuildings() {
-        this.adjustJobsForPopChange();
+        this.adjustJobs();
     }
     addWorkersToBuilding(building, amount) {
         if (amount > 0 && amount > this.unemployed.currentValue && this.unemployed.currentValue >= 0) {
@@ -247,7 +255,7 @@ export class Settlement {
             priority
         }
     }
-    adjustJobsForPopChange() {
+    adjustJobs() {
         if (this.unemployed.currentValue === 0) {
             return
         }
@@ -289,7 +297,22 @@ export class Settlement {
             throw Error("dont know what do");
         }
     }
+    canResearch(research) {
+        if (research.researched) {
+            return false;
+        }
+        let researchStorage = this.resourceStorages.find(resourceStorage => resourceStorage.resource === Resources.research);
+        if (researchStorage.amount.baseValue >= research.researchCost) {
+            return true;
+        }
+        return false;
+    }
     activateResearch(research) {
+        let researchStorage = this.resourceStorages.find(resourceStorage => resourceStorage.resource === Resources.research);
+        if (!this.canResearch(research)) {
+            return;
+        }
+        researchStorage.oneOffDemand(research.researchCost);
         for (const researchBonus of research.researchBonuses) {
             if (researchBonus instanceof SettlementResearchBonus) {
                 researchBonus.activate(this);
@@ -344,7 +367,13 @@ export class SettlementComponent extends UIBase {
             <TrendingVariableComponent showOwner={false} variable={this.settlement.happiness} /><br />
             <TrendingVariableComponent showOwner={false} variable={this.settlement.health} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.generalProductivity} /><br />
-            <a href={this.settlement.logHref}>{Variable.logging ? 'Calculation Log' : 'logging is off'}</a>
+            <a href={this.settlement.logHref}>{Variable.logging ? 'Calculation Log' : 'logging is off'}</a><br />
+            <FormControlLabel control={<Checkbox onChange={(e, value) => {
+                this.settlement.autoManageUnemployed = value;
+                if (this.settlement.autoManageUnemployed) {
+                    this.settlement.adjustJobs();
+                }
+            }}/>} label="Auto-assign unemployed"  style={{maxHeight:'80%', minHeight:'80%'}}/>
         </Grid>
         <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", padding:"5px", textAlign:"center", alignItems: "center", justifyContent: "center"}}>
             <h4>Buildings</h4>
@@ -354,6 +383,8 @@ export class SettlementComponent extends UIBase {
                         <ResourceBuildingComponent building={building} 
                             buildText={building.getBuildText(this.settlement.resourceStorages)}
                             canBuild={building.canBuild(this.settlement.resourceStorages)}
+                            canAddWorkers={building.totalJobs.currentValue > 0 && this.settlement.unemployed.currentValue > 0}
+                            canRemoveWorkers={building.filledJobs.currentValue > 0}
                             addWorkers={(e, direction) => {this.addToBuilding(e, building, direction)}}
                             addToBuildingSize={(e, direction) => {this.addToBuildingSize(e, building, direction)}}
                         />
@@ -390,10 +421,16 @@ export class SettlementComponent extends UIBase {
                     {Object.entries(this.settlement.research).map(([key, researchList], i) => {
                         return <Grid item xs={6} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
                             <h5>{titleCase(key)}</h5>
-                            {researchList.map((research) => {
-                                return <ResearchComponent research={research} 
+                            {researchList.map((research, i) => {
+                                let visible = false;
+                                if (research.researched || i === 0 || researchList[i-1].researched) {
+                                    visible = true;
+                                }
+                                return visible ? <ResearchComponent key={i} research={research} 
+                                        canResearch={this.settlement.canResearch(research)}
+                                        visible={visible}
                                         activateResearch={() => {this.settlement.activateResearch(research)}}
-                                    />
+                                    /> : null
                             })}
                         </Grid>
                     })}
