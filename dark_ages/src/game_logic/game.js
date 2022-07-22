@@ -1,13 +1,14 @@
 import {Settlement, } from "./settlement/settlement";
-import {ListAggModifier, VariableModifier, Cumulator, addition} from './UIUtils';
+import {ListAggModifier, Variable, VariableModifier, Cumulator, addition} from './UIUtils';
 import {Timer} from './timer'
 import { SumAggModifier } from "./variable/sumAgg";
 
 class Game {
     constructor(gameClock) {
         this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 600});
+        this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 36}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 36, bankrupt: this.bankrupt}),
         ];
         this.totalMarketIncome = new SumAggModifier(
             {
@@ -21,17 +22,22 @@ class Game {
             }
         );
 
-        this.treasury = new Cumulator({name: 'Treasury', startingValue: 100, timer:this.gameClock, modifiers:[this.totalMarketIncome]});
+        this.treasury = new Cumulator({name: 'Treasury', startingValue: 10, timer:this.gameClock, modifiers:[this.totalMarketIncome]});
+        this.treasury.subscribe(() => {
+            if (this.treasury.baseValue < 0 && this.bankrupt.currentValue === 0) {
+                this.bankrupt.setNewBaseValue(1, 'user bankrupt');
+            } else if (this.treasury.baseValue > 0 && this.bankrupt.currentValue !== 0){
+                this.bankrupt.setNewBaseValue(0, 'user liquid');
+            }
+        });
     }
 }
 
 export default Game;
 
 // Stuff for now:
-// - World market almost done:
-//     - Set all buying to zero if user runs out of money? Have a bankruptcy variable that can be set to zero/one?
-//     - Show the max for some market stuff (e.g. amounts bought)
-// - Hook up the upgrade buttons?
+// - Unlock new buildings with research - start with: farm, hunters lodge, woodcutter, charcoal, library
+// - Hook up the upgrade buttons? Need to be able to reserach upgrades? 
 // - Coal demand will need to depend on season (notes in rationing) - make a change to the ideal demand is the nicest way of doing this
 // - Potential simple/important buildings: storage(not trivial but important), weavers (trivial), tavern (trivial), library (trivial), construction site (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial), roads(not too trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?

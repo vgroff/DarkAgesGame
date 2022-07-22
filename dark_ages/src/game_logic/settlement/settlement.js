@@ -230,11 +230,10 @@ export class Settlement {
         ];
         this.idealPrices = {};
         defaultBuildings.forEach(building => {
-            console.log(building.getIdealisedPrice());
             this.idealPrices[building.outputResource.name] = building.getIdealisedPrice()
         })
         this.tradeFactor = new Variable({name:"trade influence", startingValue: 0});
-        this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor});
+        this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor, bankrupt: props.bankrupt});
     }
     addBuilding(building) {
         if (building instanceof ResourceBuilding) {

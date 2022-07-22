@@ -17,19 +17,19 @@ export class Market {
         this.marketSellPriceFactor = new Variable({
             name: "market sell price factor", startingValue: (1 - defaultPenalty), max: one,
             modifiers: [
-                new VariableModifier({variable: props.tradeFactor, type: scaledAddition, coeff: defaultPenalty*0.8, exp: 0.75})
+                new VariableModifier({variable: props.tradeFactor, type: scaledAddition, scale: defaultPenalty*0.8, exp: 0.75})
             ]
         });
         this.marketBuyPriceFactor = new Variable({
             name: "market buy price factor", startingValue: 1 + defaultPenalty, min: one, type: multiplication, 
             modifiers: [
-                new VariableModifier({variable: props.tradeFactor, type: scaledAddition, coeff: -defaultPenalty*0.8, exp:0.75})
+                new VariableModifier({variable: props.tradeFactor, type: scaledAddition, scale: -defaultPenalty*0.8, exp:0.75})
             ]
         });
         this.marketAmountFactor = new Variable({
             name: "market amount factor", startingValue: 0, type: multiplication,
             modifiers: [
-                new VariableModifier({variable: props.tradeFactor, type: scaledAddition, coeff: 1, exp:0.75, bias: 0.25})
+                new VariableModifier({variable: props.tradeFactor, type: scaledAddition, scale: 1, exp:0.75, bias: 0.25})
             ]
         });
         this.marketResources = this.resourceStorages.map(resourceStorage => {
@@ -38,7 +38,9 @@ export class Market {
                 return null;
             }
             let desiredSellProp = new Variable({name: `desired selling % of ${resource.name}`, startingValue: 0, min: zero, max: this.marketAmountFactor});
-            let buyProp = new Variable({name: `buying % of ${resource.name}`, startingValue: 0, min: zero,  max: this.marketAmountFactor});
+            let buyProp = new Variable({name: `buying % of ${resource.name}`, startingValue: 0, min: zero,  max: this.marketAmountFactor,
+                modifiers: [new VariableModifier({variable: props.bankrupt, type:scaledMultiplication, bias:1,scale:-1})]
+            });
             let desiredSellAmount = new Variable({name: `total selling of ${resource.name}`, startingValue: 0, modifiers: [
                 new VariableModifier({variable: this.population, type: addition}),
                 new VariableModifier({variable: desiredSellProp, type: multiplication}),
@@ -102,13 +104,13 @@ export class MarketResourceComponent extends UIBase {
         this.addVariables([this.marketResource.buyProp, this.marketResource.desiredSellProp, this.marketResource.marketSellPrice])
     }
     childRender() {
-        return <span style={{alignItems: "center", justifyContent: "center"}}>
+        return <span style={{alignItems: "center", justifyContent: "center", fontSize: 14}}>
             <div>
             <VariableComponent variable={this.marketResource.marketSellPrice} /><br/>
-            <VariableComponent variable={this.marketResource.desiredSellProp} /><br/>
-            <VariableComponent variable={this.marketResource.actualSellProp} /><br/>
             <VariableComponent variable={this.marketResource.marketBuyPrice} /><br/>
-            <VariableComponent variable={this.marketResource.buyProp} /><br/>
+            {this.marketResource.desiredSellProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.desiredSellProp}/><br/></span> : null}
+            {this.marketResource.desiredSellProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.actualSellProp} /><br/></span> : null}
+            {this.marketResource.buyProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.buyProp} showMax={true} /><br/></span> : null}
             <VariableComponent variable={this.marketResource.netIncome} />
             </div>
             <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "36px", maxWidth: "36px"}}>Buy</Button>

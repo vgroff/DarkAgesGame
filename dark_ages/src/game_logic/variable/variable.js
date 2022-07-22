@@ -292,6 +292,7 @@ export class VariableComponent extends React.Component {
         let ownerText = (this.variable.owner && this.props.showOwner && this.variable.owner.name !== unnamedVariableName) ? `${this.variable.owner.name}'s ` : '';
         let nameText = (this.props.showName && this.variable.name !== unnamedVariableName) ? <span>{ownerText ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
         let displayValue = roundNumber(this.props.showBase ? this.variable.baseValue : this.variable.currentValue, this.variable.displayRound);
+        let maxText = (this.props.showMax && this.variable.max) ? `/${this.variable.max.currentValue}` : null;
         let explanations = this.variable.explanations.map((explanation, i) => {
             if (explanation.variable && explanation.textPriority) {
                 return <span style={{textAlign: "right"}} key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.text)}<br /></span> 
@@ -311,14 +312,14 @@ export class VariableComponent extends React.Component {
             return <HTMLTooltip title={explanations} style={{textAlign: "right"}}>
                 <span style={{"textAlign": "center", ...this.props.style, ...extraStyle}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
-                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}{extraChildren}</span>
+                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{maxText}{this.props.children}{extraChildren}</span>
                 </span>
                 </HTMLTooltip>
         } else {
             return <div>
                 <div style={{"textAlign": "right", ...this.props.style, ...extraStyle}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
-                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{this.props.children}{extraChildren}</span>
+                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{maxText}{this.props.children}{extraChildren}</span>
                 </div>
                 <div style={{"textAlign": "center", "fontWeight": "bold", ...this.props.style}}>
                     <span style={{}}>Explanation:</span> <br/>
@@ -343,6 +344,7 @@ VariableComponent.defaultProps = {
     showName: true,
     showOwner: true,
     showBase: false,
+    showMax: false,
     expanded: false
 };
 
