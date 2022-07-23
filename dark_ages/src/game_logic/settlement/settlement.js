@@ -4,7 +4,7 @@ import Checkbox from '@mui/material/Checkbox';
 import {FormControlLabel} from '@mui/material';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite} from './building.js'
+import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
@@ -18,7 +18,6 @@ export class Settlement {
     constructor(props) {
         this.name = props.name;
         this.autoManageUnemployed = false;
-        this.tax = new Variable({owner: this, name:`tax`, startingValue: 1});
         this.gameClock = props.gameClock;
         this.populationSizeDecline = new Variable({owner:this, name:"population decline", startingValue: 0.00005,
             displayRound: 5,
@@ -66,10 +65,12 @@ export class Settlement {
         this.addBuilding(new CharcoalKiln({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new LumberjacksHut({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new ConstructionSite({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Brewery({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Apothecary({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Quarry({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Stonecutters({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Library({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Roads({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Brewery({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Apothecary({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Quarry({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Stonecutters({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.totalJobs = new SumAggModifier(
             {
                 name: "Total Jobs",
@@ -125,6 +126,7 @@ export class Settlement {
         this.research = createResearchTree();
         this.popDemands = getBasePopDemands();
         this.populateBuildings();
+        this.rationResources = [];
         this.rationsDemanded = [];
         this.rationsAchieved = [];
         this.idealRations = [];
@@ -154,8 +156,9 @@ export class Settlement {
                 this.rationsAchieved.push(rationAchieved);
                 this.rationsDemanded.push(desiredRationProp);
                 this.idealRations.push(demand.idealAmount);
+                this.rationResources.push(demand.resource);
             }
-            applyRationingModifiers(rationAchieved, demand, this.health, this.happiness);
+                applyRationingModifiers(rationAchieved, demand, this.health, this.happiness, this.generalProductivity);
         }
         this.happiness.addModifier(new VariableModifier({type: multiplication, variable: new Variable({name: "Penalty from health", startingValue: 0,
             modifiers: [
@@ -186,14 +189,13 @@ export class Settlement {
         this.populationSizeDecline.addModifier(new VariableModifier({name: "Homelessness", variable: this.homelessnessInternal, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: 0.05, exponent:1.2}));
         Variable.logText += "\n\nSetting jobs here";
         this.populationSizeExternal.subscribe(() => {
-            if (this.autoManageUnemployed) {
+            if (this.autoManageUnemployed || this.unemployed.currentValue < 0) {
                 Variable.logText += `\nSetting jobs here ${this.gameClock.currentValue}`;
                 this.adjustJobs();
             }
         });
         this.totalJobs.subscribe(() => {
-            console.log(this.autoManageUnemployed)
-            if (this.autoManageUnemployed) {
+            if (this.autoManageUnemployed || this.unemployed.currentValue < 0) {
                 Variable.logText += `\nSetting jobs here ${this.gameClock.currentValue}`;
                 this.adjustJobs();
             }
@@ -314,6 +316,15 @@ export class Settlement {
             throw Error("dont know what do");
         }
     }
+    upgradeBuilding(building, direction) {
+        if (direction === 1) {
+            building.upgrade(this.resourceStorages, direction);
+        } else if (direction === -1 ) {
+            building.downgrade(this.resourceStorages, direction);
+        } else {
+            throw Error("dont know what do");
+        }
+    }
     canResearch(research) {
         if (research.researched) {
             return false;
@@ -348,7 +359,7 @@ export class SettlementComponent extends UIBase {
     constructor(props) {
         super(props);
         this.settlement = props.settlement;
-        this.addVariables([this.settlement.tax, this.settlement.happiness]);
+        this.addVariables([this.settlement.happiness]);
     }
     getAmount(event, direction, multiplier) {
         event.stopPropagation();
@@ -365,6 +376,9 @@ export class SettlementComponent extends UIBase {
     }
     addToBuildingSize(event, building, direction) {
         this.settlement.addToBuildingSize(building, direction);
+    }
+    upgradeBuilding(event, building, direction) {
+        this.settlement.upgradeBuilding(building, direction);
     }
     addToRation(event, ration, direction) {
         this.settlement.addToDesiredRation(ration, this.getAmount(event, direction, 0.01));
@@ -390,7 +404,6 @@ export class SettlementComponent extends UIBase {
         <Grid item xs={12}>
             <h4>Information</h4>
             <span>{this.settlement.name}</span><br />
-            <VariableComponent showOwner={false} variable={this.settlement.tax} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeExternal} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeChange} /><br /> 
             <VariableComponent showOwner={false} variable={this.settlement.totalJobs.variable} /><br />
@@ -411,15 +424,20 @@ export class SettlementComponent extends UIBase {
         <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", padding:"5px", textAlign:"center", alignItems: "center", justifyContent: "center"}}>
             <h4>Buildings</h4>
             <Grid container spacing={3} justifyContent="center" alignItems="center" style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
-                {this.settlement.getBuildings().map((building, i) => {
-                    return <Grid item xs={4} key={i} style={{alignItems: "center", justifyContent: "center"}}>
+                {this.settlement.getBuildings().filter((building) => building.unlocked).map((building, i) => {
+                    return <Grid item xs={4} key={building.name} style={{alignItems: "center", justifyContent: "center"}}>
                         <ResourceBuildingComponent building={building} 
                             buildText={building.getBuildText(this.settlement.resourceStorages)}
                             canBuild={building.canBuild(this.settlement.resourceStorages)}
+                            canDemolish={building.size.currentValue > 0}
                             canAddWorkers={building.totalJobs.currentValue > 0 && this.settlement.unemployed.currentValue > 0}
                             canRemoveWorkers={building.filledJobs.currentValue > 0}
                             addWorkers={(e, direction) => {this.addToBuilding(e, building, direction)}}
                             addToBuildingSize={(e, direction) => {this.addToBuildingSize(e, building, direction)}}
+                            canUpgrade={building.canUpgrade(this.settlement.resourceStorages)}
+                            canDowngrade={building.canDowngrade(this.settlement.resourceStorages)}
+                            upgradeBuilding={(e, direction) => {this.upgradeBuilding(e, building, direction)}}
+                            upgradeText={building.getUpgradeText(this.settlement.resourceStorages, building)}
                         />
                     </Grid>
                 })}
@@ -431,8 +449,10 @@ export class SettlementComponent extends UIBase {
         <Grid item xs={12}>
             <h4>Rationing</h4>
                 <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
-                    {this.settlement.rationsDemanded.map((ration, i) => {
-                        return  <Grid item xs={4} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
+                    {this.settlement.rationsDemanded.filter((ration, i) => {
+                        return this.settlement.resourceBuildings.find(building => building.outputResource === this.settlement.rationResources[i] && building.unlocked)
+                    }).map((ration, i) => {
+                        return  <Grid item xs={4} key={this.settlement.rationResources[i].name} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
                             <RationingComponent demandedRation={ration} recievedRation={this.settlement.rationsAchieved[i]} idealRation={this.settlement.idealRations[i]} addRations={(e, direction) => {this.addToRation(e, ration, direction)}}/>
                         </Grid>
                     })}
@@ -441,8 +461,10 @@ export class SettlementComponent extends UIBase {
         <Grid item xs={12}>
             <h4>Market</h4>
                 <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
-                    {this.settlement.market.marketResources.map((marketResource, i) => {
-                        return  <Grid item xs={4} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
+                    {this.settlement.market.marketResources.filter(marketResource => {
+                        return this.settlement.resourceBuildings.find(building => building.outputResource === marketResource.resource && building.unlocked)
+                    }).map((marketResource, i) => {
+                        return  <Grid item xs={4} key={marketResource.resource.name} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
                             <MarketResourceComponent marketResource={marketResource} 
                             buyFromMarket={(e, direction) => {this.buyFromMarket(e, marketResource, direction)}}
                             />
@@ -453,8 +475,10 @@ export class SettlementComponent extends UIBase {
         <Grid item xs={12}>
             <h4>Resources</h4>
                 <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
-                    {this.settlement.resourceStorages.map((resourceStorage, i) => {
-                        return  <Grid item xs={4} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
+                    {this.settlement.resourceStorages.filter(resourceStorage => {
+                        return resourceStorage.amount.currentValue !== 0 || this.settlement.resourceBuildings.find(building => building.outputResource === resourceStorage.resource && building.unlocked)
+                    }).map((resourceStorage, i) => {
+                        return  <Grid item xs={4} key={resourceStorage.resource.name} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
                             <ResourceStorageComponent resourceStorage={resourceStorage} />
                         </Grid>
                     })}

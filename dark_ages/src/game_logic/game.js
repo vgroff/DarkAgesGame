@@ -36,14 +36,18 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Unlock new buildings with research - start with: farm, hunters lodge, woodcutter, charcoal, library
-// - Hook up the upgrade buttons? Need to be able to reserach upgrades? 
+// - Roads should boost trade factor too -> refactor the popdemand thing so that its simpler
+// - Introduce efficiency into resourcebuildings
+// - Some resource buildings have a maxSize (e.g. hunting lodge)
+// - Make homelessness and unemployement go red if > 0
+// - Tools resource depends on iron and boosts productivity like 20% or something? Should pop demands be moved to each resource? No because want it to be unique per settlement/character
 // - Coal demand will need to depend on season (notes in rationing) - make a change to the ideal demand is the nicest way of doing this
 // - Potential simple/important buildings: storage(not trivial but important), weavers (trivial), tavern (trivial), library (trivial), construction site (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial), roads(not too trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
+// - Add rebellions % chance using happiness+legitimacy
+// - Move to the character system!
 
 // Next up:
-// - Add a world market for buying/selling at bad prices. Calculate prices from productionRatios. Limit the quantities that can be bought. Both price and quantity depend on some tradeFactor variable.
 // - Basic character/RPG system
 // - Basic combat system - have bandit raids
 // - Basic event system with user responses and success chances depending on character - crop failures, wolf attacks etc... check phone for ideas

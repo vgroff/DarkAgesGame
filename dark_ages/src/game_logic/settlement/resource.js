@@ -91,6 +91,9 @@ export class ResourceStorage {
     addSupply(supplyVariable) {
         this.supply.variable.addModifier(new VariableModifier({variable: supplyVariable, type:addition}));
     }
+    removeSupply(supplyVariable) {
+        this.supply.variable.removeModifier(this.supply.variable.modifiers.find(modifier => modifier.variable === supplyVariable));
+    }
     updateDemands(indent) {
         let amountAtTurnStart = this.resource.cumulates ? this.amount.baseValue : 0;
         let totalSupply = amountAtTurnStart + this.supply.variable.currentValue;
@@ -141,11 +144,14 @@ export const Resources = {
     food: new Resource({name: "food", storageMultiplier: 450, productionRatio: 1.0, description: "keeps your villagers alive"}),
     coal: new Resource({name: "coal", storageMultiplier: 200, productionRatio: 3.0, description: "for smithing and keeping warm"}),
     housing: new Resource({name: "housing", storageMultiplier: null, cumulates: false, productionRatio: 1.0, description: "for living in"}),
-    beer: new Resource({name: "beer", storageMultiplier: 450, productionRatio: 4.0, description: "helps keep your villagers happy"}),
+    beer: new Resource({name: "beer", storageMultiplier: 450, productionRatio: 3.0, description: "helps keep your villagers happy"}),
     medicinalHerbs: new Resource({name: "medicinal herbs", storageMultiplier: 200, productionRatio: 12.0, description: "helps keep your villagers healthy"}),
-    labourTime: new Resource({name: "labour time", storageMultiplier: 0, productionRatio: 1.0, startingAmount: 20, description: "used for building, upkeep and upgrading"}),
+    labourTime: new Resource({name: "labour time", storageMultiplier: 0, productionRatio: 1.0, startingAmount: 10, description: "used for building, upkeep and upgrading"}),
     research: new Resource({name: "research", storageMultiplier: null, productionRatio: 1.0, startingAmount: 1000, description: "for new research developements"}),
     wood: new Resource({name: "wood", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 50, description: "for building, upkeep and fuel"}),
-    stone: new Resource({name: "stone", storageMultiplier: 150, productionRatio: 1.0, description: "for building and bricks"}),
+    dirtPathAccess: new Resource({name: "dirt path access", storageMultiplier: null, cumulates: false, productionRatio: 1.0, startingAmount: 0, description: "improves general productivity and trade"}),
+    gravelPathAccess: new Resource({name: "gravel path access", storageMultiplier: null, cumulates: false, productionRatio: 1.0, startingAmount: 0, description: "improves general productivity and trade"}),
+    brickRoadAccess: new Resource({name: "brick road access", storageMultiplier: null, cumulates: false, productionRatio: 1.0, startingAmount: 0, description: "improves general productivity and trade"}),
+    stone: new Resource({name: "stone", storageMultiplier: 150, productionRatio: 1.0, startingAmount: 0, description: "for building and bricks"}),
     stoneBricks: new Resource({name: "stone bricks", storageMultiplier: 200, productionRatio: 1.0, description: "for building and upkeep"}),
 };

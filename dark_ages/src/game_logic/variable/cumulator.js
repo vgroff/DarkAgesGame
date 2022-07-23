@@ -46,7 +46,6 @@ export class CumulatorComponent extends VariableComponent {
             expectedChange = parseFloat(this.variable.expectedChange.toFixed(3));
         }
         return super.render([
-            <span key={1}>{this.props.showMax && this.props.variable.max ? `/${this.props.variable.max.currentValue}` : ''}</span>,
             <span key={2}>{this.props.showChange ? (expectedChange > 0 ? `(+${expectedChange})`: `(${expectedChange})`) : ''}</span>
         ]);
     }

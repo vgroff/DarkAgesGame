@@ -93,7 +93,9 @@ export class LoggerComponent extends UIBase {
                     return <span  style={{fontSize: 10}} key={i}>{`${v}`}<br /><br /></span>;
                 }  else if (typeof(v) === "string") {
                     return <span  style={{fontSize: 10}} key={i}>{key}: {v}<br /></span>
-                } else if (typeof(v) === "object") {
+                }  else if (typeof(v) === "boolean") {
+                    return <span  style={{fontSize: 10}} key={i}>{key}: {v}<br /></span>
+                }  else if (typeof(v) === "object") {
                     return <span style={{fontSize: 10}} key={i} onClick={()=>{this.logger.setInspect(v)}}>{key}: {'{object}'}<br /></span>
                 } else{
                     return <span style={{fontSize: 10}} key={i}>{key}: {v}<br /></span>

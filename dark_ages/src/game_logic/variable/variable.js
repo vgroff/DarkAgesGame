@@ -94,6 +94,16 @@ export class Variable {
             this.recalculate(`set new base value - ${explanations}`, indent);
         }
     }
+    removeModifier(removedModifier) {
+        if (!(removedModifier instanceof AbstractModifier)) {
+            throw Error('not a modifier');
+        }
+        if (!(this.modifiers.find(modifier => modifier === removedModifier))) {
+            throw Error("don't have this");
+        }
+        let modifiers = this.modifiers.filter(modifier => modifier !== removedModifier);
+        this.setModifiers(modifiers)       
+    }
     addModifiers(modifiers) {
         for (const modifier of modifiers) {
             this.addModifier(modifier)

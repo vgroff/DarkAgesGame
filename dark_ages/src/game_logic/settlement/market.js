@@ -111,10 +111,10 @@ export class MarketResourceComponent extends UIBase {
             {this.marketResource.desiredSellProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.desiredSellProp}/><br/></span> : null}
             {this.marketResource.desiredSellProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.actualSellProp} /><br/></span> : null}
             {this.marketResource.buyProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.buyProp} showMax={true} /><br/></span> : null}
-            <VariableComponent variable={this.marketResource.netIncome} />
+            {this.marketResource.buyProp.currentValue > 0 || this.marketResource.desiredSellProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.netIncome} /></span> : null}
             </div>
-            <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "36px", maxWidth: "36px"}}>Buy</Button>
-            <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "36px", maxWidth: "36px"}}>Sell</Button>
+            <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "120px", maxWidth: "120px"}}>Buy</Button>
+            <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "120px", maxWidth: "120x"}}>Sell</Button>
         </span>
     }
 }
