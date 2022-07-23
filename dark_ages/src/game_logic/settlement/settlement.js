@@ -4,7 +4,7 @@ import Checkbox from '@mui/material/Checkbox';
 import {FormControlLabel} from '@mui/material';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads} from './building.js'
+import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
@@ -12,6 +12,7 @@ import { getBasePopDemands, RationingComponent, applyRationingModifiers } from '
 import { createResearchTree, ResearchComponent, SettlementResearchBonus } from './research.js';
 import { Market, MarketResourceComponent } from './market.js';
 import { titleCase } from '../utils.js';
+import { winter, summer  } from '../seasons.js';
 
 
 export class Settlement {
@@ -71,6 +72,7 @@ export class Settlement {
         this.addBuilding(new Apothecary({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Quarry({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Stonecutters({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new IronMine({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.totalJobs = new SumAggModifier(
             {
                 name: "Total Jobs",
@@ -152,6 +154,16 @@ export class Settlement {
                     new VariableModifier({type: addition, variable: actualRationProp}),
                     new VariableModifier({type: multiplication, variable: this.populationSizeInternal}),
                 ]});
+            } else if (demand.resource === Resources.coal) {
+                this.gameClock.subscribe(() => {
+                    if (this.gameClock.translatedTime.season === winter) {
+                        demand.idealAmount.setNewBaseValue(1.5, 'winter amount');
+                    } else if (this.gameClock.translatedTime.season === summer) {
+                        demand.idealAmount.setNewBaseValue(0.5, 'summer amount');
+                    } else {
+                        demand.idealAmount.setNewBaseValue(1.0, 'normal amount');
+                    }
+                })
             }
             if (!demand.alwaysFullRations) {
                 this.rationsAchieved.push(rationAchieved);

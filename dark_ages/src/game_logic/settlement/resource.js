@@ -152,6 +152,10 @@ export const Resources = {
     dirtPathAccess: new Resource({name: "dirt path access", storageMultiplier: null, cumulates: false, productionRatio: 1.0, startingAmount: 0, description: "improves general productivity and trade"}),
     gravelPathAccess: new Resource({name: "gravel path access", storageMultiplier: null, cumulates: false, productionRatio: 1.0, startingAmount: 0, description: "improves general productivity and trade"}),
     brickRoadAccess: new Resource({name: "brick road access", storageMultiplier: null, cumulates: false, productionRatio: 1.0, startingAmount: 0, description: "improves general productivity and trade"}),
-    stone: new Resource({name: "stone", storageMultiplier: 150, productionRatio: 1.0, startingAmount: 100, description: "for building and bricks"}),
+    stone: new Resource({name: "stone", storageMultiplier: 150, productionRatio: 1.0, startingAmount: 0, description: "for building and bricks"}),
     stoneBricks: new Resource({name: "stone bricks", storageMultiplier: 200, productionRatio: 1.0, description: "for building and upkeep"}),
+    iron: new Resource({name: "iron", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 0, description: "for tools and weapons"}),
+    stoneTools: new Resource({name: "stone tools", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 0, description: "improves productivity"}),
+    ironTools: new Resource({name: "iron tools", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 0, description: "improves productivity"}),
+    steelTools: new Resource({name: "steel tools", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 0, description: "improves productivity"}),
 };

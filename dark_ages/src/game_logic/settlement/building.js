@@ -559,3 +559,58 @@ export class Stonecutters extends ResourceBuilding {
         })
     }
 }
+
+export class IronMine extends ResourceBuilding {
+    static name = "iron mine";
+    constructor(props) {
+        super({name: IronMine.name, 
+            outputResource: Resources.iron, 
+            buildInputs: [[Resources.labourTime, 130], [Resources.wood, 50]],
+            sizeJobsMultiplier: 3,
+            ...props
+        })
+    }
+}
+
+export class PigIronPit extends ResourceBuilding {
+    static name = "pig iron pit";
+    constructor(props) {
+        super({name: IronMine.name, 
+            outputResource: Resources.iron, 
+            buildInputs: [[Resources.labourTime, 40], [Resources.wood, 20]],
+            sizeJobsMultiplier: 4,
+            maxSize: 3,
+            productionRation: 1.35, 
+            ...props
+        })
+    }
+}
+
+export class Toolmaker extends ResourceBuilding {
+    static name = "toolmaker";
+    static ironBlacksmith = "Blacksmith (Iron)";
+    static steelBlacksmith = "Blacksmith (Steel)";
+    static upgrades = [   
+        {
+            name: Toolmaker.ironBlacksmith,
+            newDisplayName: Toolmaker.ironBlacksmith,
+            newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25]],
+            changes: [[newResourceChange, Resources.ironTools]],
+        },
+        {
+            name: Toolmaker.steelBlacksmith,
+            newDisplayName: Toolmaker.steelBlacksmith,
+            newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25]],
+            changes: [[newResourceChange, Resources.steelTools]]
+        }
+    ];
+    constructor(props) {
+        super({name: Stonecutters.name, 
+            outputResource: Resources.stoneBricks, 
+            buildInputs: [[Resources.labourTime, 25], [Resources.wood, 25]],
+            inputResources: [{resource:Resources.stone, multiplier: 2}],
+            sizeJobsMultiplier: 3,
+            ...props
+        })
+    }
+}

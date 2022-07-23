@@ -1,7 +1,7 @@
 import React from "react";
 import UIBase from "../UIBase";
 import { VariableModifier, multiplication } from "../UIUtils";
-import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln } from "./building";
+import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, PigIronPit, Toolmaker } from "./building";
 import {Grid, Button} from '@mui/material';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 
@@ -262,6 +262,18 @@ export function createResearchTree() {
                 researchCost: 250,
                 researchBonuses: [new UnlockBuildingBonus({building: Stonecutters.name})],
             })
+        ],
+        ironwork: [
+            new Research({
+                name: "Mining Iron",
+                researchCost: 100,
+                researchBonuses: [new UnlockBuildingBonus({building: IronMine.name}), new UnlockBuildingBonus({building: PigIronPit.name})],
+            }),
+            new Research({
+                name: "Working Iron",
+                researchCost: 350,
+                researchBonuses: [new UnlockBuildingBonus({building: Toolmaker.name})],
+            })           
         ],
         productivity: [
             new Research({

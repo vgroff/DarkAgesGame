@@ -14,6 +14,8 @@ export class Timer extends Variable {
         this.meaning = props.meaning || 'no timer meaning set';
         Timer.timerNumber += 1;
         console.log(`New timer created ${this.name}, timer number: ${this.timerNumber}`);
+        this.timeTranslator = props.timeTranslator;
+        this.translatedTime =  this.timeTranslator ? this.timeTranslator(this.currentValue) : {text:`${this.currentValue} ${this.unit}`};
     }
     stopTimer() {
         if (this.started) {
@@ -25,12 +27,13 @@ export class Timer extends Variable {
         if (!this.started) {
             let self = this;
             this.intervalID = setInterval(() => {
-                self.setNewBaseValue(self.currentValue + 1, [this.meaning], 0);
+                this.forceTick();
             }, this.every);
             this.started = true;
         }
     };
     forceTick() {
+        this.translatedTime = this.timeTranslator ? this.timeTranslator(this.currentValue + 1) : {text:`${this.currentValue + 1} ${this.unit}`};
         this.setNewBaseValue(this.currentValue + 1, [this.meaning], 0);
     }
     killTimer() {
@@ -52,7 +55,7 @@ export class TimerComponent extends VariableComponent {
     }
     render () {
         return <span>
-            <VariableComponent variable={this.props.variable} children={<span> days</span>}/> 
+            {this.variable.translatedTime.text}
         </span>
     }
 }

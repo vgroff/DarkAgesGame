@@ -1,11 +1,20 @@
 import {Settlement, } from "./settlement/settlement";
 import {ListAggModifier, Variable, VariableModifier, Cumulator, addition} from './UIUtils';
+import { titleCase } from "./utils";
 import {Timer} from './timer'
 import { SumAggModifier } from "./variable/sumAgg";
+import { integerPropType } from "@mui/utils";
+import {seasons} from './seasons'
 
 class Game {
     constructor(gameClock) {
-        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 600});
+        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 600, timeTranslator:(value) => {
+            let daysInYear = 12;
+            let year = parseInt(value/daysInYear) + 1;
+            let day = value - (year - 1)*daysInYear + 1;
+            let season = seasons[parseInt((day-1)*4/daysInYear)]
+            return {day, season, year, text: `Day ${day}, ${titleCase(season)}, Year ${year}`}
+        }});
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 36, bankrupt: this.bankrupt}),
@@ -36,12 +45,20 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Tools resource depends on iron and boosts productivity like 20% or something? Should pop demands be moved to each resource? No because want it to be unique per settlement/character
-// - Coal demand will need to depend on season - making a change to the ideal demand is the nicest way of doing this
+// - Tools resource depends on iron+wood and boosts productivity like 20% or something?
+//       - Need an upgrade effect that changes inputResources, probably will need to be a function on the building
+//       - Have stone, iron and steel tools as upgrades - make sure to destroy the leftovers resource when upgrading (convert it back to raw resources)
+//       - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?)
 // - Potential simple/important buildings: storage(not trivial but important), weavers (trivial - maybe don't bother with this yet), tavern (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
+// - Add a terrain for each settlement that affects building possibilities and building productivities
+//      - e.g. -> get coalfields/pig iron in marshland but lower farming yield and labour time, get coal mines and higher mining yield and apothecary in mountains but lower farming and woodcutter yield and labour time,
+//            get higher farming yield in farmland but lower iron yield, apothecary and woodcutter yield, get fishing warfs and higher farming by the river but lower mining yield,
+//            get higher woodcutting, apothecary and hunting in the forest but lower farming and labour time
+// - Determine quality of the harvest at the beginning of the year
 // - Add rebellions % chance using happiness+legitimacy
 // - Move to the character system!
+// - Build weapons
 
 // Next up:
 // - Basic character/RPG system
@@ -55,7 +72,9 @@ export default Game;
 // - Basic settlement management
 // - Basic character/RPG system
 // - Basic combat system - have bandit raids
-// - Saving/Loading system? -> will need to do this somewhat manually, I'm thinking saving all objects props, as well as the baseValue for everything might be enough? I can probably do a lot of this with Object.entries()
+// - Saving/Loading system? -> 
+//     - Looks like I will need to do this somewhat manually, I can probably do a lot of this with Object.entries() and then handling each case. I need to make sure that single variables that are present in multiple places are reconstructed correctly, so I probably need some global Set() object that get populated/read from
+//     - Custom subscriptions also need to be saved? unless they are rebuilt instead?
 // - Do some UX improvement work
 // - Playtesting! Myself and friends
 
