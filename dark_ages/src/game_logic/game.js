@@ -36,8 +36,7 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Roads should boost trade factor too -> refactor the popdemand thing so that its simpler
-// - Introduce efficiency into resourcebuildings
+// - should be able to downgrade buildings
 // - Some resource buildings have a maxSize (e.g. hunting lodge)
 // - Make homelessness and unemployement go red if > 0
 // - Tools resource depends on iron and boosts productivity like 20% or something? Should pop demands be moved to each resource? No because want it to be unique per settlement/character
@@ -59,7 +58,7 @@ export default Game;
 // - Basic settlement management
 // - Basic character/RPG system
 // - Basic combat system - have bandit raids
-// - Saving/Loading system?
+// - Saving/Loading system? -> will need to do this somewhat manually, I'm thinking saving all objects props, as well as the baseValue for everything might be enough? I can probably do a lot of this with Object.entries()
 // - Do some UX improvement work
 // - Playtesting! Myself and friends
 

@@ -13,24 +13,30 @@ const newBuildInputs = "new build inputs";
 export class Building {
     constructor(props) {
         this.name = props.name;
+        this.displayName = props.displayName || props.name;
         this.currentUpgradeIndex = 0;
         let zero = new Variable({startingValue: 0});
         this.startingSize = props.startingSize || 0;
-        this.size = new Variable({owner: this, name:"building size", startingValue: this.startingSize, min: zero, modifiers:[]});
+        let maxSize = props.maxSize ? new Variable({startingValue: props.maxSize}) : undefined;
+        this.size = new Variable({owner: this, name:"building size", startingValue: this.startingSize, min: zero, max: maxSize, modifiers:[]});
         this.buildInputs = props.buildInputs;
         this.unlocked = (props.unlocked || this.size.currentValue > 0) ? true : false;
         this.upgrades = props.upgrades || [];
         this.upgrades = this.upgrades.map(upgrade => {
-            return new BuildingUpgrade({name: upgrade.name, newBuildCost: upgrade.newBuildCost, changes: upgrade.changes.map(changes => {
-                if (changes[0] === newResourceChange) {
-                    return new NewOutputResource({newResource: changes[1]});
-                } else {
-                    throw Error("not implemented");
-                }
+            return new BuildingUpgrade({name: upgrade.name, newBuildCost: upgrade.newBuildCost, newDisplayName: upgrade.newDisplayName, 
+                changes: upgrade.changes.map(changes => {
+                    if (changes[0] === newResourceChange) {
+                        return new NewOutputResource({newResource: changes[1]});
+                    } else {
+                        throw Error("not implemented");
+                    }
             })});
         });
     }
     canBuild(resourceStorages) {
+        if (this.maxSize && this.size.currentValue === this.maxSize.currentValue) {
+            return false;
+        }
         for (const inputResource of this.buildInputs) {
             let resourceStorage = resourceStorages.find(r => r.resource === inputResource[0]);
             if (resourceStorage.amount.baseValue < inputResource[1]) {
@@ -40,6 +46,9 @@ export class Building {
         return true;
     }
     getBuildText(resourceStorages) {
+        if (this.maxSize && this.size.currentValue === this.maxSize.currentValue) {
+            return ["This building can't get any larger"]
+        }
         let buildText = ['Will increase size by 1'];
         for (const inputResource of this.buildInputs) {
             let resourceStorage = resourceStorages.find(r => r.resource === inputResource[0]);
@@ -71,10 +80,10 @@ export class Building {
         
     }
     canDowngrade(resourceStorages) {
-        if (!this.upgrades || !this.upgrades[this.currentUpgradeIndex]) {
+        if (!this.upgrades || !this.upgrades[this.currentUpgradeIndex - 1]) {
             return false;
         }
-        this.upgrades[this.currentUpgradeIndex].canDowngrade(resourceStorages, this);
+        return this.upgrades[this.currentUpgradeIndex - 1].canDowngrade(resourceStorages, this);
     }
     getUpgradeText(resourceStorages) {
         if (!this.upgrades || !this.upgrades[this.currentUpgradeIndex]) {
@@ -84,11 +93,14 @@ export class Building {
     }
     upgrade(resourceStorages) {
         this.upgrades[this.currentUpgradeIndex].upgrade(resourceStorages, this);
+        this.oldDisplayName = this.displayName;
+        this.displayName = this.upgrades[this.currentUpgradeIndex] ? this.upgrades[this.currentUpgradeIndex].newDisplayName || this.displayName : this.displayName;
         this.currentUpgradeIndex += 1;
     }
     downgrade(resourceStorages) {
-        this.upgrades[this.currentUpgradeIndex].downgrade(resourceStorages, this);
         this.currentUpgradeIndex -= 1;
+        this.upgrades[this.currentUpgradeIndex].downgrade(resourceStorages, this);
+        this.displayName = this.oldDisplayName;
     }
 }
 
@@ -129,6 +141,7 @@ export class BuildingUpgrade {
         this.newBuildCost = props.newBuildCost;
         this.unlocked = props.unlocked || false;
         this.upgraded = false;
+        this.newDisplayName = props.newDisplayName;
     }
     canUpgrade(resourceStorages, building) {
         if (!this.unlocked || this.upgraded) {
@@ -175,13 +188,16 @@ export class BuildingUpgrade {
             }
         }
         this.changes.forEach(change => change.activate(building, resourceStorages));
+        this.oldBuildCost = building.buildInputs;
+        building.buildInputs = this.newBuildCost || building.buildInputs;
         this.upgraded = true;
     }
     downgrade(resourceStorages, building) {
         if (!this.canDowngrade(resourceStorages, building)) { 
             return;
         }
-        this.changes.forEach(change => change.deactivate(building));
+        this.changes.forEach(change => change.deactivate(building, resourceStorages));
+        building.buildInputs = this.oldBuildCost;
         this.upgraded = false;
     }
 }
@@ -345,7 +361,7 @@ export class ResourceBuildingComponent extends UIBase {
         return <Grid container spacing={0.5} style={{border:"2px solid #2196f3", borderRadius:"7px", alignItems: "center", justifyContent: "center"}} >
             <Grid item xs={9}>
                 <CustomTooltip items={this.toolTipVars.concat(extraVars)} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                    <span style={extraStyle} onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.name)} {this.building.sizeJobsMultiplier ? <span>{this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span> : this.building.passiveProduction.currentValue} </span>
+                    <span style={extraStyle} onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.displayName)} {this.building.sizeJobsMultiplier ? <span>{this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span> : this.building.passiveProduction.currentValue} </span>
                 </CustomTooltip>
             </Grid>
             <Grid item xs={3} style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
@@ -394,6 +410,7 @@ export class HuntingCabin extends ResourceBuilding {
             buildInputs: [[Resources.labourTime, 20], [Resources.wood, 25]],
             sizeJobsMultiplier: 3,
             startingProductivity: 1.45,
+            maxSize: 3,
             ...props
         })
     }
@@ -488,23 +505,26 @@ export class ConstructionSite extends ResourceBuilding {
 }
 
 export class Roads extends ResourceBuilding {
-    static name = "roads";
+    static name = "Roads";
     static gravelPath = "Gravel Paths";
     static brickRoads = "Brick Roads";
     static upgrades = [   
         {
             name: Roads.gravelPath,
+            newDisplayName: Roads.gravelPath,
             newBuildCost: [[Resources.labourTime, 50], [Resources.stone, 25]],
             changes: [[newResourceChange, Resources.gravelPathAccess]],
         },
         {
             name: Roads.brickRoads,
+            newDisplayName: Roads.brickRoads,
             newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25]],
             changes: [[newResourceChange, Resources.brickRoadAccess]]
         }
     ];
     constructor(props) {
         super({name: Roads.name, 
+            displayName: "Dirt Paths",
             outputResource: Resources.dirtPathAccess, 
             buildInputs: [[Resources.labourTime, 20]],
             sizeJobsMultiplier: 0,

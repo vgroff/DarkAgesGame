@@ -11,98 +11,141 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
         food: {
             resource: Resources.food,
             idealAmount: new Variable({name: "Ideal Food", startingValue: 1}),
-            additiveHappiness: {
+            effects: [{
+                type:addition,
+                on: "happiness",
                 coefficient: new Variable({name: "Additive Food Happiness Coeff", startingValue: 0.2}),
                 exponent: new Variable({name: "Additive Food Happiness Exp", startingValue: 1.25})
             },
-            additiveHealth: {
+            {
+                type:addition,
+                on: "health",
                 offsetProportion: -0.35,
                 coefficient: new Variable({name: "Additive Food Health Coeff", startingValue: 0.2}),
                 exponent: new Variable({name: "Additive Food Health Exp", startingValue: 2})
             },
-            multiplicativeHealth: {
+            {
+                type:multiplication,
+                on: "health",
                 offset: 0.05,
                 midpoint: new Variable({name: "Multiplicative Food Health S Curve Midpoint", startingValue: 0.3}),
                 speed: 3
-            },           
+            }]           
         },
         housing: {
             resource: Resources.housing,
             alwaysFullRations: true,
             idealAmount: new Variable({name: "Ideal Housing", startingValue: 1.0}), 
-            multiplicativeHealth: {
+            effects: [{
+                on: "health",
+                type: multiplication,
                 offset: 0.2,
                 exponent: new Variable({name: "Effect of homelessness", startingValue: 1.5})
-            },
+            }],
         },
         coal: {
             resource: Resources.coal,
             idealAmount: new Variable({name: "Ideal Coal", startingValue: 1.0}), // This should change with weather
-            additiveHappiness: {
+            effects: [{
+                type:addition,
+                on: "happiness",
                 coefficient: new Variable({name: "Additive Coal Happiness Coeff", startingValue: 0.25}),
                 exponent: new Variable({name: "Additive Coal Happiness Exp", startingValue: 1.25})
             },
-            multiplicativeHappiness: {
+            {
+                type:multiplication,
+                on: "happiness",
                 offset: 0.5,
                 exponent: new Variable({name: "Multiplicative Coal Happiness Exp", startingValue: 0.5})
             },
-            additiveHealth: {
+            {
+                type:addition,
+                on: "health",
                 offsetProportion: -0.35,
                 coefficient: new Variable({name: "Additive Coal Health Coeff", startingValue: 0.2}),
                 exponent: new Variable({name: "Additive Coal Health Exp", startingValue: 2})
             },
-            multiplicativeHealth: {
+            {
+                type:multiplication,
+                on: "health",
                 offset: 0.3,
                 midpoint: new Variable({name: "Multiplicative Coal Health S Curve Midpoint", startingValue: 0.25}),
                 speed: 2.5
-            },           
+            }],           
         },
         beer: {
             resource: Resources.beer,
             idealAmount: new Variable({name: "Ideal Beer", startingValue: 1}), // This should change with weather
-            additiveHappiness: {
+            effects: [{
+                type:addition,
+                on: "happiness",
                 coefficient: new Variable({name: "Additive Beer Happiness Coeff", startingValue: 0.3}),
                 exponent: new Variable({name: "Additive Beer Happiness Exp", startingValue: 0.5})
             },
-            additiveHealth: {
+            {
+                type:addition,
+                on: "health",
                 coefficient: new Variable({name: "Additive Beer Health Coeff", startingValue: -0.12}),
                 exponent: new Variable({name: "Additive Beer Health Exp", startingValue: 1.5})
-            }        
+            }]      
         },
         medicinalHerbs: {
             resource: Resources.medicinalHerbs,
             idealAmount: new Variable({name: "Ideal Medicinal Herbs", startingValue: 1}), // This should change with weather
-            additiveHealth: {
+            effects: [{
+                type:addition,
+                on: "health",
                 coefficient: new Variable({name: "Additive Medicinal Herbs Health Coeff", startingValue: 0.25}),
                 exponent: new Variable({name: "Additive Medicinal Herbs Health Exp", startingValue: 1.35})
-            }        
+            }]      
         },
         dirtPathAccess: {
             resource: Resources.dirtPathAccess,
             alwaysFullRations: true,
             idealAmount: new Variable({name: "Ideal Dirt Path Access", startingValue: 1}), // This should change with weather
-            additiveProductivity: {
-                coefficient: new Variable({name: "Additive Road Productivity Coeff", startingValue: 0.1}),
+            effects: [{
+                type:addition,
+                on: "productivity",
+                coefficient: new Variable({name: "Additive Road Productivity Coeff", startingValue: 0.05}),
                 exponent: new Variable({name: "Additive Road Productivity  Exp", startingValue: 0.75})
-            }        
+            },{
+                type:addition,
+                on: "tradeFactor",
+                coefficient: new Variable({name: "Additive Road Trade Factor Coeff", startingValue: 0.2}),
+                exponent: new Variable({name: "Additive Road Trade Factor  Exp", startingValue: 0.4})
+            }]
         },
         gravelPathAccess: {
             resource: Resources.gravelPathAccess,
             alwaysFullRations: true,
             idealAmount: new Variable({name: "Ideal Gravel Path Access", startingValue: 1}), // This should change with weather
-            additiveProductivity: {
-                coefficient: new Variable({name: "Additive Road Productivity Coeff", startingValue: 0.15}),
+            effects: [{
+                type:addition,
+                on: "productivity",
+                coefficient: new Variable({name: "Additive Road Productivity Coeff", startingValue: 0.125}),
                 exponent: new Variable({name: "Additive Road Productivity  Exp", startingValue: 0.75})
-            }        
+            },{
+                type:addition,
+                on: "tradeFactor",
+                coefficient: new Variable({name: "Additive Road Trade Factor Coeff", startingValue: 0.35}),
+                exponent: new Variable({name: "Additive Road Trade Factor  Exp", startingValue: 0.4})
+            }]
         },
         brickRoadAccess: {
             resource: Resources.brickRoadAccess,
             alwaysFullRations: true,
             idealAmount: new Variable({name: "Ideal Brick Road Access", startingValue: 1}), // This should change with weather
-            additiveProductivity: {
+            effects: [{
+                type:addition,
+                on: "productivity",
                 coefficient: new Variable({name: "Additive Road Productivity Coeff", startingValue: 0.2}),
                 exponent: new Variable({name: "Additive Road Productivity  Exp", startingValue: 0.75})
-            }        
+            },{
+                type:addition,
+                on: "tradeFactor",
+                coefficient: new Variable({name: "Additive Road Trade Factor Coeff", startingValue: 0.5}),
+                exponent: new Variable({name: "Additive Road Trade Factor  Exp", startingValue: 0.4})
+            }] 
         }
     };
     return basePopDemands;
@@ -150,37 +193,28 @@ function getModifierVariables(rationAchieved, idealAmount, modifierData) {
     return modifiers;
 }
 
-export function applyRationingModifiers(rationAchieved, demand, health, happiness, productivity) {
-    if (demand.additiveHappiness) {
-        happiness.addModifier(new VariableModifier({type: addition, variable: new Variable({ name: `Happiness from ${demand.resource.name}`, startingValue: 0, 
-            modifiers: getModifierVariables(rationAchieved, demand.idealAmount, demand.additiveHappiness)
-        })}));
-    }
-    if (demand.multiplicativeHappiness) {
-        happiness.addModifier(new VariableModifier({type: multiplication, variable: new Variable({ name: `Happiness. from ${demand.resource.name}`, startingValue: 0, 
-            modifiers: getModifierVariables(rationAchieved, demand.idealAmount, demand.multiplicativeHappiness)
-        })}));
-    }
-    if (demand.additiveHealth) {
-        health.addModifier(new VariableModifier({type: addition, variable: new Variable({ name: `Health from ${demand.resource.name}`, startingValue: 0, 
-            modifiers: getModifierVariables(rationAchieved, demand.idealAmount, demand.additiveHealth)
-        })}));
-    }
-    if (demand.multiplicativeHealth) {
-        health.addModifier(new VariableModifier({type: multiplication, variable: new Variable({ name: `Health from ${demand.resource.name}`, startingValue: 0, 
-            modifiers: getModifierVariables(rationAchieved, demand.idealAmount, demand.multiplicativeHealth)
-        })}));
-    }
-    if (demand.additiveProductivity) {
-        productivity.addModifier(new VariableModifier({type: addition, variable: new Variable({ name: `Productivity from ${demand.resource.name}`, startingValue: 0, 
-            modifiers: getModifierVariables(rationAchieved, demand.idealAmount, demand.additiveProductivity)
-        })}));
-    }
-    if (demand.multiplicativeProductivity) {
-        productivity.addModifier(new VariableModifier({type: multiplication, variable: new Variable({ name: `Productivity from ${demand.resource.name}`, startingValue: 0, 
-            modifiers: getModifierVariables(rationAchieved, demand.idealAmount, demand.multiplicativeProductivity)
-        })}));
-    }
+export function applyRationingModifiers(rationAchieved, demand, health, happiness, productivity, tradeFactor) {
+    demand.effects.forEach(effect => {
+        if (effect.on === "happiness") {
+            happiness.addModifier(new VariableModifier({type: effect.type, variable: new Variable({ name: `Happiness from ${demand.resource.name}`, startingValue: 0, 
+                modifiers: getModifierVariables(rationAchieved, demand.idealAmount, effect)
+            })}));
+        } else if (effect.on === "health") {
+            health.addModifier(new VariableModifier({type: effect.type, variable: new Variable({ name: `Health from ${demand.resource.name}`, startingValue: 0, 
+                modifiers: getModifierVariables(rationAchieved, demand.idealAmount, effect)
+            })}));
+        } else if (effect.on === "productivity") {
+            productivity.addModifier(new VariableModifier({type: effect.type, variable: new Variable({ name: `Productivity from ${demand.resource.name}`, startingValue: 0, 
+                modifiers: getModifierVariables(rationAchieved, demand.idealAmount, effect)
+            })}));
+        } else if (effect.on === "tradeFactor") {
+            tradeFactor.addModifier(new VariableModifier({type: effect.type, variable: new Variable({ name: `Trade Factor from ${demand.resource.name}`, startingValue: 0, 
+                modifiers: getModifierVariables(rationAchieved, demand.idealAmount,effect)
+            })}));
+        } else {
+            throw Error("effect on not recognised");
+        }
+    });
 }
 
 export class RationingComponent extends UIBase {

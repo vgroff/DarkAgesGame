@@ -1,7 +1,7 @@
 import React from "react";
 import UIBase from "../UIBase";
 import { VariableModifier, multiplication } from "../UIUtils";
-import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads } from "./building";
+import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln } from "./building";
 import {Grid, Button} from '@mui/material';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 
@@ -39,7 +39,7 @@ export class GeneralProductivityBonus extends SettlementResearchBonus {
     }
 };
 
-export class SpecificResourceProductivityBonus extends SettlementResearchBonus {
+export class SpecificBuildingProductivityBonus extends SettlementResearchBonus {
     constructor(props) {
         super(props);
         this.buildingName = props.building;
@@ -56,6 +56,26 @@ export class SpecificResourceProductivityBonus extends SettlementResearchBonus {
     getEffectText() {
         let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
         return `Increase productivity of ${this.buildingName} by ${percentage}%`;
+    }
+};
+
+export class SpecificBuildingEfficiencyBonus extends SettlementResearchBonus {
+    constructor(props) {
+        super(props);
+        this.buildingName = props.building;
+        this.name = `${this.buildingName} efficiency bonus`;
+        this.amount = props.amount;
+    }
+    activate(settlement) {
+        for (const building of settlement.resourceBuildings) {
+            if (building.name === this.buildingName) {
+                building.efficiency.addModifier(new VariableModifier({startingValue: this.amount, name: this.name, type: multiplication}));
+            }
+        }
+    }
+    getEffectText() {
+        let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
+        return `Increase efficiency of ${this.buildingName} by ${percentage}%`;
     }
 };
 
@@ -139,49 +159,61 @@ export function createResearchTree() {
             new Research({
                 name: "Larger Plough",
                 researchCost: 100,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: Farm.name, amount: 1.03})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: Farm.name, amount: 1.03})],
             }),
             new Research({
                 name: "Selective Breeding",
                 researchCost: 200,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: Farm.name, amount: 1.03})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: Farm.name, amount: 1.03})],
             }),
             new Research({
                 name: "Heavy Plough",
                 researchCost: 200,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: Farm.name, amount: 1.03})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: Farm.name, amount: 1.03})],
             }),
             new Research({
                 name: "Better irrigation",
                 researchCost: 450,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: Farm.name, amount: 1.05})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: Farm.name, amount: 1.05})],
             }),
             new Research({
                 name: "3 field rotation",
                 researchCost: 700,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: Farm.name, amount: 1.1})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: Farm.name, amount: 1.1})],
             })
         ],
         woodcutting: [
             new Research({
                 name: "Larger Axes",
                 researchCost: 100,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: LumberjacksHut.name, amount: 1.1})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: LumberjacksHut.name, amount: 1.1})],
             }),
             new Research({
                 name: "Better Axes",
                 researchCost: 200,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: LumberjacksHut.name, amount: 1.1})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: LumberjacksHut.name, amount: 1.1})],
             }),
             new Research({
                 name: "Saws",
                 researchCost: 350,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: LumberjacksHut.name, amount: 1.2})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: LumberjacksHut.name, amount: 1.2})],
             }),
             new Research({
                 name: "Advanced Saws",
                 researchCost: 350,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: LumberjacksHut.name, amount: 1.2})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: LumberjacksHut.name, amount: 1.2})],
+            })
+        ],
+        charcoal: [
+            new Research({
+                name: "Larger Kilns",
+                researchCost: 100,
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: CharcoalKiln.name, amount: 1.1})],
+            }),
+            new Research({
+                name: "Using the shavings",
+                researchCost: 200,
+                researchBonuses: [new SpecificBuildingEfficiencyBonus({building: CharcoalKiln.name, amount: 1.1})],
             })
         ],
         brewing: [
@@ -193,12 +225,12 @@ export function createResearchTree() {
             new Research({
                 name: "Ageing",
                 researchCost: 150,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: Brewery.name, amount: 1.35})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: Brewery.name, amount: 1.35})],
             }),
             new Research({
                 name: "Improved Barrels",
                 researchCost: 300,
-                researchBonuses: [new SpecificResourceProductivityBonus({building: Brewery.name, amount: 1.1})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: Brewery.name, amount: 1.1})],
             })
         ],
         health: [

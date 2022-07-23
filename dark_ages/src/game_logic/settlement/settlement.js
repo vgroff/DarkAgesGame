@@ -123,6 +123,7 @@ export class Settlement {
             new VariableModifier({type: invLogit, customPriority: priority.exponentiation + 1, invLogitSpeed: 4, bias: 1 - maxHappinessProductivityPenalty, scale: maxHappinessProductivityPenalty, startingValue: 0.15})
         ]}))
         this.generalProductivity.addModifier(new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200}));
+        this.tradeFactor = new Variable({name:"trade factor", startingValue: 0});
         this.research = createResearchTree();
         this.popDemands = getBasePopDemands();
         this.populateBuildings();
@@ -158,7 +159,7 @@ export class Settlement {
                 this.idealRations.push(demand.idealAmount);
                 this.rationResources.push(demand.resource);
             }
-                applyRationingModifiers(rationAchieved, demand, this.health, this.happiness, this.generalProductivity);
+            applyRationingModifiers(rationAchieved, demand, this.health, this.happiness, this.generalProductivity, this.tradeFactor);
         }
         this.happiness.addModifier(new VariableModifier({type: multiplication, variable: new Variable({name: "Penalty from health", startingValue: 0,
             modifiers: [
@@ -234,7 +235,6 @@ export class Settlement {
         defaultBuildings.forEach(building => {
             this.idealPrices[building.outputResource.name] = building.getIdealisedPrice()
         })
-        this.tradeFactor = new Variable({name:"trade influence", startingValue: 0});
         this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor, bankrupt: props.bankrupt});
     }
     addBuilding(building) {
