@@ -36,12 +36,9 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - should be able to downgrade buildings
-// - Some resource buildings have a maxSize (e.g. hunting lodge)
-// - Make homelessness and unemployement go red if > 0
 // - Tools resource depends on iron and boosts productivity like 20% or something? Should pop demands be moved to each resource? No because want it to be unique per settlement/character
-// - Coal demand will need to depend on season (notes in rationing) - make a change to the ideal demand is the nicest way of doing this
-// - Potential simple/important buildings: storage(not trivial but important), weavers (trivial), tavern (trivial), library (trivial), construction site (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial), roads(not too trivial)
+// - Coal demand will need to depend on season - making a change to the ideal demand is the nicest way of doing this
+// - Potential simple/important buildings: storage(not trivial but important), weavers (trivial - maybe don't bother with this yet), tavern (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - Add rebellions % chance using happiness+legitimacy
 // - Move to the character system!

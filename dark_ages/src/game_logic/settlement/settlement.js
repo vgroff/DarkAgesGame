@@ -96,7 +96,7 @@ export class Settlement {
         this.unemployed = new Variable({name: "Unemployed", startingValue: 0, modifiers: [
             new VariableModifier({variable: this.populationSizeExternal, type:addition}),
             new VariableModifier({variable: this.jobsTaken.variable, type:subtraction})
-        ]});
+        ], visualAlerts:(variable) => variable.currentValue > 0 ? ['Try to give everyone a job'] : null});
         let baseHappiness = 0.05; // Neutral happiness boost (could change with difficulty)
         let zero = new Variable({name: "zero", startingValue: 0});
         let one = new Variable({name: "one", startingValue: 1});
@@ -180,7 +180,7 @@ export class Settlement {
         this.homeless = new Variable({name: "Homeless", min: zero, modifiers: [
             new VariableModifier({type: addition, variable: this.homelessInternal}),
             new UnaryModifier({type: castInt, customPriority: priority.exponentiation + 1})
-        ]});
+        ], visualAlerts:(variable) => variable.currentValue > 0 ? ['Try to give everyone a house (build more housing)'] : null});
         this.homelessness = new Variable({name: "Homelessness", min: zero, modifiers: [
             new VariableModifier({type: addition, variable: this.homeless}),
             new VariableModifier({type: division, variable: this.populationSizeInternal})

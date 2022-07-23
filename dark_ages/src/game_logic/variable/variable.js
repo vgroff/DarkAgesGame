@@ -58,6 +58,7 @@ export class Variable {
         if (props.modifiers) {
             this.setModifiers(props.modifiers);
         }
+        this.visualAlerts = props.visualAlerts;
         this.recalculate('init', 0);
     }
     clearSubscriptions() {
@@ -299,6 +300,8 @@ export class VariableComponent extends React.Component {
         }
     }
     render (extraChildren, extraStyle) {
+        let alerts = this.variable.visualAlerts ? this.variable.visualAlerts(this.variable) : null;
+        let extraExtraStyle = alerts ? {color: "red"} : {};
         let ownerText = (this.variable.owner && this.props.showOwner && this.variable.owner.name !== unnamedVariableName) ? `${this.variable.owner.name}'s ` : '';
         let nameText = (this.props.showName && this.variable.name !== unnamedVariableName) ? <span>{ownerText ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
         let displayValue = roundNumber(this.props.showBase ? this.variable.baseValue : this.variable.currentValue, this.variable.displayRound);
@@ -318,9 +321,12 @@ export class VariableComponent extends React.Component {
                 throw Error('what');
             }
         });
+        explanations = explanations.concat(alerts ? alerts.map(alert => {
+            return <span style={{textAlign: "right", ...extraExtraStyle}} key={alert} >{titleCase(alert)}<br /></span>;
+        }) : []);
         if (!this.props.expanded) {
             return <HTMLTooltip title={explanations} style={{textAlign: "right"}}>
-                <span style={{"textAlign": "center", ...this.props.style, ...extraStyle}}>
+                <span style={{"textAlign": "center", ...this.props.style, ...extraStyle, ...extraExtraStyle}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
                     <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{maxText}{this.props.children}{extraChildren}</span>
                 </span>

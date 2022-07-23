@@ -34,7 +34,7 @@ export class Building {
         });
     }
     canBuild(resourceStorages) {
-        if (this.maxSize && this.size.currentValue === this.maxSize.currentValue) {
+        if (this.size.max && this.size.currentValue === this.size.max.currentValue) {
             return false;
         }
         for (const inputResource of this.buildInputs) {
@@ -46,7 +46,7 @@ export class Building {
         return true;
     }
     getBuildText(resourceStorages) {
-        if (this.maxSize && this.size.currentValue === this.maxSize.currentValue) {
+        if (this.size.max && this.size.currentValue === this.size.max.currentValue) {
             return ["This building can't get any larger"]
         }
         let buildText = ['Will increase size by 1'];
