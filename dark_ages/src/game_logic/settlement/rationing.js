@@ -146,6 +146,39 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
                 coefficient: new Variable({name: "Additive Road Trade Factor Coeff", startingValue: 0.5}),
                 exponent: new Variable({name: "Additive Road Trade Factor  Exp", startingValue: 0.4})
             }] 
+        },
+        stoneTools: {
+            resource: Resources.stoneTools,
+            alwaysFullRations: true,
+            idealAmount: new Variable({name: "Ideal Tools Access", startingValue: 1}), // This should change with weather
+            effects: [{
+                type:addition,
+                on: "productivity",
+                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.15}),
+                exponent: new Variable({name: "Additive Tools Productivity  Exp", startingValue: 0.8})
+            }] 
+        },
+        ironTools: {
+            resource: Resources.stoneTools,
+            alwaysFullRations: true,
+            idealAmount: new Variable({name: "Ideal Tools Access", startingValue: 1}), // This should change with weather
+            effects: [{
+                type:addition,
+                on: "productivity",
+                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.2}),
+                exponent: new Variable({name: "Additive Tools Productivity  Exp", startingValue: 0.8})
+            }] 
+        },
+        steelTools: {
+            resource: Resources.stoneTools,
+            alwaysFullRations: true,
+            idealAmount: new Variable({name: "Ideal Tools Access", startingValue: 1}), // This should change with weather
+            effects: [{
+                type:addition,
+                on: "productivity",
+                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.25}),
+                exponent: new Variable({name: "Additive Tools Productivity  Exp", startingValue: 0.8})
+            }] 
         }
     };
     return basePopDemands;

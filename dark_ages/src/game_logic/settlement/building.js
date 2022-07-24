@@ -1,4 +1,4 @@
-import {VariableModifier, Variable, addition, subtraction, min, multiplication,division } from '../UIUtils.js';
+import {VariableModifier, Variable, addition, subtraction, min, max, minBase, multiplication,division } from '../UIUtils.js';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
@@ -8,7 +8,8 @@ import Grid from  '@mui/material/Grid';
 import Button from '@mui/material/Button';
 import {Logger} from '../logger.js';
 
-const newResourceChange = "new resource";
+const outputResourceChange = "new output resource";
+const inputResourceChange = "new input resource";
 const newBuildInputs = "new build inputs";
 export class Building {
     constructor(props) {
@@ -25,8 +26,10 @@ export class Building {
         this.upgrades = this.upgrades.map(upgrade => {
             return new BuildingUpgrade({name: upgrade.name, newBuildCost: upgrade.newBuildCost, newDisplayName: upgrade.newDisplayName, 
                 changes: upgrade.changes.map(changes => {
-                    if (changes[0] === newResourceChange) {
+                    if (changes[0] === outputResourceChange) {
                         return new NewOutputResource({newResource: changes[1]});
+                    } else if (changes[0] === inputResourceChange) {
+                        return new NewInputResources({newResources: changes[1]});
                     } else {
                         throw Error("not implemented");
                     }
@@ -131,6 +134,24 @@ export class NewOutputResource extends BuildingUpgradeChange {
     getText(building, resourceStorages) {
         this.oldResource = building.outputResource;
         return `${building.name} will now produce ${this.newResource.name} instead of ${this.oldResource.name}`;
+    }
+}
+
+export class NewInputResources extends BuildingUpgradeChange {
+    constructor(props) {
+        super(props);
+        this.newResources = props.newResources;
+    }
+    activate(building, resourceStorages) {
+        this.outputResources = building.inputResources;
+        building.changeInputResources(this.newResources, resourceStorages);
+    }
+    deactivate(building, resourceStorages) {
+        building.changeInputResources(this.oldResource, resourceStorages);
+    }
+    getText(building, resourceStorages) {
+        this.oldResources = building.inputResources;
+        return `${building.name} will now need ${this.newResources.map(resource => resource.resource.name).join(", ")} instead of ${this.oldResources.map(resource => resource.resource.name).join(", ")}`;
     }
 }
 
@@ -261,46 +282,8 @@ export class ResourceBuilding extends Building {
         this.efficiency = new Variable({owner: this, name:"efficiency", startingValue: 1,
             modifiers: []
         });
-        this.inputResources = props.inputResources || [];
         var self = this;
-        this.propDemandsDesired = [];
-        this.propDemandsSatisfied = []
-        this.inputResources.forEach((input, i) => {
-            if (!input.resource || !input.multiplier) {
-                throw Error("need this stuff");
-            }
-            let propDemandDesired = new Variable({name: "satisfied input resource demand", startingValue: 1,
-                modifiers: []
-            });
-            self.propDemandsDesired.push(propDemandDesired);
-            let resourceStorage = self.resourceStorages.find(resourceStorage => input.resource === resourceStorage.resource);
-            self.propDemandsSatisfied.push(resourceStorage.addDemand(
-                self.name,
-                new Variable({ owner: self, name: `${resourceStorage.resource.name} demand from ${self.name}`,
-                    startingValue: input.multiplier, modifiers: [
-                        new VariableModifier({variable: self.theoreticalProduction, type: multiplication}),
-                        new VariableModifier({variable: self.efficiency, type: division})
-                    ]
-                }), 
-                propDemandDesired,
-                1)
-            );
-        });
-        this.propDemandsDesired.forEach((demand, i) => {
-            demand.setModifiers(self.propDemandsSatisfied.filter((_, j) => {return i !== j}).map(variable => {
-                return new VariableModifier({variable: variable, type: min, customPriority: 5})
-            }
-        ))}); // Limit the demand on all inputs by the min of the others to avoid waste
-        this.minPropDemandSatisfied = new Variable({owner: this, name: "proportion of demand satisfied",startingValue: 1, 
-            modifiers: self.propDemandsSatisfied.map(demandSatisfied => {
-                return new VariableModifier({variable: demandSatisfied, type: min, customPriority: 5});
-            })
-        }); // Limit the production by the min of the inputs
-        let productionModifiers = [
-            new VariableModifier({variable: this.theoreticalProduction,type: addition})
-        ];
-        productionModifiers.push(new VariableModifier({variable: this.minPropDemandSatisfied,type: multiplication}))
-        this.totalProduction.setModifiers(productionModifiers);
+        this.changeInputResources(props.inputResources || [], this.resourceStorages);
         this.alerts = [];
         self.setDemandAlert();
         this.minPropDemandSatisfied.subscribe(() => {
@@ -336,6 +319,53 @@ export class ResourceBuilding extends Building {
         resourceStorage = resourceStorages.find(resourceStorage => resourceStorage.resource === newResource);       
         resourceStorage.addSupply(this.totalProduction);
         this.outputResource = newResource;
+    }
+    changeInputResources(newInputResources, resourceStorages) {
+        if (this.inputResources) {
+            this.inputResources.forEach((input, i) => {
+                let resourceStorage = this.resourceStorages.find(resourceStorage => input.resource === resourceStorage.resource);
+                resourceStorage.removeDemand(this.propDemandsDesired[i]);
+            });
+        }
+        this.inputResources = newInputResources;
+        this.propDemandsDesired = [];
+        this.propDemandsSatisfied = []
+        this.inputResources.forEach((input, i) => {
+            if (!input.resource || !input.multiplier) {
+                throw Error("need this stuff");
+            }
+            let propDemandDesired = new Variable({name: "satisfied input resource demand", startingValue: 1,
+                modifiers: []
+            });
+            this.propDemandsDesired.push(propDemandDesired);
+            let resourceStorage = this.resourceStorages.find(resourceStorage => input.resource === resourceStorage.resource);
+            this.propDemandsSatisfied.push(resourceStorage.addDemand(
+                this.name,
+                new Variable({ owner: this, name: `${resourceStorage.resource.name} demand from ${this.name}`,
+                    startingValue: input.multiplier, modifiers: [
+                        new VariableModifier({variable: this.theoreticalProduction, type: multiplication}),
+                        new VariableModifier({variable: this.efficiency, type: division})
+                    ]
+                }), 
+                propDemandDesired,
+                1)
+            );
+        });
+        this.minPropDemandSatisfied = new Variable({owner: this, name: "proportion of demand satisfied",startingValue: 1, 
+            modifiers: this.propDemandsSatisfied.map(demandSatisfied => {
+                return new VariableModifier({variable: demandSatisfied, type: min, customPriority: 5});
+            })
+        }); // Limit the production by the min of the inputs
+        this.propDemandsDesired.forEach((demand, i) => {
+            demand.setModifiers(this.propDemandsSatisfied.filter((_, j) => {return i !== j}).map(variable => {
+                return new VariableModifier({variable: variable, type: min, customPriority: 5})
+            }
+        ))});  // Limit the demand on all inputs by the min of the inputs
+        let productionModifiers = [
+            new VariableModifier({variable: this.theoreticalProduction,type: addition})
+        ];
+        productionModifiers.push(new VariableModifier({variable: this.minPropDemandSatisfied,type: multiplication}))
+        this.totalProduction.setModifiers(productionModifiers);
     }
 }
 
@@ -513,13 +543,13 @@ export class Roads extends ResourceBuilding {
             name: Roads.gravelPath,
             newDisplayName: Roads.gravelPath,
             newBuildCost: [[Resources.labourTime, 50], [Resources.stone, 25]],
-            changes: [[newResourceChange, Resources.gravelPathAccess]],
+            changes: [[outputResourceChange, Resources.gravelPathAccess]],
         },
         {
             name: Roads.brickRoads,
             newDisplayName: Roads.brickRoads,
             newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25]],
-            changes: [[newResourceChange, Resources.brickRoadAccess]]
+            changes: [[outputResourceChange, Resources.brickRoadAccess]]
         }
     ];
     constructor(props) {
@@ -553,7 +583,7 @@ export class Stonecutters extends ResourceBuilding {
         super({name: Stonecutters.name, 
             outputResource: Resources.stoneBricks, 
             buildInputs: [[Resources.labourTime, 25], [Resources.wood, 25]],
-            inputResources: [{resource:Resources.stone, multiplier: 2}],
+            inputResources: [{resource:Resources.stone, multiplier: 2}, {resource:Resources.wood, multiplier: 2}],
             sizeJobsMultiplier: 3,
             ...props
         })
@@ -595,21 +625,22 @@ export class Toolmaker extends ResourceBuilding {
             name: Toolmaker.ironBlacksmith,
             newDisplayName: Toolmaker.ironBlacksmith,
             newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25]],
-            changes: [[newResourceChange, Resources.ironTools]],
+            changes: [[outputResourceChange, Resources.ironTools], [inputResourceChange, [{resource:Resources.iron, multiplier: 0.1}, {resource:Resources.coal, multiplier: 0.1}, {resource:Resources.wood, multiplier: 0.05}]]],
         },
         {
             name: Toolmaker.steelBlacksmith,
             newDisplayName: Toolmaker.steelBlacksmith,
             newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25]],
-            changes: [[newResourceChange, Resources.steelTools]]
+            changes: [[outputResourceChange, Resources.steelTools], [inputResourceChange, [{resource:Resources.iron, multiplier: 0.1}, {resource:Resources.coal, multiplier: 0.2}, {resource:Resources.wood, multiplier: 0.05}]]]
         }
     ];
     constructor(props) {
-        super({name: Stonecutters.name, 
-            outputResource: Resources.stoneBricks, 
-            buildInputs: [[Resources.labourTime, 25], [Resources.wood, 25]],
-            inputResources: [{resource:Resources.stone, multiplier: 2}],
-            sizeJobsMultiplier: 3,
+        super({name: Toolmaker.name, 
+            outputResource: Resources.stoneTools, 
+            buildInputs: [[Resources.labourTime, 25], [Resources.wood, 25], [Resources.stone, 20]],
+            inputResources: [{resource:Resources.stone, multiplier: 0.1}, {resource:Resources.wood, multiplier: 0.05}],
+            sizeJobsMultiplier: 2,
+            upgrades: Toolmaker.upgrades,
             ...props
         })
     }

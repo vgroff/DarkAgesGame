@@ -275,6 +275,23 @@ export function createResearchTree() {
                 researchBonuses: [new UnlockBuildingBonus({building: Toolmaker.name})],
             })           
         ],
+        tools: [
+            new Research({
+                name: "Stone Tools",
+                researchCost: 100,
+                researchBonuses: [new UnlockBuildingBonus({building: Toolmaker.name})],
+            }),
+            new Research({
+                name: "Iron Tools",
+                researchCost: 350,
+                researchBonuses: [new UnlockBuildingUpgradeBonus({building: Toolmaker.ironBlacksmith})],
+            }),
+            new Research({
+                name: "Steel Tools",
+                researchCost: 500,
+                researchBonuses: [new UnlockBuildingUpgradeBonus({building: Toolmaker.steelBlacksmith})],
+            })         
+        ],
         productivity: [
             new Research({
                 name: "Basic Administration",

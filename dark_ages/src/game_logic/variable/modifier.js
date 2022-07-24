@@ -9,9 +9,10 @@ export const division = 'division';
 export const exponentiation = 'exponentiation';
 export const invLogit = 'invLogit'; // From https://stats.stackexchange.com/questions/214877/is-there-a-formula-for-an-s-shaped-curve-with-domain-and-range-0-1
 export const min = 'min';
+export const minBase = 'min with base value';
 export const max = 'max';
 export const castInt = 'castInt';
-export const roundTo = 'roundTo';
+export const roundTo = 'round to decimal';
 export const scaledAddition = 'scaledAddition';
 export const scaledMultiplication = 'scaledMultiplication';
 export const greaterThan = 'greaterThan';
@@ -235,7 +236,13 @@ export class VariableModifier extends AbstractModifier {
                 text: `Mined with ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,
                 variable: this.variable
             }; 
-        } else if (this.type === roundTo) {
+        } else if (this.type === minBase) {
+            return {
+                result: Math.min(value, this.variable.baseValue), 
+                text: `Mined with base value of ${ownerText}${this.variable.name}: ${roundNumber(this.variable.baseValue, this.variable.displayRound)}`,
+                variable: this.variable
+            }; 
+        }  else if (this.type === roundTo) {
             return {
                 result: roundNumber(value, this.variable.currentValue), 
                 text: `Rounded to ${ownerText}${this.variable.name}: ${roundNumber(this.variable.currentValue, this.variable.displayRound)}`,

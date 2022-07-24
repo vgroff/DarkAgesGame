@@ -1,5 +1,5 @@
 
-export { priority, addition, subtraction, multiplication, division, exponentiation, min, max, castInt,roundTo, greaterThan, lesserThan, invLogit, scaledAddition, scaledMultiplication,UnaryModifier, VariableModifier } from "./variable/modifier";
+export { priority, addition, subtraction, multiplication, division, exponentiation, min, minBase, max, castInt,roundTo, greaterThan, lesserThan, invLogit, scaledAddition, scaledMultiplication,UnaryModifier, VariableModifier } from "./variable/modifier";
 export { Variable, VariableComponent, makeTextFile } from "./variable/variable";
 export { AggregatorModifier } from './variable/aggregator';
 export { Cumulator, CumulatorComponent } from './variable/cumulator';

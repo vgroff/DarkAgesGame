@@ -4,7 +4,7 @@ import Checkbox from '@mui/material/Checkbox';
 import {FormControlLabel} from '@mui/material';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine} from './building.js'
+import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine, Toolmaker} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
@@ -64,13 +64,14 @@ export class Settlement {
         this.addBuilding(new Housing({startingSize: 4, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new HuntingCabin({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new CharcoalKiln({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new LumberjacksHut({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new LumberjacksHut({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new ConstructionSite({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Library({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Toolmaker({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Roads({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Brewery({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Apothecary({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Quarry({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Quarry({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Stonecutters({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new IronMine({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.totalJobs = new SumAggModifier(
