@@ -46,14 +46,14 @@ export default Game;
 
 // Stuff for now:
 // - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?)
-// - Potential simple/important buildings: tavern (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
+// - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - Add a terrain for each settlement that affects building possibilities and building productivities
 //      - e.g. -> get coalfields/pig iron in marshland but lower farming yield and labour time, get coal mines and higher mining yield and apothecary in mountains but lower farming and woodcutter yield and labour time,
 //            get higher farming yield in farmland but lower iron yield, apothecary and woodcutter yield, get fishing warfs and higher farming by the river but lower mining yield,
 //            get higher woodcutting, apothecary and hunting in the forest but lower farming and labour time
-// - Determine quality of the harvest at the beginning of the year
-// - Add rebellions % chance using happiness+legitimacy
+// - Determine quality of the harvest at the beginning of the year (build the event rolls systems with success/major success etc..)
+// - Add rebellions % chance using happiness+legitimacy(comes from character?)
 // - Move to the character system!
 // - Build weapons
 

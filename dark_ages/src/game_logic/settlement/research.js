@@ -1,7 +1,7 @@
 import React from "react";
 import UIBase from "../UIBase";
 import { VariableModifier, multiplication } from "../UIUtils";
-import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, PigIronPit, Toolmaker, Housing } from "./building";
+import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, PigIronPit, Toolmaker, Housing, Church, Tavern } from "./building";
 import {Grid, Button} from '@mui/material';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 
@@ -236,12 +236,24 @@ export function createResearchTree() {
             new Research({
                 name: "Ageing",
                 researchCost: 150,
-                researchBonuses: [new SpecificBuildingProductivityBonus({building: Brewery.name, amount: 1.35})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: Brewery.name, amount: 1.3})],
             }),
             new Research({
                 name: "Improved Barrels",
                 researchCost: 300,
-                researchBonuses: [new SpecificBuildingProductivityBonus({building: Brewery.name, amount: 1.1})],
+                researchBonuses: [new SpecificBuildingProductivityBonus({building: Brewery.name, amount: 1.2})],
+            })
+        ],
+        services: [
+            new Research({
+                name: "Tavern",
+                researchCost: 100,
+                researchBonuses: [new UnlockBuildingBonus({building: Tavern.name})],
+            }),
+            new Research({
+                name: "Church Architecture",
+                researchCost: 200,
+                researchBonuses: [new UnlockBuildingBonus({building: Church.name})],
             })
         ],
         health: [

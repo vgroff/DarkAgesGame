@@ -92,11 +92,11 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
         },
         beer: {
             resource: Resources.beer,
-            idealAmount: new Variable({name: "Ideal Beer", startingValue: 1}), // This should change with weather
+            idealAmount: new Variable({name: "Ideal Beer", startingValue: 1}),
             effects: [{
                 type:addition,
                 on: "happiness",
-                coefficient: new Variable({name: "Additive Beer Happiness Coeff", startingValue: 0.3}),
+                coefficient: new Variable({name: "Additive Beer Happiness Coeff", startingValue: 0.2}),
                 exponent: new Variable({name: "Additive Beer Happiness Exp", startingValue: 0.5})
             },
             {
@@ -108,7 +108,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
         },
         medicinalHerbs: {
             resource: Resources.medicinalHerbs,
-            idealAmount: new Variable({name: "Ideal Medicinal Herbs", startingValue: 1}), // This should change with weather
+            idealAmount: new Variable({name: "Ideal Medicinal Herbs", startingValue: 1}), 
             effects: [{
                 type:addition,
                 on: "health",
@@ -116,10 +116,32 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
                 exponent: new Variable({name: "Additive Medicinal Herbs Health Exp", startingValue: 1.35})
             }]      
         },
+        religion: {
+            resource: Resources.religion,
+            alwaysFullRations: true,
+            idealAmount: new Variable({name: "Ideal Religion", startingValue: 1.0}), 
+            effects: [{
+                on: "happiness",
+                type: addition,
+                coefficient: new Variable({name: "Religion Happiness Coeff", startingValue: 0.15}),
+                exponent: new Variable({name: "Religion Happiness Exp", startingValue: 0.8})
+            }],
+        },
+        entertainment: {
+            resource: Resources.entertainment,
+            alwaysFullRations: true,
+            idealAmount: new Variable({name: "Ideal Entertainment", startingValue: 1}),
+            effects: [{
+                type:addition,
+                on: "happiness",
+                coefficient: new Variable({name: "Additive Entertainment Happiness Coeff", startingValue: 0.1}),
+                exponent: new Variable({name: "Additive Entertainment Happiness Exp", startingValue: 0.65})
+            }]      
+        },
         dirtPathAccess: {
             resource: Resources.dirtPathAccess,
             alwaysFullRations: true,
-            idealAmount: new Variable({name: "Ideal Dirt Path Access", startingValue: 1}), // This should change with weather
+            idealAmount: new Variable({name: "Ideal Dirt Path Access", startingValue: 1}),
             effects: [{
                 type:addition,
                 on: "productivity",

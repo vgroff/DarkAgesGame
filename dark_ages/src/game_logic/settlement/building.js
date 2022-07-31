@@ -577,6 +577,31 @@ export class ConstructionSite extends ResourceBuilding {
     }
 }
 
+export class Church extends ResourceBuilding {
+    static name = "church";
+    constructor(props) {
+        super({name: Church.name, 
+            outputResource: Resources.religion, 
+            buildInputs: [[Resources.labourTime, 100], [Resources.stone, 75]],
+            sizeJobsMultiplier: 1,
+            ...props
+        })
+    }
+}
+
+export class Tavern extends ResourceBuilding {
+    static name = "tavern";
+    constructor(props) {
+        super({name: Tavern.name, 
+            outputResource: Resources.entertainment, 
+            buildInputs: [[Resources.labourTime, 50], [Resources.wood, 50]],
+            inputResources: [{resource:Resources.food, multiplier: 0.1}, {resource:Resources.beer, multiplier: 0.1}],
+            sizeJobsMultiplier: 2,
+            ...props
+        })
+    }
+}
+
 export class Roads extends ResourceBuilding {
     static name = "Roads";
     static gravelPath = "Gravel Paths";
