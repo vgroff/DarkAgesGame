@@ -17,7 +17,7 @@ class Game {
         }});
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 36, bankrupt: this.bankrupt}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 39, bankrupt: this.bankrupt}),
         ];
         this.totalMarketIncome = new SumAggModifier(
             {
@@ -45,15 +45,8 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Tools resource depends on iron+wood and boosts productivity like 20% or something?
-//       - Having the two input resources doesnt seem to work well
-//             - should manually subscribe to propSatisfied, and if it doesn't match desired then alter the other propDesireds but not the current one
-//             - Add to addDemand() an actualDesiredProp, then it returns a theoreticalPropFulfilled too. actualDesiredProp is what is mined, but it is mined with the theoreticalPropFulfilled
-//       - Have stone, iron and steel tools as upgrades and test them - make sure to destroy the leftovers resource when upgrading (convert it back to raw resources)
-//       - Double check that they are actually a net productivity boost
-//       - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?)
-// - Potential simple/important buildings: storage(not trivial but important), weavers (trivial - maybe don't bother with this yet), tavern (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
-// - Add upgrades for housing - wood to stone brick+wood
+// - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?)
+// - Potential simple/important buildings: tavern (trivial), church (trivial), cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - Add a terrain for each settlement that affects building possibilities and building productivities
 //      - e.g. -> get coalfields/pig iron in marshland but lower farming yield and labour time, get coal mines and higher mining yield and apothecary in mountains but lower farming and woodcutter yield and labour time,

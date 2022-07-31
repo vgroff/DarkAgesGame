@@ -81,10 +81,10 @@ export class ResourceStorage {
         this.updateDemands();
         return {idealDesiredPropFulfilled, actualDesiredPropFulfilled};
     }
-    removeDemand(desiredProp) {
-        let demandObj = this.demands.find(demand => demand.desiredProp === desiredProp);
-        this.demands = this.demands.filter(demand => demand.desiredProp !== desiredProp);
-        this.demand.variable.removeModifier(this.demand.variable.modifiers.find(modifier => modifier.variable.modifiers.find(modifier => modifier.variable === demandObj.demandPropFulfilled)));
+    removeDemand(idealDesiredProp) {
+        let demandObj = this.demands.find(demand => demand.idealDesiredProp === idealDesiredProp);
+        this.demands = this.demands.filter(demand => demand.idealDesiredProp !== idealDesiredProp);
+        this.demand.variable.removeModifier(this.demand.variable.modifiers.find(modifier => modifier.variable.modifiers.find(modifier => modifier.variable === demandObj.actualDesiredPropFulfilled)));
         demandObj.totalDemand.unsubscribe(demandObj.totalDemandCb);
         demandObj.actualDesiredProp.unsubscribe(demandObj.actualDesiredPropCb);
         demandObj.idealDesiredProp.unsubscribe(demandObj.idealDesiredPropCb);
@@ -165,19 +165,21 @@ export class ResourceStorageComponent extends UIBase {
 export const Resources = {
     food: new Resource({name: "food", storageMultiplier: 450, productionRatio: 1.0, description: "keeps your villagers alive"}),
     coal: new Resource({name: "coal", storageMultiplier: 200, productionRatio: 3.0, description: "for smithing and keeping warm"}),
-    housing: new Resource({name: "housing", storageMultiplier: null, cumulates: false, productionRatio: 1.0, description: "for living in"}),
+    mudHuts: new Resource({name: "mud huts", storageMultiplier: null, cumulates: false, productionRatio: 1.0, description: "for living in"}),
+    woodenHuts: new Resource({name: "wooden huts", storageMultiplier: null, cumulates: false, productionRatio: 1.0, description: "for living in"}),
+    brickHouses: new Resource({name: "brick houses", storageMultiplier: null, cumulates: false, productionRatio: 1.0, description: "for living in"}),
     beer: new Resource({name: "beer", storageMultiplier: 450, productionRatio: 3.0, description: "helps keep your villagers happy"}),
     medicinalHerbs: new Resource({name: "medicinal herbs", storageMultiplier: 200, productionRatio: 12.0, description: "helps keep your villagers healthy"}),
     labourTime: new Resource({name: "labour time", storageMultiplier: 0, productionRatio: 1.0, startingAmount: 1000, description: "used for building, upkeep and upgrading"}),
     research: new Resource({name: "research", storageMultiplier: null, productionRatio: 1.0, startingAmount: 1000, description: "for new research developements"}),
-    wood: new Resource({name: "wood", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 0, description: "for building, upkeep and fuel"}),
+    wood: new Resource({name: "wood", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 100, description: "for building, upkeep and fuel"}),
     dirtPathAccess: new Resource({name: "dirt path access", storageMultiplier: null, cumulates: false, productionRatio: 1.0, startingAmount: 0, description: "improves general productivity and trade"}),
     gravelPathAccess: new Resource({name: "gravel path access", storageMultiplier: null, cumulates: false, productionRatio: 1.0, startingAmount: 0, description: "improves general productivity and trade"}),
     brickRoadAccess: new Resource({name: "brick road access", storageMultiplier: null, cumulates: false, productionRatio: 1.0, startingAmount: 0, description: "improves general productivity and trade"}),
-    stone: new Resource({name: "stone", storageMultiplier: 150, productionRatio: 1.0, startingAmount: 0, description: "for building and bricks"}),
-    stoneBricks: new Resource({name: "stone bricks", storageMultiplier: 200, productionRatio: 1.0, description: "for building and upkeep"}),
-    iron: new Resource({name: "iron", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 0, description: "for tools and weapons"}),
-    stoneTools: new Resource({name: "stone tools", storageMultiplier: 200, productionRatio: 15.0, startingAmount: 0, description: "improves productivity"}),
-    ironTools: new Resource({name: "iron tools", storageMultiplier: 200, productionRatio: 15.0, startingAmount: 0, description: "improves productivity"}),
-    steelTools: new Resource({name: "steel tools", storageMultiplier: 200, productionRatio: 15.0, startingAmount: 0, description: "improves productivity"}),
+    stone: new Resource({name: "stone", storageMultiplier: 150, productionRatio: 1.0, startingAmount: 100, description: "for building and bricks"}),
+    stoneBricks: new Resource({name: "stone bricks", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 100, description: "for building and upkeep"}),
+    iron: new Resource({name: "iron", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 100, description: "for tools and weapons"}),
+    stoneTools: new Resource({name: "stone tools", storageMultiplier: 200, productionRatio: 20.0, startingAmount: 0, description: "improves productivity"}),
+    ironTools: new Resource({name: "iron tools", storageMultiplier: 200, productionRatio: 20.0, startingAmount: 0, description: "improves productivity"}),
+    steelTools: new Resource({name: "steel tools", storageMultiplier: 200, productionRatio: 20.0, startingAmount: 0, description: "improves productivity"}),
 };

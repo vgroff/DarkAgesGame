@@ -32,16 +32,33 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
                 speed: 3
             }]           
         },
-        housing: {
-            resource: Resources.housing,
+        mudHuts: {
+            resource: Resources.mudHuts,
+            alwaysFullRations: true,
+            idealAmount: new Variable({name: "Ideal Housing", startingValue: 1.0}), 
+            effects: [],
+        },
+        woodenHuts: {
+            resource: Resources.woodenHuts,
             alwaysFullRations: true,
             idealAmount: new Variable({name: "Ideal Housing", startingValue: 1.0}), 
             effects: [{
-                on: "health",
-                type: multiplication,
-                offset: 0.2,
-                exponent: new Variable({name: "Effect of homelessness", startingValue: 1.5})
+                on: "happiness",
+                type: addition,
+                coefficient: new Variable({name: "Wooden Huts Happiness Coeff", startingValue: 0.15}),
+                exponent: new Variable({name: "Wooden Huts Coal Happiness Exp", startingValue: 1.5})
             }],
+        },
+        brickHouses: {
+            resource: Resources.brickHouses,
+            alwaysFullRations: true,
+            idealAmount: new Variable({name: "Ideal Housing", startingValue: 1.0}), 
+            effects: [{
+                on: "happiness",
+                type: addition,
+                coefficient: new Variable({name: "Brick Houses Happiness Coeff", startingValue: 0.25}),
+                exponent: new Variable({name: "Brick Houses Coal Happiness Exp", startingValue: 1.5})
+            } ],
         },
         coal: {
             resource: Resources.coal,
@@ -165,7 +182,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
             effects: [{
                 type:addition,
                 on: "productivity",
-                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.2}),
+                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.25}),
                 exponent: new Variable({name: "Additive Tools Productivity  Exp", startingValue: 0.8})
             }] 
         },
@@ -176,7 +193,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
             effects: [{
                 type:addition,
                 on: "productivity",
-                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.25}),
+                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.35}),
                 exponent: new Variable({name: "Additive Tools Productivity  Exp", startingValue: 0.8})
             }] 
         }

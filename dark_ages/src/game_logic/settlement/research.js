@@ -1,7 +1,7 @@
 import React from "react";
 import UIBase from "../UIBase";
 import { VariableModifier, multiplication } from "../UIUtils";
-import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, PigIronPit, Toolmaker } from "./building";
+import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, PigIronPit, Toolmaker, Housing } from "./building";
 import {Grid, Button} from '@mui/material';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 
@@ -182,6 +182,17 @@ export function createResearchTree() {
                 researchBonuses: [new SpecificBuildingProductivityBonus({building: Farm.name, amount: 1.1})],
             })
         ],
+        housing: [
+            new Research({
+                name: "Wooden Huts",
+                researchCost: 75,
+                researchBonuses: [new UnlockBuildingUpgradeBonus({building: Housing.name, upgrade:  Housing.woodenHuts,})],
+            }), new Research({
+                name: "Brick Houses",
+                researchCost: 250,
+                researchBonuses: [new UnlockBuildingUpgradeBonus({building: Housing.name,  upgrade: Housing.brickHouses,})],
+            }) 
+        ],
         woodcutting: [
             new Research({
                 name: "Larger Axes",
@@ -258,22 +269,15 @@ export function createResearchTree() {
                 researchBonuses: [new UnlockBuildingBonus({building: Quarry.name})],
             }),
             new Research({
-                name: "Stonecutting",
-                researchCost: 250,
-                researchBonuses: [new UnlockBuildingBonus({building: Stonecutters.name})],
-            })
-        ],
-        ironwork: [
-            new Research({
-                name: "Mining Iron",
+                name: "Mining",
                 researchCost: 100,
                 researchBonuses: [new UnlockBuildingBonus({building: IronMine.name}), new UnlockBuildingBonus({building: PigIronPit.name})],
             }),
             new Research({
-                name: "Working Iron",
-                researchCost: 350,
-                researchBonuses: [new UnlockBuildingBonus({building: Toolmaker.name})],
-            })           
+                name: "Stonecutting",
+                researchCost: 250,
+                researchBonuses: [new UnlockBuildingBonus({building: Stonecutters.name})],
+            })  
         ],
         tools: [
             new Research({
@@ -284,12 +288,12 @@ export function createResearchTree() {
             new Research({
                 name: "Iron Tools",
                 researchCost: 350,
-                researchBonuses: [new UnlockBuildingUpgradeBonus({building: Toolmaker.ironBlacksmith})],
+                researchBonuses: [new UnlockBuildingUpgradeBonus({upgrade: Toolmaker.ironBlacksmith, building: Toolmaker.name})],
             }),
             new Research({
                 name: "Steel Tools",
                 researchCost: 500,
-                researchBonuses: [new UnlockBuildingUpgradeBonus({building: Toolmaker.steelBlacksmith})],
+                researchBonuses: [new UnlockBuildingUpgradeBonus({upgrade: Toolmaker.steelBlacksmith, building: Toolmaker.name})],
             })         
         ],
         productivity: [

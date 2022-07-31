@@ -38,6 +38,7 @@ export class Variable {
         this.subscriptions = [];
         this.currentDepth = 0;
         this.explanations = [];
+        this.abridgedExplanations = [];
         this.baseValueExplanations = [];
         this.max = props.max;
         this.min = props.min;
@@ -190,30 +191,37 @@ export class Variable {
         });
         let value = this.baseValue;
         let explanations = this.baseValueExplanations.map(val => val); // Need to copy the array
+        let abridgedExplanations = this.baseValueExplanations.map(val => val); // Need to copy the array
         for (let modifier of this.modifiers) {
             let result = modifier.modify(value, indent, this.displayRound);
+            if (value !== result.result) {
+                abridgedExplanations.push({text: result.text, variable: result.variable, type:modifier.type, textPriority: result.textPriority});
+            }
+            explanations.push({text: result.text, variable: result.variable, type:modifier.type, textPriority: result.textPriority});
             value = result.result;
             if (isNaN(result.result)) {
                 throw Error("nan number");
             }
-            explanations.push({text: result.text, variable: result.variable, type:modifier.type, textPriority: result.textPriority});
         }
         if (this.max && value > this.max.currentValue) {
             value = this.max.currentValue;
             explanations.push({text: `max value is ${this.max.currentValue}`})
+            abridgedExplanations.push({text: `max value is ${this.max.currentValue}`})
         } else if (this.min && value < this.min.currentValue) {
             value = this.min.currentValue;
             explanations.push({text: `min value is ${this.min.currentValue}`})
+            abridgedExplanations.push({text: `max value is ${this.min.currentValue}`})
         }
         let eps = 1e-8;
         let absChange = Math.abs(this.currentValue - value);
-        if (this.currentValue === undefined || (Math.abs(absChange) > eps && absChange / Math.abs(this.currentValue)  > 2e-5)) {
+        if (this.currentValue === undefined || (Math.abs(absChange) > eps && absChange / Math.abs(this.currentValue) > 2e-5)) {
             if (Variable.logging) {
                 Variable.logText += '  '.repeat(indent);
                 Variable.logText += `recalculated ${this.name} to ${roundNumber(value, 7)} ${ Math.abs(this.currentValue - value)} - ${reason}`;
             }
             this.currentValue = value;
             this.explanations = explanations;
+            this.abridgedExplanations = abridgedExplanations;
             if (this.currentDepth < 2 && !quietly) {
                 if (Variable.logging) {
                     Variable.logText += `- calling subscribers\n`;
@@ -230,6 +238,7 @@ export class Variable {
             }
         } else if (explanations.length !== this.explanations.length) {
             this.explanations = explanations;
+            this.abridgedExplanations = abridgedExplanations;
         }
         if (!quietly) {
             this.currentDepth = 0;
@@ -306,7 +315,7 @@ export class VariableComponent extends React.Component {
         let nameText = (this.props.showName && this.variable.name !== unnamedVariableName) ? <span>{ownerText ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
         let displayValue = roundNumber(this.props.showBase ? this.variable.baseValue : this.variable.currentValue, this.variable.displayRound);
         let maxText = (this.props.showMax && this.variable.max) ? `/${this.variable.max.currentValue}` : null;
-        let explanations = this.variable.explanations.map((explanation, i) => {
+        function mapExplanationToHTML(explanation, i) {
             if (explanation.variable && explanation.textPriority) {
                 return <span style={{textAlign: "right"}} key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.text)}<br /></span> 
             } else if (explanation.variable) {
@@ -320,12 +329,17 @@ export class VariableComponent extends React.Component {
             } else {
                 throw Error('what');
             }
-        });
+        }
+        let explanations = this.variable.explanations.map((explanation, i) => mapExplanationToHTML(explanation, i));
+        let abridgedExplanations = this.variable.abridgedExplanations.map((explanation, i) => mapExplanationToHTML(explanation, i));
         explanations = explanations.concat(alerts ? alerts.map(alert => {
             return <span style={{textAlign: "right", ...extraExtraStyle}} key={alert} >{titleCase(alert)}<br /></span>;
         }) : []);
+        abridgedExplanations = abridgedExplanations.concat(alerts ? alerts.map(alert => {
+            return <span style={{textAlign: "right", ...extraExtraStyle}} key={alert} >{titleCase(alert)}<br /></span>;
+        }) : []);
         if (!this.props.expanded) {
-            return <HTMLTooltip title={explanations} style={{textAlign: "right"}}>
+            return <HTMLTooltip title={abridgedExplanations} style={{textAlign: "right"}}>
                 <span style={{"textAlign": "center", ...this.props.style, ...extraStyle, ...extraExtraStyle}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
                     <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{maxText}{this.props.children}{extraChildren}</span>

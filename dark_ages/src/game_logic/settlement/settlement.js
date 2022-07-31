@@ -4,7 +4,7 @@ import Checkbox from '@mui/material/Checkbox';
 import {FormControlLabel} from '@mui/material';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, ResourceBuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine, Toolmaker} from './building.js'
+import {Storage, Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, BuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine, Toolmaker} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
@@ -53,7 +53,10 @@ export class Settlement {
                 new UnaryModifier({type: castInt, customPriority: 10})
             ]
         }); 
-        this.storageSize = new Variable({owner: this, name:`storage size`, startingValue: 1});
+        this.otherBuildings = [];
+        let storageBuilding = new Storage({startingSize: 1});
+        this.addBuilding(storageBuilding);
+        this.storageSize = storageBuilding.size;
         this.resourceStorages = Object.entries(Resources).map(([resourceName, resource]) => {
             return new ResourceStorage({resource: resource, size: this.storageSize, startingAmount: 0, gameClock: this.gameClock})
         });
@@ -67,7 +70,7 @@ export class Settlement {
         this.addBuilding(new LumberjacksHut({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new ConstructionSite({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Library({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Toolmaker({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Toolmaker({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Roads({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Brewery({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Apothecary({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
@@ -103,7 +106,7 @@ export class Settlement {
         let baseHappiness = 0.05; // Neutral happiness boost (could change with difficulty)
         let zero = new Variable({name: "zero", startingValue: 0});
         let one = new Variable({name: "one", startingValue: 1});
-        this.happiness = new TrendingVariable({name: "happiness", startingValue: baseHappiness, trendingRoundTo: 3, timer: this.gameClock, trendingUpSpeed: 0.1, trendingDownSpeed: 0.2, smallestTrend: 0.009});
+        this.happiness = new TrendingVariable({name: "happiness", startingValue: baseHappiness, trendingRoundTo: 3, timer: this.gameClock, min: zero, trendingUpSpeed: 0.1, trendingDownSpeed: 0.2, smallestTrend: 0.009});
         this.health = new TrendingVariable({name: "health", timer: this.gameClock, trendingRoundTo: 3, startingValue: 1, trendingUpSpeed: 0.05, trendingDownSpeed: 0.15, smallestTrend: 0.009});
         this.unhealth = new Variable({name: "unhealth", startingValue: 1, min: zero, max: one, modifiers: [
             new VariableModifier({variable: this.health, type: subtraction}),
@@ -134,6 +137,7 @@ export class Settlement {
         this.rationsDemanded = [];
         this.rationsAchieved = [];
         this.idealRations = [];
+        this.totalHousedInternal = new Variable({name: "Total housed", modifiers: []});
         for (const [key, demand] of Object.entries(this.popDemands)) {
             let desiredRationProp = new Variable({name: `${demand.resource.name} ration (% of ideal)`, startingValue: 1, max: one, min: zero});
             let desiredRation = new Variable({name: `${demand.resource.name} ration`, startingValue: 0, min: zero, modifiers: [
@@ -151,11 +155,12 @@ export class Settlement {
                 new VariableModifier({variable: demand.idealAmount, type: multiplication}),
                 new VariableModifier({variable:actualRationProp, type: multiplication})
             ]})
-            if (demand.resource === Resources.housing) {
-                this.totalHousedInternal = new Variable({name: "Total housed", modifiers: [
+            if (demand.resource === Resources.mudHuts || demand.resource === Resources.woodenHuts || demand.resource === Resources.brickHouses) {
+                let housed = new VariableModifier({type: addition, name: "housed", modifiers: [
                     new VariableModifier({type: addition, variable: actualRationProp}),
                     new VariableModifier({type: multiplication, variable: this.populationSizeInternal}),
                 ]});
+                this.totalHousedInternal.addModifier(housed);
             } else if (demand.resource === Resources.coal) {
                 this.gameClock.subscribe(() => {
                     if (this.gameClock.translatedTime.season === winter) {
@@ -199,7 +204,8 @@ export class Settlement {
             new VariableModifier({type: addition, variable: this.homeless}),
             new VariableModifier({type: division, variable: this.populationSizeInternal})
         ]});
-        this.happiness.addModifier(new VariableModifier({variable: this.homelessness, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: -0.75, exponent:1 }));
+        this.happiness.addModifier(new VariableModifier({variable: this.homelessness, type: scaledAddition, priority: addition, offset:0, bias: 0.0, scale: -0.75, exponent:1 }));
+        this.health.addModifier(new VariableModifier({variable: this.homelessness, type: scaledMultiplication, priority: addition, offset:0, bias: 1.0, scale: -0.35, exponent:1.5 }));
 
         this.populationSizeDecline.addModifier(new VariableModifier({name: "Homelessness", variable: this.homelessnessInternal, type: scaledAddition, priority: addition, offset:0,  bias: 0.0, scale: 0.05, exponent:1.2}));
         Variable.logText += "\n\nSetting jobs here";
@@ -255,6 +261,8 @@ export class Settlement {
         if (building instanceof ResourceBuilding) {
             this.resourceBuildings.push(building);
             building.productivity.addModifier(this.generalProductivityModifier)
+        } else {
+            this.otherBuildings.push(building);
         }
     }
     populateBuildings() {
@@ -365,7 +373,7 @@ export class Settlement {
         research.researched = true;
     }
     getBuildings() {
-        return this.resourceBuildings;
+        return this.otherBuildings.concat(this.resourceBuildings);
     }
 }
 
@@ -440,7 +448,7 @@ export class SettlementComponent extends UIBase {
             <Grid container spacing={3} justifyContent="center" alignItems="center" style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
                 {this.settlement.getBuildings().filter((building) => building.unlocked).map((building, i) => {
                     return <Grid item xs={4} key={building.name} style={{alignItems: "center", justifyContent: "center"}}>
-                        <ResourceBuildingComponent building={building} 
+                        {building instanceof ResourceBuilding ? <BuildingComponent building={building} 
                             buildText={building.getBuildText(this.settlement.resourceStorages)}
                             canBuild={building.canBuild(this.settlement.resourceStorages)}
                             canDemolish={building.size.currentValue > 0}
@@ -452,7 +460,16 @@ export class SettlementComponent extends UIBase {
                             canDowngrade={building.canDowngrade(this.settlement.resourceStorages)}
                             upgradeBuilding={(e, direction) => {this.upgradeBuilding(e, building, direction)}}
                             upgradeText={building.getUpgradeText(this.settlement.resourceStorages, building)}
-                        />
+                        /> :  <BuildingComponent building={building} 
+                            buildText={building.getBuildText(this.settlement.resourceStorages)}
+                            canBuild={building.canBuild(this.settlement.resourceStorages)}
+                            canDemolish={building.size.currentValue > 0}
+                            addToBuildingSize={(e, direction) => {this.addToBuildingSize(e, building, direction)}}
+                            canUpgrade={building.canUpgrade(this.settlement.resourceStorages)}
+                            canDowngrade={building.canDowngrade(this.settlement.resourceStorages)}
+                            upgradeBuilding={(e, direction) => {this.upgradeBuilding(e, building, direction)}}
+                            upgradeText={building.getUpgradeText(this.settlement.resourceStorages, building)}
+                        /> }
                     </Grid>
                 })}
             </Grid>

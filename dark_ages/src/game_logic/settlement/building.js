@@ -126,10 +126,10 @@ export class NewOutputResource extends BuildingUpgradeChange {
     }
     activate(building, resourceStorages) {
         this.oldResource = building.outputResource;
-        building.changeOutputResource(this.newResource, resourceStorages);
+        building.changeOutputResource(this.newResource, resourceStorages, true); // Destroy the old resource in case the effect conflict (e.g. tools)
     }
     deactivate(building, resourceStorages) {
-        building.changeOutputResource(this.oldResource, resourceStorages);
+        building.changeOutputResource(this.oldResource, resourceStorages, true); // Destroy the old resource in case the effect conflict (e.g. tools)
     }
     getText(building, resourceStorages) {
         this.oldResource = building.outputResource;
@@ -313,9 +313,12 @@ export class ResourceBuilding extends Building {
         let inputCost = this.inputResources.reduce((prev, resource) => {return resource.multiplier/resource.resource.productionRatio}, 0)
         return outputProductionRatio + inputCost;
     }
-    changeOutputResource(newResource, resourceStorages) {
+    changeOutputResource(newResource, resourceStorages, destroyOld) {
         let resourceStorage = resourceStorages.find(resourceStorage => resourceStorage.resource === this.outputResource);       
         resourceStorage.removeSupply(this.totalProduction);
+        if (destroyOld) {
+            resourceStorage.amount.setNewBaseValue(0, "resource destroyed by upgrade");
+        }
         resourceStorage = resourceStorages.find(resourceStorage => resourceStorage.resource === newResource);       
         resourceStorage.addSupply(this.totalProduction);
         this.outputResource = newResource;
@@ -324,7 +327,7 @@ export class ResourceBuilding extends Building {
         if (this.inputResources) {
             this.inputResources.forEach((input, i) => {
                 let resourceStorage = this.resourceStorages.find(resourceStorage => input.resource === resourceStorage.resource);
-                resourceStorage.removeDemand(this.propDemandsDesired[i]);
+                resourceStorage.removeDemand(this.idealPropDemandsDesired[i]);
             });
         }
         this.inputResources = newInputResources;
@@ -375,35 +378,41 @@ export class ResourceBuilding extends Building {
     }
 }
 
-export class ResourceBuildingComponent extends UIBase {
+export class BuildingComponent extends UIBase {
     constructor(props) {
         super(props);
         this.building = props.building;
         this.toolTipVars = [
             this.building.size,
-            this.building.totalProduction
         ]
-        this.addVariables([this.building.filledJobs,this.building.totalJobs,...this.toolTipVars]);
+        if (this.building instanceof ResourceBuilding) {
+            this.toolTipVars = [this.building.filledJobs,this.building.totalJobs,this.building.totalProduction,...this.toolTipVars]
+        }
+        this.addVariables(this.toolTipVars);
     }
     childRender() {
         let extraStyle = {};
-        let extraVars = [`Output resource: ${this.building.outputResource.name}`];
-        if (this.building.alerts.length > 0) {
-            extraStyle = {"color": "red"}
-            this.building.alerts.forEach(alert => {
-                extraVars.push({text: alert, style: extraStyle})
-            })
+        let extraVars = [];
+        if (this.building instanceof ResourceBuilding) {
+            let extraVars = [`Output resource: ${this.building.outputResource.name}`];
+            if (this.building.alerts.length > 0) {
+                extraStyle = {"color": "red"}
+                this.building.alerts.forEach(alert => {
+                    extraVars.push({text: alert, style: extraStyle})
+                })
+            }
         }
         return <Grid container spacing={0.5} style={{border:"2px solid #2196f3", borderRadius:"7px", alignItems: "center", justifyContent: "center"}} >
             <Grid item xs={9}>
                 <CustomTooltip items={this.toolTipVars.concat(extraVars)} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                    <span style={extraStyle} onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.displayName)} {this.building.sizeJobsMultiplier ? <span>{this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span> : this.building.passiveProduction.currentValue} </span>
+                    <span style={extraStyle} onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.displayName)} {this.building.sizeJobsMultiplier ? <span>{this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span> : this.building.passiveProduction ? this.building.passiveProduction.currentValue : this.building.size.currentValue} </span>
                 </CustomTooltip>
             </Grid>
+            {this.props.addWorkers ? 
             <Grid item xs={3} style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
                 <Button variant={this.props.canAddWorkers ? "outlined" : "disabled"} onClick={(e) => this.props.addWorkers(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
                 <Button variant={this.props.canRemoveWorkers ? "outlined" : "disabled"} onClick={(e) => this.props.addWorkers(e, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>
-            </Grid>
+            </Grid> : null}
             <CustomTooltip items={this.props.buildText} style={{textAlign: "left"}}>
             <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
                     <Button variant={this.props.canBuild ? "outlined" : "disabled"} onClick={(e) => this.props.addToBuildingSize(e, 1)} sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Build</Button>
@@ -423,6 +432,17 @@ export class ResourceBuildingComponent extends UIBase {
                 <Button variant={this.props.canDowngrade ? "outlined" : "disabled"} onClick={(e) => this.props.upgradeBuilding(e, -1)}  sx={{fontSize: 12, minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Downgrade</Button>
             </Grid>
         </Grid>
+    }
+}
+
+
+export class Storage extends Building {
+    static name = "storage";
+    constructor(props) {
+        super({name: Storage.name, 
+            buildInputs: [[Resources.labourTime, 25], [Resources.wood, 50]],
+            ...props
+        })
     }
 }
 
@@ -453,13 +473,30 @@ export class HuntingCabin extends ResourceBuilding {
 }
 
 export class Housing extends ResourceBuilding {
-    static name = "housing";
+    static name = "Mud Huts";
+    static woodenHuts = "Wooden Huts";
+    static brickHouses = "Brick Houses";
+    static upgrades = [   
+        {
+            name: Housing.woodenHuts,
+            newDisplayName: Housing.woodenHuts,
+            newBuildCost: [[Resources.labourTime, 50], [Resources.wood, 25]],
+            changes: [[outputResourceChange, Resources.woodenHuts]],
+        },
+        {
+            name: Housing.brickHouses,
+            newDisplayName: Housing.brickHouses,
+            newBuildCost: [[Resources.labourTime, 100], [Resources.stoneBricks, 40]],
+            changes: [[outputResourceChange, Resources.steelTools]]
+        }
+    ];
     constructor(props) {
         super({name: Housing.name, 
-            outputResource: Resources.housing, 
-            buildInputs: [[Resources.labourTime, 50], [Resources.wood, 100]],
+            outputResource: Resources.mudHuts, 
+            buildInputs: [[Resources.labourTime, 30]],
             sizeJobsMultiplier: 0,
             passiveProductionPerSize: 10,
+            upgrades: Housing.upgrades,
             ...props
         })
     }
@@ -631,20 +668,20 @@ export class Toolmaker extends ResourceBuilding {
             name: Toolmaker.ironBlacksmith,
             newDisplayName: Toolmaker.ironBlacksmith,
             newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25]],
-            changes: [[outputResourceChange, Resources.ironTools], [inputResourceChange, [{resource:Resources.iron, multiplier: 0.1}, {resource:Resources.coal, multiplier: 0.1}, {resource:Resources.wood, multiplier: 0.05}]]],
+            changes: [[outputResourceChange, Resources.ironTools], [inputResourceChange, [{resource:Resources.iron, multiplier: 0.05}, {resource:Resources.coal, multiplier: 0.1}, {resource:Resources.wood, multiplier: 0.05}]]],
         },
         {
             name: Toolmaker.steelBlacksmith,
             newDisplayName: Toolmaker.steelBlacksmith,
             newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25]],
-            changes: [[outputResourceChange, Resources.steelTools], [inputResourceChange, [{resource:Resources.iron, multiplier: 0.1}, {resource:Resources.coal, multiplier: 0.2}, {resource:Resources.wood, multiplier: 0.05}]]]
+            changes: [[outputResourceChange, Resources.steelTools], [inputResourceChange, [{resource:Resources.iron, multiplier: 0.05}, {resource:Resources.coal, multiplier: 0.2}, {resource:Resources.wood, multiplier: 0.05}]]]
         }
     ];
     constructor(props) {
         super({name: Toolmaker.name, 
             outputResource: Resources.stoneTools, 
             buildInputs: [[Resources.labourTime, 25], [Resources.wood, 25], [Resources.stone, 20]],
-            inputResources: [{resource:Resources.stone, multiplier: 0.1}, {resource:Resources.wood, multiplier: 0.05}],
+            inputResources: [{resource:Resources.stone, multiplier: 0.05}, {resource:Resources.wood, multiplier: 0.05}],
             sizeJobsMultiplier: 2,
             upgrades: Toolmaker.upgrades,
             ...props
