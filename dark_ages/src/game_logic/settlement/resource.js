@@ -57,30 +57,37 @@ export class ResourceStorage {
         // Should subscribe to supply but not to demand -> need to change on others demands tho
         // -> figure out which demands are already distributed?
     }
-    addDemand(name, totalDemand, desiredProp, priority) {
-        let demandPropFulfilled = new Variable({name: "demand prop fulfilled", startingValue: 0});
+    addDemand(name, totalDemand, idealDesiredProp, actualDesiredProp, priority) {
+        let idealDesiredPropFulfilled = new Variable({name: "ideal demand prop fulfilled", startingValue: 0});
+        let actualDesiredPropFulfilled = new Variable({name: "demand prop fulfilled", startingValue: 0});
         this.demands.push({
-            totalDemand: totalDemand, 
-            desiredProp: desiredProp, 
-            demandPropFulfilled: demandPropFulfilled, 
-            priority: priority,
+            totalDemand,
+            idealDesiredProp, 
+            actualDesiredProp,
+            idealDesiredPropFulfilled, 
+            actualDesiredPropFulfilled,
+            priority,
             totalDemandCb: totalDemand.subscribe(() => this.updateDemands()),
-            desiredPropCb: desiredProp.subscribe(() => this.updateDemands())
+            idealDesiredPropCb: idealDesiredProp.subscribe(() => this.updateDemands()),
+            actualDesiredPropCb: actualDesiredProp.subscribe(() => this.updateDemands())
         });
         this.demands.sort((a, b) => {
             return a.priority - b.priority;
         });
         this.demand.variable.addModifier(new VariableModifier({name: `${name} demand`, startingValue:0, type:addition, modifiers: [
             new VariableModifier({variable: totalDemand, type: addition}),
-            new VariableModifier({variable: demandPropFulfilled, type: multiplication})
+            new VariableModifier({variable: actualDesiredPropFulfilled, type: multiplication})
         ]}));
         this.updateDemands();
-        return demandPropFulfilled;
+        return {idealDesiredPropFulfilled, actualDesiredPropFulfilled};
     }
     removeDemand(desiredProp) {
         let demandObj = this.demands.find(demand => demand.desiredProp === desiredProp);
         this.demands = this.demands.filter(demand => demand.desiredProp !== desiredProp);
         this.demand.variable.removeModifier(this.demand.variable.modifiers.find(modifier => modifier.variable.modifiers.find(modifier => modifier.variable === demandObj.demandPropFulfilled)));
+        demandObj.totalDemand.unsubscribe(demandObj.totalDemandCb);
+        demandObj.actualDesiredProp.unsubscribe(demandObj.actualDesiredPropCb);
+        demandObj.idealDesiredProp.unsubscribe(demandObj.idealDesiredPropCb);
         this.updateDemands();
     }
     oneOffDemand(amount, explanation) {
@@ -91,34 +98,43 @@ export class ResourceStorage {
         if (amount > amountAtTurnStart) {
             amount = amountAtTurnStart
         }
-        this.amount.setNewBaseValue(amountAtTurnStart - amount, "Turn start");
+        this.amount.setNewBaseValue(amountAtTurnStart - amount, "Turn start + " + explanation);
+        this.updateDemands(0);
         return amount;
+    }
+    updateDemands(indent) {
+        let amountAtTurnStart = this.resource.cumulates ? this.amount.baseValue : 0;
+        let totalSupply = amountAtTurnStart + this.supply.variable.currentValue;
+        this.demands.forEach(demandObj => {
+            let idealDemand = demandObj.totalDemand.currentValue * demandObj.idealDesiredProp.currentValue;
+            let actualDemand = demandObj.totalDemand.currentValue * demandObj.actualDesiredProp.currentValue;
+            if (idealDemand === 0) {
+                demandObj.idealDesiredPropFulfilled.setNewBaseValue(0, "new demand calculated", indent);
+            } else if (totalSupply >= idealDemand) {
+                demandObj.idealDesiredPropFulfilled.setNewBaseValue(demandObj.idealDesiredProp.currentValue, "new demand calculated", indent);
+            } else {
+                demandObj.idealDesiredPropFulfilled.setNewBaseValue(demandObj.idealDesiredProp.currentValue * totalSupply / idealDemand, "new demand calculated", indent);
+            }
+            if (actualDemand === 0) {
+                demandObj.actualDesiredPropFulfilled.setNewBaseValue(0, "new demand calculated", indent);
+            } else if (totalSupply >= actualDemand) {
+                totalSupply -= actualDemand;
+                demandObj.actualDesiredPropFulfilled.setNewBaseValue(demandObj.actualDesiredProp.currentValue, "new demand calculated", indent);
+            } else {
+                demandObj.actualDesiredPropFulfilled.setNewBaseValue(demandObj.actualDesiredProp.currentValue * totalSupply / actualDemand, "new demand calculated", indent);
+                totalSupply = 0;
+            }
+            if (isNaN(idealDemand) || isNaN(actualDemand) || isNaN(totalSupply)) {
+                debugger;
+                throw Error('nans');
+            }
+        });
     }
     addSupply(supplyVariable) {
         this.supply.variable.addModifier(new VariableModifier({variable: supplyVariable, type:addition}));
     }
     removeSupply(supplyVariable) {
         this.supply.variable.removeModifier(this.supply.variable.modifiers.find(modifier => modifier.variable === supplyVariable));
-    }
-    updateDemands(indent) {
-        let amountAtTurnStart = this.resource.cumulates ? this.amount.baseValue : 0;
-        let totalSupply = amountAtTurnStart + this.supply.variable.currentValue;
-        this.demands.forEach(demandObj => {
-            let demand = demandObj.totalDemand.currentValue * demandObj.desiredProp.currentValue;
-            if (demand === 0) {
-                demandObj.demandPropFulfilled.setNewBaseValue(0, "new demand calculated", indent);
-            } else if (totalSupply >= demand) {
-                totalSupply -= demand;
-                demandObj.demandPropFulfilled.setNewBaseValue(demandObj.desiredProp.currentValue, "new demand calculated", indent);
-            } else {
-                demandObj.demandPropFulfilled.setNewBaseValue(demandObj.desiredProp.currentValue * totalSupply / demand, "new demand calculated", indent);
-                totalSupply = 0;
-            }
-            if (isNaN(demand) || isNaN(totalSupply)) {
-                debugger;
-                throw Error('nans');
-            }
-        });
     }
 }
 

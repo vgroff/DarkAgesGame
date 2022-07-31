@@ -159,7 +159,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
             }] 
         },
         ironTools: {
-            resource: Resources.stoneTools,
+            resource: Resources.ironTools,
             alwaysFullRations: true,
             idealAmount: new Variable({name: "Ideal Tools Access", startingValue: 1}), // This should change with weather
             effects: [{
@@ -170,7 +170,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
             }] 
         },
         steelTools: {
-            resource: Resources.stoneTools,
+            resource: Resources.steelTools,
             alwaysFullRations: true,
             idealAmount: new Variable({name: "Ideal Tools Access", startingValue: 1}), // This should change with weather
             effects: [{

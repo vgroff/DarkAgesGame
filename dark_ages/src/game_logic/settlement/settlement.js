@@ -142,9 +142,10 @@ export class Settlement {
                     new VariableModifier({variable: this.populationSizeExternal, type: multiplication})
                 ]
             });
-            let proportion = new Variable({name: `${demand.resource.name} proportion`, startingValue: 1});
+            let idealProportion = new Variable({name: `ideal ${demand.resource.name} proportion`, startingValue: 1});
+            let actualProportion = new Variable({name: `${demand.resource.name} proportion`, startingValue: 1});
             let resourceStorage = this.resourceStorages.find(resourceStorage => resourceStorage.resource === demand.resource);
-            let actualRationProp = resourceStorage.addDemand(`${demand.resource.name} ration`, desiredRation, proportion, 2); // 2 because citizens go after businesses
+            let actualRationProp = resourceStorage.addDemand(`${demand.resource.name} ration`, desiredRation, idealProportion, actualProportion, 2).actualDesiredPropFulfilled; // 2 because citizens go after businesses
             let rationAchieved = new Variable({name: `Actual ${demand.resource.name} ration`, startingValue: 0, modifiers: [
                 new VariableModifier({variable:desiredRationProp, type: addition}),
                 new VariableModifier({variable: demand.idealAmount, type: multiplication}),
@@ -235,14 +236,14 @@ export class Settlement {
         this.health.forceResetTrend();
         this.happiness.forceResetTrend(); // Twice for good measure
         let defaultBuildings = [
-            new Farm({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new LumberjacksHut({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new CharcoalKiln({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new LumberjacksHut({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new Brewery({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new Apothecary({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new Quarry({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new Stonecutters({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new Farm({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new LumberjacksHut({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new CharcoalKiln({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new LumberjacksHut({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new Brewery({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new Apothecary({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new Quarry({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
+            new Stonecutters({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
         ];
         this.idealPrices = {};
         defaultBuildings.forEach(building => {

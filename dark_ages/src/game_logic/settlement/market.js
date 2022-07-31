@@ -49,8 +49,9 @@ export class Market {
                 new VariableModifier({variable: this.population, type: addition}),
                 new VariableModifier({variable: buyProp, type: multiplication}),
             ]});
-            let proportion = new Variable({name: `${resource.name} proportion`, startingValue: 1});
-            let actualSellPropProp = resourceStorage.addDemand(`market demand`, desiredSellAmount, proportion, 3); // 3 because market goes last
+            let idealProportion = new Variable({name: `ideal ${resource.name} proportion`, startingValue: 1});
+            let actualProportion = new Variable({name: `${resource.name} proportion`, startingValue: 1});
+            let actualSellPropProp = resourceStorage.addDemand(`market demand`, desiredSellAmount, idealProportion, actualProportion, 3).actualDesiredPropFulfilled; // 3 because market goes last
             resourceStorage.addSupply(buyAmount);
             let actualSellProp = new Variable({name: `actual selling % amount of ${resource.name}`, startingValue: 0, modifiers: [
                 new VariableModifier({variable: desiredSellProp, type: addition}),
