@@ -147,7 +147,7 @@ export class NewInputResources extends BuildingUpgradeChange {
         building.changeInputResources(this.newResources, resourceStorages);
     }
     deactivate(building, resourceStorages) {
-        building.changeInputResources(this.oldResource, resourceStorages);
+        building.changeInputResources(this.oldResources, resourceStorages);
     }
     getText(building, resourceStorages) {
         this.oldResources = building.inputResources;
@@ -259,11 +259,12 @@ export class ResourceBuilding extends Building {
                 new VariableModifier({variable: this.filledJobs, type:subtraction})
             ]
         });
+        this.workerProduction = new Variable({name:"production from workers", owner: this, startingValue: this.outputResource.productionRatio, modifiers: [
+            new VariableModifier({variable: this.filledJobs, type:multiplication}),
+            new VariableModifier({variable: this.productivity, type:multiplication})
+        ]})
         this.productionModifiers = [
-            new VariableModifier({name:"production from workers", owner: this, startingValue: this.outputResource.productionRatio, type:addition, modifiers: [
-                new VariableModifier({variable: this.filledJobs, type:multiplication}),
-                new VariableModifier({variable: this.productivity, type:multiplication})
-            ]})
+            new VariableModifier({variable: this.workerProduction, type: addition})
         ];
         if (props.passiveProductionPerSize) {
             this.passiveProduction = new Variable({name:"passive production", startingValue:props.passiveProductionPerSize, modifiers: [
@@ -317,7 +318,7 @@ export class ResourceBuilding extends Building {
         let resourceStorage = resourceStorages.find(resourceStorage => resourceStorage.resource === this.outputResource);       
         resourceStorage.removeSupply(this.totalProduction);
         if (destroyOld) {
-            resourceStorage.amount.setNewBaseValue(0, "resource destroyed by upgrade");
+            resourceStorage.oneOffDemand(resourceStorage.amount.currentValue, "resource destroyed by upgrade");
         }
         resourceStorage = resourceStorages.find(resourceStorage => resourceStorage.resource === newResource);       
         resourceStorage.addSupply(this.totalProduction);
@@ -386,7 +387,7 @@ export class BuildingComponent extends UIBase {
             this.building.size,
         ]
         if (this.building instanceof ResourceBuilding) {
-            this.toolTipVars = [this.building.filledJobs,this.building.totalJobs,this.building.totalProduction,...this.toolTipVars]
+            this.toolTipVars = [...this.toolTipVars, this.building.filledJobs,this.building.totalJobs,this.building.totalProduction]
         }
         this.addVariables(this.toolTipVars);
     }
@@ -394,7 +395,16 @@ export class BuildingComponent extends UIBase {
         let extraStyle = {};
         let extraVars = [];
         if (this.building instanceof ResourceBuilding) {
-            let extraVars = [`Output resource: ${this.building.outputResource.name}`];
+            extraVars = [``, `Output resource: ${this.building.outputResource.name}`];
+            if (this.building.workerProduction.currentValue > 0) {
+                let outputPerWorker = this.building.workerProduction.currentValue / this.building.filledJobs.currentValue;
+                extraVars.push(`Producing ${roundNumber(outputPerWorker, 3)} per worker`);
+                if (this.building.inputResources && this.building.inputResources.length > 0) {
+                    this.building.inputResources.forEach(inputResource => {
+                        extraVars.push(`Need ${roundNumber(inputResource.multiplier*outputPerWorker, 3)} of ${inputResource.resource.name} per worker`)
+                    });
+                }
+            }
             if (this.building.alerts.length > 0) {
                 extraStyle = {"color": "red"}
                 this.building.alerts.forEach(alert => {
@@ -733,13 +743,13 @@ export class Toolmaker extends ResourceBuilding {
         {
             name: Toolmaker.ironBlacksmith,
             newDisplayName: Toolmaker.ironBlacksmith,
-            newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25]],
+            newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25], [Resources.iron, 25]],
             changes: [[outputResourceChange, Resources.ironTools], [inputResourceChange, [{resource:Resources.iron, multiplier: 0.05}, {resource:Resources.coal, multiplier: 0.1}, {resource:Resources.wood, multiplier: 0.05}]]],
         },
         {
             name: Toolmaker.steelBlacksmith,
             newDisplayName: Toolmaker.steelBlacksmith,
-            newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25]],
+            newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25], [Resources.iron, 25]],
             changes: [[outputResourceChange, Resources.steelTools], [inputResourceChange, [{resource:Resources.iron, multiplier: 0.05}, {resource:Resources.coal, multiplier: 0.2}, {resource:Resources.wood, multiplier: 0.05}]]]
         }
     ];
@@ -750,6 +760,49 @@ export class Toolmaker extends ResourceBuilding {
             inputResources: [{resource:Resources.stone, multiplier: 0.05}, {resource:Resources.wood, multiplier: 0.05}],
             sizeJobsMultiplier: 2,
             upgrades: Toolmaker.upgrades,
+            ...props
+        })
+    }
+}
+
+export class Bowyer extends ResourceBuilding {
+    static name = "bowyer";
+    constructor(props) {
+        super({name: Bowyer.name, 
+            outputResource: Resources.bows, 
+            buildInputs: [[Resources.labourTime, 25], [Resources.wood, 25], [Resources.stone, 5]],
+            inputResources: [{resource:Resources.wood, multiplier: 0.2}],
+            sizeJobsMultiplier: 2,
+            ...props
+        })
+    }
+}
+
+export class WeaponMaker extends ResourceBuilding {
+    static name = "Stone Weapon Maker";
+    static ironBlacksmith = "Military Blacksmith (Iron)";
+    static steelBlacksmith = "Military Blacksmith (Steel)";
+    static upgrades = [   
+        {
+            name: WeaponMaker.ironBlacksmith,
+            newDisplayName: WeaponMaker.ironBlacksmith,
+            newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25], [Resources.iron, 25]],
+            changes: [[outputResourceChange, Resources.ironWeaponry], [inputResourceChange, [{resource:Resources.iron, multiplier: 0.5}, {resource:Resources.coal, multiplier: 0.5}]]],
+        },
+        {
+            name: WeaponMaker.steelBlacksmith,
+            newDisplayName: WeaponMaker.steelBlacksmith,
+            newBuildCost: [[Resources.labourTime, 50], [Resources.stoneBricks, 25], [Resources.iron, 25]],
+            changes: [[outputResourceChange, Resources.steelWeaponry], [inputResourceChange, [{resource:Resources.iron, multiplier: 0.5}, {resource:Resources.coal, multiplier: 0.5}]]]
+        }
+    ];
+    constructor(props) {
+        super({name: WeaponMaker.name, 
+            outputResource: Resources.stoneWeaponry, 
+            buildInputs: [[Resources.labourTime, 25], [Resources.wood, 25], [Resources.stone, 20]],
+            inputResources: [{resource:Resources.stone, multiplier: 0.2}, {resource:Resources.wood, multiplier: 0.15}],
+            sizeJobsMultiplier: 2,
+            upgrades: WeaponMaker.upgrades,
             ...props
         })
     }

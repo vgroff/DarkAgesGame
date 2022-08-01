@@ -1,7 +1,7 @@
 import React from "react";
 import UIBase from "../UIBase";
 import { VariableModifier, multiplication } from "../UIUtils";
-import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, BogIronPit, Toolmaker, Housing, Church, Tavern, CoalMine, CoalPit } from "./building";
+import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, BogIronPit, Toolmaker, Housing, Church, Tavern, CoalMine, CoalPit, WeaponMaker } from "./building";
 import {Grid, Button} from '@mui/material';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 import { GeneralProductivityBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, UnlockBuildingBonus, UnlockBuildingUpgradeBonus } from "./bonus";
@@ -205,6 +205,28 @@ export function createResearchTree() {
                 researchCost: 500,
                 researchBonuses: [new UnlockBuildingUpgradeBonus({upgrade: Toolmaker.steelBlacksmith, building: Toolmaker.name})],
             })         
+        ],
+        military: [
+            new Research({
+                name: "Stone Weaponry",
+                researchCost: 30,
+                researchBonuses: [new UnlockBuildingBonus({building: WeaponMaker.name})],
+            }),
+            new Research({
+                name: "Bowyery and Fletching",
+                researchCost: 100,
+                researchBonuses: [new UnlockBuildingBonus({building: WeaponMaker.name})],
+            }),
+            new Research({
+                name: "Iron Weaponry",
+                researchCost: 300,
+                researchBonuses: [new UnlockBuildingUpgradeBonus({upgrade: WeaponMaker.ironBlacksmith, building: WeaponMaker.name})],
+            }),
+            new Research({
+                name: "Steel Weaponry",
+                researchCost: 500,
+                researchBonuses: [new UnlockBuildingUpgradeBonus({upgrade: WeaponMaker.steelBlacksmith, building: WeaponMaker.name})],
+            })           
         ],
         productivity: [
             new Research({

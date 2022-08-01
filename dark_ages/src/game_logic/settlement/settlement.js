@@ -4,7 +4,7 @@ import Checkbox from '@mui/material/Checkbox';
 import {FormControlLabel} from '@mui/material';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Storage, Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, BuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine, Toolmaker, Church, Tavern, CoalMine} from './building.js'
+import {Storage, Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, BuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine, Toolmaker, Church, Tavern, CoalMine, Bowyer, WeaponMaker} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
@@ -82,6 +82,8 @@ export class Settlement {
         this.addBuilding(new Stonecutters({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new IronMine({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new CoalMine({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Bowyer({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new WeaponMaker({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.totalJobs = new SumAggModifier(
             {
                 name: "Total Jobs",

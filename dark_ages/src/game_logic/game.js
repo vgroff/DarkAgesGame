@@ -46,17 +46,19 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?)
+// - Upgrade coal mine size with research
+// - auto-sell excess goods to the market
+// - Determine quality of the harvest at the beginning of the year (build the event rolls systems with success/major success etc..)
+//     - Event system that subscribes to gameClock, has some abstract way of determining whether it should fire, and then fires, 
+//        probably by calling a callback on either the settlement or something else. Also might need to cancel itself once it is over - deactivating bonuses should be a function too
+//       In the case of the harvest they should probably apply to all settlements
+//     - Have an event that simulates a bandit raid, and simplify the battle by just using weaponry+people. Also have a way of paying tributes
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
-// - Add a terrain for each settlement that affects building possibilities and building productivities
-//      - e.g. -> get coalfields/pig iron in marshland but lower farming yield and labour time, get coal mines and higher mining yield and apothecary in mountains but lower farming and woodcutter yield and labour time,
-//            by the river - get fishing warfs and higher farming by the river but lower mining yield
-// - Determine quality of the harvest at the beginning of the year (build the event rolls systems with success/major success etc..)
 // - Add rebellions % chance using happiness+legitimacy(comes from character?)
 // - Move to the character system!
-// - Add more info to buildings tooltip
-// - Build weapons
+// - Add a coastal terrain with fishin wharf + higher raid chance
+// - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?) 
 
 // Next up:
 // - Basic character/RPG system
