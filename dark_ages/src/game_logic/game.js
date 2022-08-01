@@ -4,13 +4,13 @@ import { titleCase } from "./utils";
 import {Timer} from './timer'
 import { SumAggModifier } from "./variable/sumAgg";
 import { integerPropType } from "@mui/utils";
-import {seasons} from './seasons'
+import {daysInYear, seasons} from './seasons'
 import { Farmlands, Marshlands, NoTerrain } from "./settlement/terrain";
+import { HarvestEvent } from "./events";
 
 class Game {
     constructor(gameClock) {
         this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 600, timeTranslator:(value) => {
-            let daysInYear = 12;
             let year = parseInt(value/daysInYear) + 1;
             let day = value - (year - 1)*daysInYear + 1;
             let season = seasons[parseInt((day-1)*4/daysInYear)]
@@ -40,18 +40,26 @@ class Game {
                 this.bankrupt.setNewBaseValue(0, 'user liquid');
             }
         });
+
+        this.globalEvents = [
+            new HarvestEvent({settlements: this.settlements, timer: this.gameClock})
+        ]
+        this.globalEvents.forEach(event => {
+            if (event.eventShouldFire()) {
+                event.fire();
+            }
+        });
     }
 }
 
 export default Game;
 
 // Stuff for now:
-// - Upgrade coal mine size with research
 // - auto-sell excess goods to the market
-// - Determine quality of the harvest at the beginning of the year (build the event rolls systems with success/major success etc..)
-//     - Event system that subscribes to gameClock, has some abstract way of determining whether it should fire, and then fires, 
-//        probably by calling a callback on either the settlement or something else. Also might need to cancel itself once it is over - deactivating bonuses should be a function too
-//       In the case of the harvest they should probably apply to all settlements
+// - change coal demand with weather - have a weather to number function?
+// - Events:
+//     - Show harvest quality on HUD
+//     - Have a popup for some events (e.g. bandit raid?)
 //     - Have an event that simulates a bandit raid, and simplify the battle by just using weaponry+people. Also have a way of paying tributes
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
@@ -73,13 +81,20 @@ export default Game;
 // - Basic character/RPG system
 // - Basic combat system - have bandit raids
 // - Saving/Loading system? -> 
-//     - Looks like I will need to do this somewhat manually, I can probably do a lot of this with Object.entries() and then handling each case. I need to make sure that single variables that are present in multiple places are reconstructed correctly, so I probably need some global Set() object that get populated/read from
-//     - Get the data of the object (all key: value pairs, including Variables initialised correctly) and then change the constructor to recieve props,loadedObject and then read everything you can from the loadedObject instead, but still do all the constructing as usual
+//     - I can probably do a lot of this with Object.entries(). I need to make sure that any objects that are present in multiple places are reconstructed correctly, so I probably need some global Set() object that get populated/read from
+//     - Biggest problem is going to be making sure that stored functions are copied over correctly?
+//          - It feels like just reconstructing the objects and then overwriting the k,v pairs would work for this though? We would just have to copy over all the subscribers afterwards
+//               - Does this work for the lambdas related to events? I think so right? So long as the timer and all the data is right?
+//     - Otherwise, potentially slightly more painful solutions:
+//          - Could change the constructor to recieve props,loadedObject and then read everything you can from the loadedObject instead, but still do all the constructing as usual - this way all the lambdas are correctly hooked up?
+//          - If the only real problem is with serialising stored functions in subscribe() fashion, can we find a way of storing a re-viving subscriptions?
+//          - https://github.com/denostack/superserial this sounds like it might help maybe? not sure it deals with functions though 
+//          - https://github.com/iconico/JavaScript-Serializer or this? might actually deal with functions
+//          - https://www.npmjs.com/package/javascript-serializer maybe this?
 // - Do some UX improvement work
 // - Playtesting! Myself and friends
 
 // Stuff for later builds:
-// - Could make a more complex research system?
 // - Diplomacy system
 // - "Fake" AI settlements that are really just characters that do combat/diplomacy but don't actually do the settlement management
 // - Could have conditional variables -> they take either a single true/false variable or two variables to compare and then return different results depending on the outcome

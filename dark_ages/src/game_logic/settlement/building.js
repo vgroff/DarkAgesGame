@@ -687,7 +687,7 @@ export class BogIronPit extends ResourceBuilding {
             outputResource: Resources.iron, 
             buildInputs: [[Resources.labourTime, 40], [Resources.wood, 20]],
             sizeJobsMultiplier: 4,
-            maxSize: 1,
+            maxSize: 2,
             startingProductivity: 1.35, 
             ...props
         })
@@ -701,7 +701,7 @@ export class CoalMine extends ResourceBuilding {
             outputResource: Resources.coal, 
             buildInputs: [[Resources.labourTime, 100], [Resources.wood, 50]],
             sizeJobsMultiplier: 3,
-            maxSize: 8,
+            maxSize: 4,
             startingProductivity: 1.35,
             ...props
         })

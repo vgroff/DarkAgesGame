@@ -4,7 +4,7 @@ import { VariableModifier, multiplication } from "../UIUtils";
 import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, BogIronPit, Toolmaker, Housing, Church, Tavern, CoalMine, CoalPit, WeaponMaker } from "./building";
 import {Grid, Button} from '@mui/material';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
-import { GeneralProductivityBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, UnlockBuildingBonus, UnlockBuildingUpgradeBonus } from "./bonus";
+import { GeneralProductivityBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, UnlockBuildingBonus, UnlockBuildingUpgradeBonus, SpecificBuildingMaxSizeBonus } from "./bonus";
 
 
 
@@ -174,8 +174,13 @@ export function createResearchTree() {
                 researchBonuses: [new UnlockBuildingBonus({building: Quarry.name})],
             }),
             new Research({
-                name: "Surface Mining",
+                name: "Stonecutting",
                 researchCost: 100,
+                researchBonuses: [new UnlockBuildingBonus({building: Stonecutters.name})],
+            }),
+            new Research({
+                name: "Surface Mining",
+                researchCost: 150,
                 researchBonuses: [new UnlockBuildingBonus({building: BogIronPit.name}), new UnlockBuildingBonus({building: CoalPit.name})],
             }),
             new Research({
@@ -184,10 +189,15 @@ export function createResearchTree() {
                 researchBonuses: [new UnlockBuildingBonus({building: IronMine.name}), new UnlockBuildingBonus({building: CoalMine.name})],
             }),
             new Research({
-                name: "Stonecutting",
-                researchCost: 250,
-                researchBonuses: [new UnlockBuildingBonus({building: Stonecutters.name})],
-            })  
+                name: "Deeper Mining",
+                researchCost: 400,
+                researchBonuses: [new SpecificBuildingMaxSizeBonus({building: CoalMine.name, amount: 4})],
+            }),
+            new Research({
+                name: "Deepest Mining",
+                researchCost: 600,
+                researchBonuses: [new SpecificBuildingMaxSizeBonus({building: CoalMine.name, amount: 4})],
+            }),
         ],
         tools: [
             new Research({

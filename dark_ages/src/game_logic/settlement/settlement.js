@@ -392,6 +392,13 @@ export class Settlement {
             throw Error("not implemented");
         }
     }
+    deactivateBonus(bonus) {
+        if (bonus instanceof SettlementBonus) {
+            bonus.deactivate(this);
+        } else {
+            throw Error("not implemented");
+        }
+    }
     getBuildings() {
         return this.otherBuildings.concat(this.resourceBuildings);
     }
