@@ -16,6 +16,7 @@ class UIBase extends React.Component {
         }
         let self = this;
         variables.forEach((variable, key) => self.addVarToStateObject(key, variable));
+        this.variablesSet = true;
     }
     addVarToStateObject(key, variable) {
         this.subs.push({key, variable});

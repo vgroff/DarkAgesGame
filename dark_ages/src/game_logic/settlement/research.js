@@ -1,118 +1,11 @@
 import React from "react";
 import UIBase from "../UIBase";
 import { VariableModifier, multiplication } from "../UIUtils";
-import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, PigIronPit, Toolmaker, Housing, Church, Tavern } from "./building";
+import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, BogIronPit, Toolmaker, Housing, Church, Tavern, CoalMine, CoalPit } from "./building";
 import {Grid, Button} from '@mui/material';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
+import { GeneralProductivityBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, UnlockBuildingBonus, UnlockBuildingUpgradeBonus } from "./bonus";
 
-
-export class ResearchBonus {
-    constructor(props) {
-        this.name = props.name;
-    }
-    activate() {
-        throw Error("need an activation");
-    }
-    getEffect() {
-        throw Error("you forgot to define this on the subclass");
-    }
-};
-
-export class SettlementResearchBonus extends ResearchBonus {
-    activate(settlement) {
-        throw Error("need an activation");
-    }
-};
-
-export class GeneralProductivityBonus extends SettlementResearchBonus {
-    constructor(props) {
-        props.name = "productivity bonus";
-        super(props);
-        this.amount = props.amount;
-    }
-    activate(settlement) {
-        settlement.generalProductivity.addModifier(new VariableModifier({startingValue: this.amount, name: this.name, type: multiplication}));
-    }
-    getEffectText() {
-        let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
-        return `Increase general productivity by ${percentage}%`;
-    }
-};
-
-export class SpecificBuildingProductivityBonus extends SettlementResearchBonus {
-    constructor(props) {
-        super(props);
-        this.buildingName = props.building;
-        this.name = `${this.buildingName} productivity bonus`;
-        this.amount = props.amount;
-    }
-    activate(settlement) {
-        for (const building of settlement.resourceBuildings) {
-            if (building.name === this.buildingName) {
-                building.productivity.addModifier(new VariableModifier({startingValue: this.amount, name: this.name, type: multiplication}));
-            }
-        }
-    }
-    getEffectText() {
-        let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
-        return `Increase productivity of ${this.buildingName} by ${percentage}%`;
-    }
-};
-
-export class SpecificBuildingEfficiencyBonus extends SettlementResearchBonus {
-    constructor(props) {
-        super(props);
-        this.buildingName = props.building;
-        this.name = `${this.buildingName} efficiency bonus`;
-        this.amount = props.amount;
-    }
-    activate(settlement) {
-        for (const building of settlement.resourceBuildings) {
-            if (building.name === this.buildingName) {
-                building.efficiency.addModifier(new VariableModifier({startingValue: this.amount, name: this.name, type: multiplication}));
-            }
-        }
-    }
-    getEffectText() {
-        let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
-        return `Increase efficiency of ${this.buildingName} by ${percentage}%`;
-    }
-};
-
-export class UnlockBuildingBonus extends SettlementResearchBonus {
-    constructor(props) {
-        super(props);
-        this.buildingName = props.building;
-        this.name = `unlock ${this.buildingName}`;
-    }
-    activate(settlement) {
-        for (const building of settlement.resourceBuildings) {
-            if (building.name === this.buildingName) {
-                building.unlocked = true;
-            }
-        }
-    }
-    getEffectText() {
-        return `Unlock ${this.buildingName}`;
-    }
-};
-
-export class UnlockBuildingUpgradeBonus extends SettlementResearchBonus {
-    constructor(props) {
-        super(props);
-        this.upgradeName = props.upgrade;
-        this.buildingName = props.building;
-        this.name = `${props.upgrade}`;
-    }
-    activate(settlement) {
-        let building = settlement.resourceBuildings.find(building => building.name === this.buildingName)
-        let upgrade = building.upgrades.find(upgrade => upgrade.name === this.upgradeName)
-        upgrade.unlocked = true;
-    }
-    getEffectText() {
-        return `Unlock building upgrade ${this.upgradeName}`;
-    }
-};
 
 
 export class Research {
@@ -274,16 +167,21 @@ export function createResearchTree() {
                 researchBonuses: [new UnlockBuildingUpgradeBonus({building: Roads.name,  upgrade: Roads.brickRoads,})],
             }) // Should I change the output resource? Maybe don't show resources that have no buildings on the GUI
         ],
-        stonework: [
+        mining: [
             new Research({
                 name: "Quarrying",
                 researchCost: 50,
                 researchBonuses: [new UnlockBuildingBonus({building: Quarry.name})],
             }),
             new Research({
-                name: "Mining",
+                name: "Surface Mining",
                 researchCost: 100,
-                researchBonuses: [new UnlockBuildingBonus({building: IronMine.name}), new UnlockBuildingBonus({building: PigIronPit.name})],
+                researchBonuses: [new UnlockBuildingBonus({building: BogIronPit.name}), new UnlockBuildingBonus({building: CoalPit.name})],
+            }),
+            new Research({
+                name: "Deep Mining",
+                researchCost: 200,
+                researchBonuses: [new UnlockBuildingBonus({building: IronMine.name}), new UnlockBuildingBonus({building: CoalMine.name})],
             }),
             new Research({
                 name: "Stonecutting",

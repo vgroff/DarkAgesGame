@@ -5,6 +5,7 @@ import {Timer} from './timer'
 import { SumAggModifier } from "./variable/sumAgg";
 import { integerPropType } from "@mui/utils";
 import {seasons} from './seasons'
+import { Farmlands, Marshlands, NoTerrain } from "./settlement/terrain";
 
 class Game {
     constructor(gameClock) {
@@ -17,7 +18,7 @@ class Game {
         }});
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 39, bankrupt: this.bankrupt}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt}),
         ];
         this.totalMarketIncome = new SumAggModifier(
             {
@@ -50,11 +51,11 @@ export default Game;
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - Add a terrain for each settlement that affects building possibilities and building productivities
 //      - e.g. -> get coalfields/pig iron in marshland but lower farming yield and labour time, get coal mines and higher mining yield and apothecary in mountains but lower farming and woodcutter yield and labour time,
-//            get higher farming yield in farmland but lower iron yield, apothecary and woodcutter yield, get fishing warfs and higher farming by the river but lower mining yield,
-//            get higher woodcutting, apothecary and hunting in the forest but lower farming and labour time
+//            by the river - get fishing warfs and higher farming by the river but lower mining yield
 // - Determine quality of the harvest at the beginning of the year (build the event rolls systems with success/major success etc..)
 // - Add rebellions % chance using happiness+legitimacy(comes from character?)
 // - Move to the character system!
+// - Add more info to buildings tooltip
 // - Build weapons
 
 // Next up:

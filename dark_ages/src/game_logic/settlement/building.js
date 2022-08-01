@@ -260,7 +260,7 @@ export class ResourceBuilding extends Building {
             ]
         });
         this.productionModifiers = [
-            new VariableModifier({name:"production from workers", owner: this, startingValue:this.outputResource.productionRatio, type:addition, modifiers: [
+            new VariableModifier({name:"production from workers", owner: this, startingValue: this.outputResource.productionRatio, type:addition, modifiers: [
                 new VariableModifier({variable: this.filledJobs, type:multiplication}),
                 new VariableModifier({variable: this.productivity, type:multiplication})
             ]})
@@ -520,7 +520,7 @@ export class CharcoalKiln extends ResourceBuilding {
         super({name: CharcoalKiln.name, 
             outputResource: Resources.coal, 
             buildInputs: [[Resources.labourTime, 20], [Resources.wood, 30]],
-            inputResources: [{resource:Resources.wood, multiplier: 0.25}],
+            inputResources: [{resource:Resources.wood, multiplier: 0.3}],
             sizeJobsMultiplier: 3,
             ...props
         })
@@ -670,15 +670,56 @@ export class IronMine extends ResourceBuilding {
     }
 }
 
-export class PigIronPit extends ResourceBuilding {
-    static name = "pig iron pit";
+export class BogIronPit extends ResourceBuilding {
+    static name = "bog iron pit";
     constructor(props) {
-        super({name: IronMine.name, 
+        super({name: BogIronPit.name, 
             outputResource: Resources.iron, 
             buildInputs: [[Resources.labourTime, 40], [Resources.wood, 20]],
             sizeJobsMultiplier: 4,
-            maxSize: 3,
-            productionRation: 1.35, 
+            maxSize: 1,
+            startingProductivity: 1.35, 
+            ...props
+        })
+    }
+}
+
+export class CoalMine extends ResourceBuilding {
+    static name = "coal mine";
+    constructor(props) {
+        super({name: CoalMine.name, 
+            outputResource: Resources.coal, 
+            buildInputs: [[Resources.labourTime, 100], [Resources.wood, 50]],
+            sizeJobsMultiplier: 3,
+            maxSize: 8,
+            startingProductivity: 1.35,
+            ...props
+        })
+    }
+}
+
+export class CoalPit extends ResourceBuilding {
+    static name = "coal pit";
+    constructor(props) {
+        super({name: CoalPit.name, 
+            outputResource: Resources.coal, 
+            buildInputs: [[Resources.labourTime, 30], [Resources.wood, 20]],
+            sizeJobsMultiplier: 4,
+            maxSize: 2,
+            startingProductivity: 1.65, 
+            ...props
+        })
+    }
+}
+
+export class PeatBog extends ResourceBuilding {
+    static name = "peat bog";
+    constructor(props) {
+        super({name: PeatBog.name, 
+            outputResource: Resources.coal, 
+            buildInputs: [[Resources.labourTime, 30]],
+            sizeJobsMultiplier: 3,
+            maxSize: 2,
             ...props
         })
     }

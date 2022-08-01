@@ -4,15 +4,17 @@ import Checkbox from '@mui/material/Checkbox';
 import {FormControlLabel} from '@mui/material';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Storage, Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, BuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine, Toolmaker, Church, Tavern} from './building.js'
+import {Storage, Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, BuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine, Toolmaker, Church, Tavern, CoalMine} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
 import { Cumulator } from '../UIUtils.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
 import { getBasePopDemands, RationingComponent, applyRationingModifiers } from './rationing.js';
-import { createResearchTree, ResearchComponent, SettlementResearchBonus } from './research.js';
+import { createResearchTree, ResearchComponent } from './research.js';
+import { AddNewBuildingBonus, SettlementBonus } from './bonus.js';
 import { Market, MarketResourceComponent } from './market.js';
 import { titleCase } from '../utils.js';
 import { winter, summer  } from '../seasons.js';
+import { TerrainComponent } from './terrain.js';
 
 
 export class Settlement {
@@ -76,9 +78,10 @@ export class Settlement {
         this.addBuilding(new Roads({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Brewery({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Apothecary({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Quarry({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Quarry({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new Stonecutters({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.addBuilding(new IronMine({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new CoalMine({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.totalJobs = new SumAggModifier(
             {
                 name: "Total Jobs",
@@ -134,6 +137,7 @@ export class Settlement {
         this.tradeFactor = new Variable({name:"trade factor", startingValue: 0});
         this.research = createResearchTree();
         this.popDemands = getBasePopDemands();
+        this.terrain = props.terrain;
         this.populateBuildings();
         this.rationResources = [];
         this.rationsDemanded = [];
@@ -239,6 +243,7 @@ export class Settlement {
                 this.logHref = makeTextFile(Variable.logText);
             });
         }
+        this.activateTerrain(props.terrain);
         this.health.forceResetTrend();
         this.happiness.forceResetTrend(); // Start health and happiness off with values from this
         this.health.forceResetTrend();
@@ -260,6 +265,7 @@ export class Settlement {
         this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor, bankrupt: props.bankrupt});
     }
     addBuilding(building) {
+        console.log(`Adding ${building.name}`);
         if (building instanceof ResourceBuilding) {
             this.resourceBuildings.push(building);
             building.productivity.addModifier(this.generalProductivityModifier)
@@ -366,13 +372,23 @@ export class Settlement {
         }
         researchStorage.oneOffDemand(research.researchCost);
         for (const researchBonus of research.researchBonuses) {
-            if (researchBonus instanceof SettlementResearchBonus) {
-                researchBonus.activate(this);
-            } else {
-                throw Error("not implemented");
-            }
+            this.activateBonus(researchBonus);
         }
         research.researched = true;
+    }
+    activateTerrain(terrain) {
+        for (const bonus of terrain.bonuses) {
+            this.activateBonus(bonus);
+        }
+    }
+    activateBonus(bonus) {
+        if (bonus instanceof AddNewBuildingBonus) {
+            this.addBuilding(new bonus.buildingType({startingSize: bonus.size, unlocked:bonus.unlocked, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        } else if (bonus instanceof SettlementBonus) {
+            bonus.activate(this);
+        } else {
+            throw Error("not implemented");
+        }
     }
     getBuildings() {
         return this.otherBuildings.concat(this.resourceBuildings);
@@ -428,6 +444,7 @@ export class SettlementComponent extends UIBase {
         <Grid item xs={12}>
             <h4>Information</h4>
             <span>{this.settlement.name}</span><br />
+            <TerrainComponent terrain={this.settlement.terrain} prefix={true} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeExternal} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeChange} /><br /> 
             <VariableComponent showOwner={false} variable={this.settlement.totalJobs.variable} /><br />
