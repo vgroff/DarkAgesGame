@@ -56,12 +56,14 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - auto-sell excess goods to the market
 // - Events:
 //     - Bonuses that events activate should be stored separately so that they can be displayed? Also activated/deactivated easily?
-//         - Ideally do everything through event but some may have to do more
-//     - Have a popup for some events (e.g. bandit raid? pay them off/let them raid) (don't hide all the ui, but stop the pause/play buttons)
-//     - Have an event that simulates a bandit raid, and simplify the battle by just using weaponry+people. Also have a way of paying tributes
+//         - Ideally do everything through bonuses but some events may have to do more custom stuff too
+//              - have a default fire_ method on Global and Single Settlement classes that call getBonuses() and added them and same for end_
+//                this way we can then store the bonuses and have a default way of displaying them through getText()
+//     - Have a popup for some events (e.g. wolf attack? can try to find the wolf or not) (don't hide all the ui, but disable the pause/play buttons)
+//     - Should probably also show the crop blight on the pop-up thing, and maybe also pause? but no interaction needed
+// - auto-sell excess goods to the market - important!
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - resource buildings should show a productivity breakdown so that user can easily see effect of terrain, crop blight etc...
@@ -69,6 +71,9 @@ export default Game;
 // - Move to the character system!
 // - Add a coastal terrain with fishin wharf + higher raid chance
 // - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?) 
+// Thoughts on easy UI improvements to make it playable:
+// - Move resource storage to the side like in kitten games
+// - Move research into it's own tab - maybe it should use the sum of the research from all settlements? since research isn't per-settlement
 
 // Next up:
 // - Basic character/RPG system

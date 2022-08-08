@@ -109,7 +109,7 @@ export class CropBlight extends RegularSingleSettlementEvent {
         });
     }
     eventShouldFire_() {
-        return successToTruthy(rollSuccess(0.85));
+        return successToTruthy(rollSuccess(0.15));
     }
     fire_(day, settlement) {
         this.cropBlightModifier = 0.9 - 0.2*Math.random();
