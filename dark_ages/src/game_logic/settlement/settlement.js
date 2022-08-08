@@ -13,8 +13,9 @@ import { createResearchTree, ResearchComponent } from './research.js';
 import { AddNewBuildingBonus, SettlementBonus } from './bonus.js';
 import { Market, MarketResourceComponent } from './market.js';
 import { titleCase } from '../utils.js';
-import { winter, summer  } from '../seasons.js';
+import { winter, summer, seasonToTempFactor  } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
+import { CropBlight } from '../events.js';
 
 
 export class Settlement {
@@ -265,6 +266,14 @@ export class Settlement {
             this.idealPrices[building.outputResource.name] = building.getIdealisedPrice()
         })
         this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor, bankrupt: props.bankrupt});
+        this.settlementEvents = [
+            new CropBlight({settlement: this, timer: this.gameClock})
+        ];
+        this.tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
+        this.adjustCoalDemand();
+        this.gameClock.subscribe(() => {
+            this.adjustCoalDemand();
+        });
     }
     addBuilding(building) {
         console.log(`Adding ${building.name}`);
@@ -277,6 +286,13 @@ export class Settlement {
     }
     populateBuildings() {
         this.adjustJobs();
+    }
+    adjustCoalDemand() {
+        let tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
+        if (tempFactor !== this.tempFactor) {
+            this.popDemands.coal.idealAmount.setNewBaseValue(1 - 0.5*tempFactor, 'determined by season');
+            this.tempFactor = tempFactor;
+        }
     }
     addWorkersToBuilding(building, amount) {
         if (amount > 0 && amount > this.unemployed.currentValue && this.unemployed.currentValue >= 0) {

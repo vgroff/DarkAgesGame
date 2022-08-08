@@ -4,6 +4,7 @@ import HUD from './hud.js'
 import Grid from  '@mui/material/Grid';
 import MainUI from './mainUI.js'
 import {Logger, LoggerComponent} from './logger'
+import { successToQualityText } from './rolling';
 
 
 class GameUI extends UIBase {
@@ -19,7 +20,7 @@ class GameUI extends UIBase {
             <Grid item xs={2}></Grid>
                 <Grid item xs={8}>
                     <div>
-                        <HUD gameClock={this.gameClock} treasury={this.game.treasury}/>
+                        <HUD gameClock={this.gameClock} treasury={this.game.treasury} harvestQuality={successToQualityText(this.game.harvestEvent.harvestSuccess)}/>
                     </div>
                     <div>
                         <MainUI gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game} currentSettlement={0}/>

@@ -10,6 +10,7 @@ class Terrain {
     constructor(props) {
         this.name = props.name;
         this.bonuses = props.bonuses;
+        this.bonuses.forEach(bonus => bonus.setOrigin(`terrain ${this.name}`))
     }
     getEffectList() {
         let effectList = []

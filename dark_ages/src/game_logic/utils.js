@@ -14,6 +14,10 @@ export function roundNumber(number, dp = 3) {
     return parseFloat(number.toFixed(dp));
 }
 
+export function randomRange(low, high) {
+    return low + (high - low) * Math.random();
+}
+
 // Keep these out of UIUtils.js or it creates circular dependencies
 export const HTMLTooltip = styled(({ className, ...props }) => (
     <Tooltip {...props} classes={{ popper: className }} />

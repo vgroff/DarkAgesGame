@@ -36,3 +36,31 @@ export function successToNumber(successFailure, majorModifier=0.5) {
         throw Error("what")
     }
 }
+
+export function successToQualityText(successFailure) {
+    if (successFailure === successText) {
+        return 'good';
+    } else if (successFailure === majorSuccessText) {
+        return 'great';
+    } else if (successFailure === failureText) {
+        return 'poor';
+    } else if (successFailure === majorFailureText) {
+        return 'very poor';
+    } else {
+        throw Error("what")
+    }
+}
+
+export function successToTruthy(successFailure) {
+    if (successFailure === successText) {
+        return true;
+    } else if (successFailure === majorSuccessText) {
+        return true;
+    } else if (successFailure === failureText) {
+        return false;
+    } else if (successFailure === majorFailureText) {
+        return false;
+    } else {
+        throw Error("what")
+    }
+}

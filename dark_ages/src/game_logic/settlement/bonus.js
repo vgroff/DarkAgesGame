@@ -4,6 +4,21 @@ import { roundNumber } from "../utils";
 export class Bonus {
     constructor(props) {
         this.name = props.name;
+        this.origin = props.origin;
+        this.timeLimit = props.timeLimit;
+        this.timer = props.timer;
+        if (props.timeLimit) {
+            this.startTime = this.timer.currentValue;
+            props.timer.subscribe(() => {
+                if (this.timer.currentValue - this.startTime > props.timeLimit) {
+                    
+                }
+            });
+        }
+    }
+    setOrigin(origin, rename=true) {
+        this.origin = origin;
+        this.name = `${this.name}${this.origin ? ` from ${this.origin}` : ''}`
     }
     activate() {
         throw Error("need an activation");

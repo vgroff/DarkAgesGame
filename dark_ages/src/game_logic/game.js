@@ -41,8 +41,9 @@ class Game {
             }
         });
 
+        this.harvestEvent = new HarvestEvent({settlements: this.settlements, timer: this.gameClock});
         this.globalEvents = [
-            new HarvestEvent({settlements: this.settlements, timer: this.gameClock})
+            this.harvestEvent
         ]
         this.globalEvents.forEach(event => {
             if (event.eventShouldFire()) {
@@ -56,13 +57,14 @@ export default Game;
 
 // Stuff for now:
 // - auto-sell excess goods to the market
-// - change coal demand with weather - have a weather to number function?
 // - Events:
-//     - Show harvest quality on HUD
-//     - Have a popup for some events (e.g. bandit raid?)
+//     - Bonuses that events activate should be stored separately so that they can be displayed? Also activated/deactivated easily?
+//         - Ideally do everything through event but some may have to do more
+//     - Have a popup for some events (e.g. bandit raid? pay them off/let them raid) (don't hide all the ui, but stop the pause/play buttons)
 //     - Have an event that simulates a bandit raid, and simplify the battle by just using weaponry+people. Also have a way of paying tributes
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
+// - resource buildings should show a productivity breakdown so that user can easily see effect of terrain, crop blight etc...
 // - Add rebellions % chance using happiness+legitimacy(comes from character?)
 // - Move to the character system!
 // - Add a coastal terrain with fishin wharf + higher raid chance
@@ -82,7 +84,7 @@ export default Game;
 // - Basic combat system - have bandit raids
 // - Saving/Loading system? -> 
 //     - I can probably do a lot of this with Object.entries(). I need to make sure that any objects that are present in multiple places are reconstructed correctly, so I probably need some global Set() object that get populated/read from
-//     - Biggest problem is going to be making sure that stored functions are copied over correctly?
+//     - Biggest problem is going to be making sure that stored functions are copied over correctly? can we find a way of storing a re-viving subscriptions for example? is that enough?
 //          - It feels like just reconstructing the objects and then overwriting the k,v pairs would work for this though? We would just have to copy over all the subscribers afterwards
 //               - Does this work for the lambdas related to events? I think so right? So long as the timer and all the data is right?
 //     - Otherwise, potentially slightly more painful solutions:
@@ -90,7 +92,7 @@ export default Game;
 //          - If the only real problem is with serialising stored functions in subscribe() fashion, can we find a way of storing a re-viving subscriptions?
 //          - https://github.com/denostack/superserial this sounds like it might help maybe? not sure it deals with functions though 
 //          - https://github.com/iconico/JavaScript-Serializer or this? might actually deal with functions
-//          - https://www.npmjs.com/package/javascript-serializer maybe this?
+//          - https://www.npmjs.com/package/javascript-serializer maybe this? not sure it handles functions tbh
 // - Do some UX improvement work
 // - Playtesting! Myself and friends
 

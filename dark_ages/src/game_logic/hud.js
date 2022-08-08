@@ -4,6 +4,7 @@ import { TimerComponent } from './timer';
 import Button from '@mui/material/Button';
 import config from './config.js'
 import Grid from  '@mui/material/Grid';
+import { titleCase } from './utils';
 
 
 class HUD extends UIBase {
@@ -17,7 +18,8 @@ class HUD extends UIBase {
         <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
             <Grid container spacing={1} style={{"textAlign": "center", margin: "auto"}}>
                 <Grid item xs={12} style={{"textAlign": "center", margin: "auto"}}>
-                    <TimerComponent variable={this.props.gameClock} unit='days' meaning='current day'/>
+                    <TimerComponent variable={this.props.gameClock} unit='days' meaning='current day'/><br />
+                    Harvest this year: {titleCase(this.props.harvestQuality)}
                 </Grid>
                 <Grid item xs={4} style={{"textAlign": "center", margin: "auto"}}>
                     <Button variant={config.buttonVariant} onClick={this.props.gameClock.startTimer.bind(this.props.gameClock)}>Play</Button>
