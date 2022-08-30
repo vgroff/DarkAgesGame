@@ -57,11 +57,14 @@ export default Game;
 
 // Stuff for now:
 // - Events:
+//     - Need to re-calculate price for food and derivatives when harvest occurs
 //     - Bonuses that events activate should be stored separately so that they can be displayed? Also activated/deactivated easily?
 //         - Ideally do everything through bonuses but some events may have to do more custom stuff too
-//              - have a default fire_ method on Global and Single Settlement classes that call getBonuses() and added them and same for end_
-//                this way we can then store the bonuses and have a default way of displaying them through getText()
+//              - have a default fire_ method on Global and Single Settlement classes that call getBonuses() on subclass and adds the bonuses, and same for end_
+//                this way we can then store the bonuses and have a default way of displaying them through getText(), but subclasses can also override the fire_ method if they want
 //     - Have a popup for some events (e.g. wolf attack? can try to find the wolf or not) (don't hide all the ui, but disable the pause/play buttons)
+//          - Event will need to communicate with settlement/game so that it knows it has fired so that it can display it and pause the game?
+//                 - Maybe we want an EventManager that we can pass around who's job it is to collect/filter the events and pause the game accordingly?
 //     - Should probably also show the crop blight on the pop-up thing, and maybe also pause? but no interaction needed
 // - auto-sell excess goods to the market - important!
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
