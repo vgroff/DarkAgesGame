@@ -184,7 +184,7 @@ export const Resources = {
     stoneTools: new Resource({name: "stone tools", storageMultiplier: 200, productionRatio: 20.0, startingAmount: 0, description: "improves productivity"}),
     ironTools: new Resource({name: "iron tools", storageMultiplier: 200, productionRatio: 20.0, startingAmount: 0, description: "improves productivity"}),
     steelTools: new Resource({name: "steel tools", storageMultiplier: 200, productionRatio: 20.0, startingAmount: 0, description: "improves productivity"}),
-    stoneWeaponry: new Resource({name: "wooden weaponry", storageMultiplier: 50, productionRatio: 1.0, startingAmount: 0, description: "for fighting"}),
+    stoneWeaponry: new Resource({name: "stone weaponry", storageMultiplier: 50, productionRatio: 1.0, startingAmount: 0, description: "for fighting"}),
     bows: new Resource({name: "bows", storageMultiplier: 50, productionRatio: 1.0, startingAmount: 0, description: "for fighting"}),
     ironWeaponry: new Resource({name: "iron weaponry", storageMultiplier: 50, productionRatio: 1.0, startingAmount: 0, description: "for fighting"}),
     steelWeaponry: new Resource({name: "steel weaponry", storageMultiplier: 50, productionRatio: 1.0, startingAmount: 0, description: "for fighting"}),

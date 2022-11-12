@@ -1,3 +1,4 @@
+import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { rollSuccess, successToNumber, successToTruthy } from "./rolling";
 import { daysInYear } from "./seasons";
 import { SpecificBuildingProductivityBonus } from "./settlement/bonus";
@@ -32,6 +33,9 @@ class Event {
             }
         });
     }
+    eventActive() {
+        return this.lastTriggered >= this.lastEnded;
+    }
     eventShouldFire() {
         throw Error("this is an abstract class, extend it")
     }
@@ -46,46 +50,58 @@ class Event {
     }
 }
 
-class GlobalSettlementEvent extends Event {
+class SettlementEvent extends Event {
     constructor(props) {
         super(props);
         this.settlements = props.settlements;
+        this.lastBonuses = null;
     }
     eventShouldFire() {
         return this.eventShouldFire_(this.timer.currentValue, this.settlements);
     }
     fire() {
-        this.fire_(this.timer.currentValue, this.settlements);
+        if (this.fire_) {
+            return this.fire_(this.timer.currentValue, this.settlements);
+        } else {
+            let bonuses = this.getBonuses(this.timer.currentValue, this.settlements);
+            if (this.lastBonuses) {
+                this.lastBonuses.forEach( bonus => {
+                    this.settlements.forEach( settlement => {
+                        settlement.deactivateBonus(bonus);
+                    });
+                });
+            }
+            bonuses.forEach( bonus => {
+                this.settlements.forEach( settlement => {
+                    settlement.activateBonus(bonus);
+                });
+            });
+            this.lastBonuses = bonuses;
+        }
+    }
+    getBonuses() {
+        throw Error("this is an abstract class, extend it"); 
     }
     end() {
-        this.end_(this.timer.currentValue, this.settlements);
+        if (this.end_) {
+            return this.end_(this.timer.currentValue, this.settlements);
+        } else {
+            if (this.lastBonuses) {
+                this.lastBonuses.forEach( bonus => {
+                    this.settlements.forEach( settlement => {
+                        settlement.deactivateBonus(bonus);
+                    });
+                });
+            }
+            this.lastBonuses = null;
+        }
     }
     getText() {
         throw Error("this is an abstract class, extend it")
     }
 }
 
-class SingleSettlementEvent extends Event {
-    constructor(props) {
-        super(props);
-        this.settlement = props.settlement;
-    }
-    eventShouldFire() {
-        return this.eventShouldFire_(this.timer.currentValue, this.settlement);
-    }
-    fire() {
-        this.fire_(this.timer.currentValue, this.settlement);
-    }
-    end() {
-        this.end_(this.timer.currentValue, this.settlement);
-    }
-    getText() {
-        throw Error("this is an abstract class, extend it")
-    }
-}
-
-
-class RegularSingleSettlementEvent extends SingleSettlementEvent {
+class RegularSettlementEvent extends SettlementEvent {
     constructor(props) {
         let variance = props.variance || 0;
         super({checkEvery: props.checkEveryAvg * randomRange(1-variance, 1+variance), ...props});
@@ -98,7 +114,7 @@ class RegularSingleSettlementEvent extends SingleSettlementEvent {
     }
 }
 
-export class CropBlight extends RegularSingleSettlementEvent {
+export class CropBlight extends RegularSettlementEvent {
     constructor(props) {
         super({
             name: "crop blight",
@@ -111,24 +127,13 @@ export class CropBlight extends RegularSingleSettlementEvent {
     eventShouldFire_() {
         return successToTruthy(rollSuccess(0.15));
     }
-    fire_(day, settlement) {
+    getBonuses() {
         this.cropBlightModifier = 0.9 - 0.2*Math.random();
-        if (this.cropBlightBonus) {
-            settlement.deactivateBonus(this.cropBlightBonus);
-        }
-        let cropBlightBonus = new SpecificBuildingProductivityBonus({name: "effect of crop blight", building: Farm.name, amount: this.cropBlightModifier});
-        settlement.activateBonus(cropBlightBonus);
-        this.cropBlightBonus = cropBlightBonus;
-    }
-    end_(day, settlement) {
-        if (this.cropBlightBonus) {
-            settlement.deactivateBonus(this.cropBlightBonus);
-            this.cropBlightBonus = null;
-        }
+        return [new SpecificBuildingProductivityBonus({name: "effect of crop blight", building: Farm.name, amount: this.cropBlightModifier})];
     }
 }
 
-export class HarvestEvent extends GlobalSettlementEvent {
+export class HarvestEvent extends SettlementEvent {
     constructor(props) {
         super({
             name: "harvest event",
@@ -142,28 +147,11 @@ export class HarvestEvent extends GlobalSettlementEvent {
     eventShouldFire_(day, settlements) {
         return true;
     }
-    fire_(day, settlements) {
-        console.log('harvest fired');
+    getBonuses() {
         this.harvestSuccess = rollSuccess(0.65);
         let harvestSuccess  = successToNumber(this.harvestSuccess, 0.5);
         this.harvestModifier = 0.95 + 0.1*(harvestSuccess/Math.abs(harvestSuccess))*harvestSuccess**2; // varies between ~0.7 and ~1.1
-        if (this.harvestBonus) {
-            settlements.forEach( settlement => {
-                settlement.deactivateBonus(this.harvestBonus);
-            });
-        }
-        let harvestBonus = new SpecificBuildingProductivityBonus({name: "effect of weather on the harvest", building: Farm.name, amount: this.harvestModifier});
-        settlements.forEach( settlement => {
-            settlement.activateBonus(harvestBonus);
-        });
-        this.harvestBonus = harvestBonus;;
-    }
-    end_(day, settlements) {
-        if (this.harvestBonus) {
-            settlements.forEach( settlement => {
-                settlement.deactivateBonus(this.harvestBonus);
-            });
-        }
+        return [new SpecificBuildingProductivityBonus({name: "effect of weather on the harvest", building: Farm.name, amount: this.harvestModifier})];
     }
     getText() {
         let percentage = `${roundNumber((this.harvestModifier - 1)*100, 1)}`
