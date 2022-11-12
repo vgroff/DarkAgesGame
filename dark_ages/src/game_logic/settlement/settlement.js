@@ -15,7 +15,7 @@ import { Market, MarketResourceComponent } from './market.js';
 import { titleCase } from '../utils.js';
 import { winter, summer, seasonToTempFactor  } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
-import { CropBlight } from '../events.js';
+import { CropBlight, EventComponent } from '../events.js';
 
 
 export class Settlement {
@@ -486,6 +486,12 @@ export class SettlementComponent extends UIBase {
                     this.settlement.adjustJobs();
                 }
             }}/>} label="Auto-assign unemployed"  style={{maxHeight:'80%', minHeight:'80%'}}/>
+        </Grid>
+        <Grid item xs={12}>
+            <h4>Active Events</h4>
+            {this.settlement.settlementEvents.filter(events => events.isActive()).map((ev, i) => {
+                return <EventComponent key={`${ev.name}_${i}`} event={ev}/>
+            })}
         </Grid>
         <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", padding:"5px", textAlign:"center", alignItems: "center", justifyContent: "center"}}>
             <h4>Buildings</h4>

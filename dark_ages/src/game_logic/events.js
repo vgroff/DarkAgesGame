@@ -1,9 +1,11 @@
 import { getButtonUnstyledUtilityClass } from "@mui/base";
+import { Logger } from "./logger";
 import { rollSuccess, successToNumber, successToTruthy } from "./rolling";
 import { daysInYear } from "./seasons";
 import { SpecificBuildingProductivityBonus } from "./settlement/bonus";
 import { Farm } from "./settlement/building";
-import { randomRange, roundNumber } from "./utils";
+import UIBase from "./UIBase";
+import { CustomTooltip, randomRange, roundNumber, titleCase } from "./utils";
 
 
 
@@ -33,8 +35,8 @@ class Event {
             }
         });
     }
-    eventActive() {
-        return this.lastTriggered >= this.lastEnded;
+    isActive() {
+        return this.lastTriggered !== null && this.lastTriggered >= this.lastEnded;
     }
     eventShouldFire() {
         throw Error("this is an abstract class, extend it")
@@ -97,7 +99,9 @@ class SettlementEvent extends Event {
         }
     }
     getText() {
-        throw Error("this is an abstract class, extend it")
+        let text = [`Event ${this.name} has following effects:`];
+        text = text.concat(this.lastBonuses ? this.lastBonuses.map(bonus => bonus.getEffectText()).join("\n") : [''])
+        return text;
     }
 }
 
@@ -125,7 +129,7 @@ export class CropBlight extends RegularSettlementEvent {
         });
     }
     eventShouldFire_() {
-        return successToTruthy(rollSuccess(0.15));
+        return successToTruthy(rollSuccess(1.0));
     }
     getBonuses() {
         this.cropBlightModifier = 0.9 - 0.2*Math.random();
@@ -159,3 +163,15 @@ export class HarvestEvent extends SettlementEvent {
     }
 }
 
+export class EventComponent extends UIBase {
+    constructor(props) {
+        super(props);
+        this.event = props.event;
+        this.addVariables([this.event.timer]);
+    }
+    childRender() {
+        return <CustomTooltip items={this.event.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+            <span onClick={()=>{Logger.setInspect(this.event)}}>{titleCase(this.event.name)}</span>
+        </CustomTooltip>
+    }
+}
