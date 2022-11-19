@@ -193,7 +193,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
             effects: [{
                 type:addition,
                 on: "productivity",
-                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.15}),
+                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.2}),
                 exponent: new Variable({name: "Additive Tools Productivity  Exp", startingValue: 0.8})
             }] 
         },
@@ -204,7 +204,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
             effects: [{
                 type:addition,
                 on: "productivity",
-                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.25}),
+                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.3}),
                 exponent: new Variable({name: "Additive Tools Productivity  Exp", startingValue: 0.8})
             }] 
         },
@@ -215,7 +215,7 @@ export function getBasePopDemands() { // Needs to be a funciton so that each set
             effects: [{
                 type:addition,
                 on: "productivity",
-                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.35}),
+                coefficient: new Variable({name: "Additive Tools Productivity Coeff", startingValue: 0.4}),
                 exponent: new Variable({name: "Additive Tools Productivity  Exp", startingValue: 0.8})
             }] 
         }

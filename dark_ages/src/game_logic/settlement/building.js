@@ -94,8 +94,8 @@ export class Building {
         }
         return this.upgrades[this.currentUpgradeIndex].upgradeText(resourceStorages, this);
     }
-    upgrade(resourceStorages) {
-        this.upgrades[this.currentUpgradeIndex].upgrade(resourceStorages, this);
+    upgrade(resourceStorages, force=false) {
+        this.upgrades[this.currentUpgradeIndex].upgrade(resourceStorages, this, force);
         this.oldDisplayName = this.displayName;
         this.displayName = this.upgrades[this.currentUpgradeIndex] ? this.upgrades[this.currentUpgradeIndex].newDisplayName || this.displayName : this.displayName;
         this.currentUpgradeIndex += 1;
@@ -197,8 +197,8 @@ export class BuildingUpgrade {
         }
         return upgradeText;
     }
-    upgrade(resourceStorages, building) {
-        if (!this.canUpgrade(resourceStorages, building)) {
+    upgrade(resourceStorages, building, force=false) {
+        if (!force && !this.canUpgrade(resourceStorages, building)) {
             return;
         }
         for (const buildCost of this.newBuildCost) {
@@ -309,9 +309,15 @@ export class ResourceBuilding extends Building {
         if (this.name.includes("rew")) {
         }
     }
-    getIdealisedPrice() {
-        let outputProductionRatio = 1 / this.outputResource.productionRatio;
-        let inputCost = this.inputResources.reduce((prev, resource) => {return resource.multiplier/resource.resource.productionRatio}, 0)
+    getIdealisedPrice(localPriceModifiers) {
+        let localPriceModifier = localPriceModifiers[this.outputResource.name] ? localPriceModifiers[this.outputResource.name].currentValue : 1;
+        let outputProductionRatio = localPriceModifier / (this.outputResource.productionRatio);
+        let inputCost = this.inputResources.reduce((prev, resource) => {
+            return prev + resource.multiplier*resource.resource.defaultBuilding.getIdealisedPrice(localPriceModifiers);
+        }, 0)
+        if (isNaN(outputProductionRatio) || isNaN(inputCost)) {
+            throw Error("what")
+        }
         return outputProductionRatio + inputCost;
     }
     changeOutputResource(newResource, resourceStorages, destroyOld) {

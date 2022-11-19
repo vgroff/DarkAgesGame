@@ -3,6 +3,8 @@ import { titleCase, CustomTooltip } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Logger} from '../logger.js';
+import { Apothecary, Bowyer, Brewery, CharcoalKiln, CoalMine, Farm, IronMine, LumberjacksHut, Quarry, Stonecutters, Toolmaker, WeaponMaker } from './building.js';
+import { Timer } from '../timer.js';
 
 export class Resource {
     constructor(props) {
@@ -12,6 +14,7 @@ export class Resource {
         this.description = props.description || "";
         this.cumulates = props.cumulates === undefined ? true : props.cumulates;
         this.startingAmount = props.startingAmount;
+        this.defaultBuilding = props.defaultBuilding || null; // Only needed for traded resources to calculate prices
     }
 }
 
@@ -161,6 +164,7 @@ export class ResourceStorageComponent extends UIBase {
         }
     }
 }
+
 
 export const Resources = {
     food: new Resource({name: "food", storageMultiplier: 450, productionRatio: 1.0, description: "keeps your villagers alive"}),

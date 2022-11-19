@@ -37,6 +37,9 @@ export class Market {
             if (!resource.storageMultiplier) {
                 return null;
             }
+            if (!(resource.name in this.idealPrices)) {
+                throw Error("need all resources")
+            }
             let desiredSellProp = new Variable({name: `desired selling % of ${resource.name}`, startingValue: 0, min: zero, max: this.marketAmountFactor});
             let buyProp = new Variable({name: `buying % of ${resource.name}`, startingValue: 0, min: zero,  max: this.marketAmountFactor,
                 modifiers: [new VariableModifier({variable: props.bankrupt, type:scaledMultiplication, bias:1,scale:-1})]
@@ -77,7 +80,7 @@ export class Market {
             ]}); 
             return {
                 resource,
-                idealPrice: this.idealPrices[resource],
+                idealPrice: this.idealPrices[resource.name],
                 marketSellPrice,
                 marketBuyPrice,
                 buyProp,
@@ -93,6 +96,14 @@ export class Market {
         this.netMarketIncome.setModifiers(this.marketResources.map(marketResource => {
             return new VariableModifier({variable: marketResource.netIncome, type:addition});
         }));
+    }
+    setNewIdealPrices(idealPrices) {
+        this.idealPrices = idealPrices;
+        this.marketResources.forEach(marketResource => {
+            marketResource.idealPrice = this.idealPrices[marketResource.resource.name];
+            marketResource.marketSellPrice.setNewBaseValue(this.idealPrices[marketResource.resource.name], 'resetting prices');
+            marketResource.marketBuyPrice.setNewBaseValue(this.idealPrices[marketResource.resource.name], 'resetting prices');
+        });
     }
 }
 

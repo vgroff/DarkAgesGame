@@ -57,15 +57,11 @@ export default Game;
 
 // Stuff for now:
 // - Events:
-//     - Need to re-calculate price for food and derivatives when harvest occurs
-//     - Some kind of Event UI - maybe a list of active events with unread ones in red and pop-up if you click on them
-//     - Bonuses that events activate should be stored separately so that they can be displayed? Also activated/deactivated easily?
-//         - Ideally do everything through bonuses but some events may have to do more custom stuff too
-//              - Create a default getText() that uses getBonuses(). Then have an Event List UI in each settlement?
-//              - Should events attempt to add themselves to settlements? How will faction-wide events work here - we just need to change them when a settlement changes faction
+//     - Improve the Event UI - maybe have unread ones in red and pop-up if you click on them
+//          - Add the harvest? Add it to each settlement?
 //     - Have a popup for some events (e.g. wolf attack? can try to find the wolf or not) (don't hide all the ui, but disable the pause/play buttons)
 //          - Event will need to communicate with settlement/game so that it knows it has fired so that it can display it and pause the game?
-//                 - Maybe we want an EventManager that we can pass around who's job it is to collect/filter the events and pause the game accordingly?
+//                 - Should be fine to trigger the settlement to pause the game and trigger a pop-up
 //     - Should probably also show the crop blight on the pop-up thing, and maybe also pause? but no interaction needed
 // - auto-sell excess goods to the market - important!
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)

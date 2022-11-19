@@ -178,6 +178,26 @@ export class UnlockBuildingUpgradeBonus extends SettlementBonus {
     }
 };
 
+export class ChangePriceBonus extends SettlementBonus {
+    constructor(props) {
+        super(props);
+        this.resource = props.resource;
+        this.amount = props.amount;
+        this.modifier = new VariableModifier({name: this.name, startingValue: props.amount, type:multiplication})
+        this.name = props.name || `Change price of ${this.resource.name}`;
+    }
+    activate(settlement) {
+        settlement.addLocalPriceModifier(this.resource, this.modifier);
+    }
+    deactivate(settlement) {
+        settlement.removeLocalPriceModifier(this.resource, this.modifier);
+    }
+    getEffectText() {
+        let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
+        return `Change price of ${this.resource.name} by ${percentage}%`;
+    }
+};
+
 export class AddNewBuildingBonus extends Bonus {
     constructor(props) {
         super(props);
@@ -186,7 +206,9 @@ export class AddNewBuildingBonus extends Bonus {
         this.size = props.size || 0;
         this.unlocked = props.unlocked || false;
     }
+    // The activate logic is done within the settlement for this one (cant rememeber why)
     getEffectText() {
         return `Add ${this.buildingType.name} size ${this.size} to the settlement`;
     }
 };
+

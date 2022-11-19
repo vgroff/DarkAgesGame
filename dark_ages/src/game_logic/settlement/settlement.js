@@ -16,6 +16,7 @@ import { titleCase } from '../utils.js';
 import { winter, summer, seasonToTempFactor  } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
 import { CropBlight, EventComponent } from '../events.js';
+import { DefaultBuildings } from './default_buildings.js';
 
 
 export class Settlement {
@@ -251,21 +252,14 @@ export class Settlement {
         this.happiness.forceResetTrend(); // Start health and happiness off with values from this
         this.health.forceResetTrend();
         this.happiness.forceResetTrend(); // Twice for good measure
-        let defaultBuildings = [
-            new Farm({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new LumberjacksHut({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new CharcoalKiln({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new LumberjacksHut({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new Brewery({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new Apothecary({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new Quarry({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-            new Stonecutters({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}),
-        ];
+
         this.idealPrices = {};
-        defaultBuildings.forEach(building => {
-            this.idealPrices[building.outputResource.name] = building.getIdealisedPrice()
-        })
+        this.localPriceModifiers = {};
+        DefaultBuildings.forEach(building => {
+            this.idealPrices[building.outputResource.name] = building.getIdealisedPrice(this.localPriceModifiers)
+        });
         this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor, bankrupt: props.bankrupt});
+
         this.settlementEvents = [
             new CropBlight({settlements: [this], timer: this.gameClock})
         ];
@@ -414,6 +408,32 @@ export class Settlement {
         } else {
             throw Error("not implemented");
         }
+    }
+    addLocalPriceModifier(resource, modifier) {
+        if (!(modifier instanceof VariableModifier)) {
+            throw Error("should be a variable modifier")
+        }
+        if (!(resource.name in this.localPriceModifiers)) {
+            this.localPriceModifiers[resource.name] = new Variable({startingValue:1})
+        }
+        this.localPriceModifiers[resource.name].addModifier(modifier)
+        this.recalculatePrices();
+    }
+    removeLocalPriceModifier(resource, modifier) {
+        if (!(modifier instanceof VariableModifier)) {
+            throw Error("should be a variable")
+        }
+        this.localPriceModifiers[resource.name].removeModifier(modifier)
+        this.recalculatePrices();
+    }
+    recalculatePrices(bankrupt) {
+        DefaultBuildings.forEach(building => {
+            this.idealPrices[building.outputResource.name] = building.getIdealisedPrice(this.localPriceModifiers);
+        })
+        this.market.setNewIdealPrices(this.idealPrices);
+    }
+    addPriceModifier(resource, modifier) {
+
     }
     getBuildings() {
         return this.otherBuildings.concat(this.resourceBuildings);

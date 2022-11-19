@@ -2,8 +2,9 @@ import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
 import { rollSuccess, successToNumber, successToTruthy } from "./rolling";
 import { daysInYear } from "./seasons";
-import { SpecificBuildingProductivityBonus } from "./settlement/bonus";
+import { ChangePriceBonus, SpecificBuildingProductivityBonus } from "./settlement/bonus";
 import { Farm } from "./settlement/building";
+import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
 import { CustomTooltip, randomRange, roundNumber, titleCase } from "./utils";
 
@@ -14,6 +15,7 @@ class Event {
         this.name = props.name;
         this.timer = props.timer;
         this.checkEvery = props.checkEvery;
+        this.read = false;
         if (this.checkEvery === undefined || !this.timer) {
             throw Error()
         }
@@ -27,6 +29,7 @@ class Event {
                 if (this.eventShouldFire()) {
                     this.lastTriggered = this.timer.currentValue;
                     this.fire();
+                    this.read = false;
                 }
             }
             if (this.eventDuration && (!this.lastEnded || this.lastEnded <= this.lastTriggered) && this.lastTriggered && this.timer.currentValue - this.lastTriggered >= this.eventDuration) {
@@ -100,7 +103,7 @@ class SettlementEvent extends Event {
     }
     getText() {
         let text = [`Event ${this.name} has following effects:`];
-        text = text.concat(this.lastBonuses ? this.lastBonuses.map(bonus => bonus.getEffectText()).join("\n") : [''])
+        text = text.concat(this.lastBonuses ? this.lastBonuses.map(bonus => bonus.getEffectText()) : [''])
         return text;
     }
 }
@@ -155,11 +158,10 @@ export class HarvestEvent extends SettlementEvent {
         this.harvestSuccess = rollSuccess(0.65);
         let harvestSuccess  = successToNumber(this.harvestSuccess, 0.5);
         this.harvestModifier = 0.95 + 0.1*(harvestSuccess/Math.abs(harvestSuccess))*harvestSuccess**2; // varies between ~0.7 and ~1.1
-        return [new SpecificBuildingProductivityBonus({name: "effect of weather on the harvest", building: Farm.name, amount: this.harvestModifier})];
-    }
-    getText() {
-        let percentage = `${roundNumber((this.harvestModifier - 1)*100, 1)}`
-        return `The weather will affect productivity of ${Farm.name} by ${percentage}%`;
+        return [
+            new SpecificBuildingProductivityBonus({name: "effect of weather on the harvest", building: Farm.name, amount: this.harvestModifier}),
+            new ChangePriceBonus({name: "effect of weather on the harvest", resource: Resources.food, amount: 1/this.harvestModifier})
+        ];
     }
 }
 
@@ -170,7 +172,7 @@ export class EventComponent extends UIBase {
         this.addVariables([this.event.timer]);
     }
     childRender() {
-        return <CustomTooltip items={this.event.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+        return <CustomTooltip items={this.event.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center", color: this.event.read ? "black" : "red"}}>
             <span onClick={()=>{Logger.setInspect(this.event)}}>{titleCase(this.event.name)}</span>
         </CustomTooltip>
     }

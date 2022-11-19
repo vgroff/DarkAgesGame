@@ -4,22 +4,28 @@ import { TimerComponent } from './timer';
 import Button from '@mui/material/Button';
 import config from './config.js'
 import Grid from  '@mui/material/Grid';
-import { titleCase } from './utils';
+import { CustomTooltip, titleCase } from './utils';
+import { successToQualityText } from './rolling';
+import { Logger } from './logger';
 
 
 class HUD extends UIBase {
     constructor(props) {
         super(props);
         // this.props.gameClock.startTimer();
+        this.harvestEvent = props.harvestEvent;
         this.addVariables([this.props.treasury, this.props.gameClock]);
     }
     childRender() {
+        let harvestQuality=successToQualityText(this.props.harvestEvent.harvestSuccess);
         return <Grid container spacing={2}>
         <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
             <Grid container spacing={1} style={{"textAlign": "center", margin: "auto"}}>
                 <Grid item xs={12} style={{"textAlign": "center", margin: "auto"}}>
                     <TimerComponent variable={this.props.gameClock} unit='days' meaning='current day'/><br />
-                    Harvest this year: {titleCase(this.props.harvestQuality)}
+                    <CustomTooltip items={this.props.harvestEvent.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+                        <span onClick={()=>{Logger.setInspect(this.props.harvestEvent)}}>Harvest this year: {titleCase(harvestQuality)}</span>
+                    </CustomTooltip>
                 </Grid>
                 <Grid item xs={4} style={{"textAlign": "center", margin: "auto"}}>
                     <Button variant={config.buttonVariant} onClick={this.props.gameClock.startTimer.bind(this.props.gameClock)}>Play</Button>
