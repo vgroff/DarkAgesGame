@@ -7,6 +7,7 @@ import { Farm } from "./settlement/building";
 import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
 import { CustomTooltip, randomRange, roundNumber, titleCase } from "./utils";
+import {Box, Button, Modal, Typography} from "@mui/material";
 
 
 
@@ -19,24 +20,27 @@ class Event {
         if (this.checkEvery === undefined || !this.timer) {
             throw Error()
         }
-        this.lastChecked = this.timer.currentValue;
+        this.lastChecked = null;
         this.eventDuration = props.eventDuration || null;
         this.lastTriggered = null;
         this.lastEnded = null;
         this.timer.subscribe(() => {
-            if ((this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) === 0) {
-                this.lastChecked = this.timer.currentValue;
-                if (this.eventShouldFire()) {
-                    this.lastTriggered = this.timer.currentValue;
-                    this.fire();
-                    this.read = false;
-                }
-            }
-            if (this.eventDuration && (!this.lastEnded || this.lastEnded <= this.lastTriggered) && this.lastTriggered && this.timer.currentValue - this.lastTriggered >= this.eventDuration) {
-                this.lastEnded = this.timer.currentValue;
-                this.end();
-            }
+            this.triggerChecks();
         });
+    }
+    triggerChecks() {
+        if (!this.lastChecked || (this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) === 0) {
+            this.lastChecked = this.timer.currentValue;
+            if (this.eventShouldFire()) {
+                this.lastTriggered = this.timer.currentValue;
+                this.fire();
+                this.read = false;
+            }
+        }
+        if (this.eventDuration && (!this.lastEnded || this.lastEnded <= this.lastTriggered) && this.lastTriggered && this.timer.currentValue - this.lastTriggered >= this.eventDuration) {
+            this.lastEnded = this.timer.currentValue;
+            this.end();
+        }
     }
     isActive() {
         return this.lastTriggered !== null && this.lastTriggered >= this.lastEnded;
@@ -128,6 +132,7 @@ export class CropBlight extends RegularSettlementEvent {
             checkEveryAvg: daysInYear,
             variance: 0.5, 
             eventDuration:  daysInYear / 2,
+            checkImmediately: true,
             ...props
         });
     }
@@ -171,9 +176,41 @@ export class EventComponent extends UIBase {
         this.event = props.event;
         this.addVariables([this.event.timer]);
     }
+    setModalOpen(modalOpen) {
+        this.setState({modalOpen: modalOpen});
+        if (modalOpen === true) {
+            this.event.read = true;
+        }
+    }
     childRender() {
-        return <CustomTooltip items={this.event.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center", color: this.event.read ? "black" : "red"}}>
-            <span onClick={()=>{Logger.setInspect(this.event)}}>{titleCase(this.event.name)}</span>
+        return <div><CustomTooltip items={this.event.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center", color: this.event.read ? "black" : "red"}}>
+            <span onClick={()=>{Logger.setInspect(this.event); this.setModalOpen(true);}}>{titleCase(this.event.name)}</span>
         </CustomTooltip>
+            <Modal
+            open={this.state.modalOpen || false}
+            onClose={() => this.setModalOpen(false)}
+            aria-labelledby="modal-modal-title"
+            aria-describedby="modal-modal-description"
+            >
+            <Box sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 400,
+                bgcolor: 'background.paper',
+                border: '2px solid #000',
+                boxShadow: 24,
+                p: 4,
+                }}>
+                <Typography id="modal-modal-title" variant="h6" component="h2">
+                Event
+                </Typography>
+                <Typography id="modal-modal-description" sx={{ mt: 2 }}>
+                {this.event.getText().join("\n")}
+                </Typography>
+                <Button onClick={() => this.setModalOpen(false)}>Close</Button>
+            </Box>
+        </Modal></div>
     }
 }
