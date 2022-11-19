@@ -1,5 +1,5 @@
 import { VariableModifier, multiplication, addition } from "../UIUtils";
-import { roundNumber } from "../utils";
+import { percentagize, roundNumber } from "../utils";
 
 export class Bonus {
     constructor(props) {
@@ -54,7 +54,7 @@ export class GeneralProductivityBonus extends SettlementBonus {
         settlement.generalProductivity.removeModifier(this.modifier);
     }
     getEffectText() {
-        let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
+        let percentage = percentagize(this.amount)
         return `Increase general productivity by ${percentage}%`;
     }
 };
@@ -82,7 +82,7 @@ export class SpecificBuildingProductivityBonus extends SettlementBonus {
         }
     }
     getEffectText() {
-        let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
+        let percentage = percentagize(this.amount)
         return `Increase productivity of ${this.buildingName} by ${percentage}%`;
     }
 };
@@ -110,7 +110,7 @@ export class SpecificBuildingEfficiencyBonus extends SettlementBonus {
         }
     }
     getEffectText() {
-        let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
+        let percentage = percentagize(this.amount)
         return `Increase efficiency of ${this.buildingName} by ${percentage}%`;
     }
 };
@@ -138,7 +138,7 @@ export class SpecificBuildingMaxSizeBonus extends SettlementBonus {
         }
     }
     getEffectText() {
-        let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
+        let percentage = percentagize(this.amount)
         return `Increase maximum size of ${this.buildingName} by ${percentage}%`;
     }
 };
@@ -193,7 +193,7 @@ export class ChangePriceBonus extends SettlementBonus {
         settlement.removeLocalPriceModifier(this.resource, this.modifier);
     }
     getEffectText() {
-        let percentage = `${roundNumber((this.amount - 1)*100, 1)}`
+        let percentage = percentagize(this.amount)
         return `Change price of ${this.resource.name} by ${percentage}%`;
     }
 };

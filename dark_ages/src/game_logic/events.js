@@ -6,8 +6,9 @@ import { ChangePriceBonus, SpecificBuildingProductivityBonus } from "./settlemen
 import { Farm } from "./settlement/building";
 import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
-import { CustomTooltip, randomRange, roundNumber, titleCase } from "./utils";
+import { CustomTooltip, percentagize, randomRange, roundNumber, titleCase } from "./utils";
 import {Box, Button, Modal, Typography} from "@mui/material";
+import { Variable, multiplication, VariableModifier } from "./UIUtils";
 
 
 
@@ -21,12 +22,17 @@ class Event {
             throw Error()
         }
         this.lastChecked = null;
-        this.eventDuration = props.eventDuration || null;
+        this.eventDuration = props.eventDuration ? new Variable({startingValue: props.eventDuration}) : null;
         this.lastTriggered = null;
         this.lastEnded = null;
         this.timer.subscribe(() => {
             this.triggerChecks();
         });
+        if (this.eventDuration) {
+            this.eventDuration.subscribe(() => {
+                this.triggerChecks();
+            });
+        }
     }
     triggerChecks() {
         if (!this.lastChecked || (this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) === 0) {
@@ -37,14 +43,17 @@ class Event {
                 this.read = false;
             }
         }
-        if (this.eventDuration && (!this.lastEnded || this.lastEnded <= this.lastTriggered) && this.lastTriggered && this.timer.currentValue - this.lastTriggered >= this.eventDuration) {
+        if (this.eventDuration && this.isActive() && this.daysLeft() <= 0) {
             this.lastEnded = this.timer.currentValue;
             this.end();
         }
     }
     isActive() {
-        return this.lastTriggered !== null && this.lastTriggered >= this.lastEnded;
+        return this.lastTriggered && (!this.lastEnded || this.lastTriggered >= this.lastEnded);
     }
+    daysLeft() {
+        return this.eventDuration.currentValue - (this.timer.currentValue - this.lastTriggered);
+    }        
     eventShouldFire() {
         throw Error("this is an abstract class, extend it")
     }
@@ -56,6 +65,48 @@ class Event {
     }
     getText() {
         throw Error("this is an abstract class, extend it")
+    }
+    activatEventChoice(eventChoice) {
+        throw Error("this is an abstract class, extend it")
+    }
+    deactivatEventChoice(eventChoice) {
+        throw Error("this is an abstract class, extend it")
+    }
+}
+
+class EventEffect {
+    constructor(props) {
+        this.name = props.name;
+    }
+    activate(event) {
+        
+    }
+    deactivate(event) {
+    }
+}
+
+class ShortenEvent extends EventEffect {
+    constructor(props) {
+        super({props, name: "Short Event Effect"});
+        this.name = props.name;
+        this.amount = props.amount;
+        this.modifier = new VariableModifier({startingValue: this.amount, type: multiplication});
+    }
+    activate(event) {
+        event.eventDuration.addModifier(this.modifier);
+    }
+    deactivate(event) {
+        event.eventDuration.removeModifier(this.modifier);
+    }
+    getText() {
+        return `shorten event duration by ${percentagize(this.amount)}%`
+    }
+}
+
+class EventChoice {
+    constructor(props) {
+        this.name = props.name;
+        this.effects = props.effects;
     }
 }
 
@@ -91,6 +142,15 @@ class SettlementEvent extends Event {
     getBonuses() {
         throw Error("this is an abstract class, extend it"); 
     }
+    getEventChoices() {
+
+    }
+    activatEventChoice(eventChoice) {
+        if (eventChoice inst)
+    }
+    deactivatEventChoice(eventChoice) {
+        
+    }
     end() {
         if (this.end_) {
             return this.end_(this.timer.currentValue, this.settlements);
@@ -106,7 +166,7 @@ class SettlementEvent extends Event {
         }
     }
     getText() {
-        let text = [`Event ${this.name} has following effects:`];
+        let text = [`Event ${this.name} will last for ${this.eventDuration.currentValue} days and has following effects:`];
         text = text.concat(this.lastBonuses ? this.lastBonuses.map(bonus => bonus.getEffectText()) : [''])
         return text;
     }

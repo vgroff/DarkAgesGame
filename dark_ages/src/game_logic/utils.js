@@ -14,6 +14,10 @@ export function roundNumber(number, dp = 3) {
     return parseFloat(number.toFixed(dp));
 }
 
+export function percentagize(amount) {
+    return `${roundNumber((amount - 1)*100, 1)}`
+}
+
 export function randomRange(low, high) {
     return low + (high - low) * Math.random();
 }

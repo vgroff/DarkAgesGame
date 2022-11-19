@@ -57,8 +57,8 @@ export default Game;
 
 // Stuff for now:
 // - Events:
-//     - Improve the Event UI - maybe have unread ones in red and pop-up if you click on them
-//          - Add the harvest? Add it to each settlement?
+//     - Have the ability to act on Events by making choices
+//     - Have the ability for events to force-pause until they are resolved
 //     - Have a popup for some events (e.g. wolf attack? can try to find the wolf or not) (don't hide all the ui, but disable the pause/play buttons)
 //          - Event will need to communicate with settlement/game so that it knows it has fired so that it can display it and pause the game?
 //                 - Should be fine to trigger the settlement to pause the game and trigger a pop-up
