@@ -75,6 +75,9 @@ export class Building {
     demolish() {
         this.size.setNewBaseValue(this.size.baseValue - 1, "demolish", 0);
     }
+    forceNewSize(newSize) {
+        this.size.setNewBaseValue(newSize, "force change (by event)", 0);
+    }
     canUpgrade(resourceStorages) {
         if (!this.upgrades || !this.upgrades[this.currentUpgradeIndex]) {
             return false;
@@ -252,6 +255,12 @@ export class ResourceBuilding extends Building {
         });
         this.filledJobs = new Variable({owner: this, name:"filled jobs", startingValue: props.startingFilledJobs || 0, max: this.totalJobs, min: zero,
             modifiers:[]
+        });
+        this.filledJobs.subscribe(() => {
+            // This helps some other systems behave a bit more sensibly 
+            if (this.filledJobs.baseValue > this.filledJobs.max.currentValue) {
+                this.filledJobs.setNewBaseValue(this.filledJobs.max.currentValue, 'size changed');
+            }
         });
         this.emptyJobs = new Variable({owner: this, name:"empty jobs", startingValue: 0, max: this.totalJobs, min: zero,
             modifiers:[

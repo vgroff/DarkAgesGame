@@ -2,7 +2,7 @@ import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
 import { rollSuccess, successToNumber, successToTruthy } from "./rolling";
 import { daysInYear } from "./seasons";
-import { ChangePriceBonus, SpecificBuildingProductivityBonus } from "./settlement/bonus";
+import { ChangePriceBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus } from "./settlement/bonus";
 import { Farm } from "./settlement/building";
 import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
@@ -35,7 +35,7 @@ class Event {
         }
     }
     triggerChecks() {
-        if (!this.lastChecked || (this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) === 0) {
+        if (!this.isActive() && (!this.lastChecked || (this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) === 0)) {
             this.lastChecked = this.timer.currentValue;
             if (this.eventShouldFire()) {
                 this.lastTriggered = this.timer.currentValue;
@@ -83,12 +83,14 @@ class EventEffect {
     }
     deactivate(event) {
     }
+    getEffectText() {
+        throw Error("this is an abstract class, extend it")
+    }
 }
 
-class ShortenEvent extends EventEffect {
+class ChangeEventDuration extends EventEffect {
     constructor(props) {
         super({props, name: "Short Event Effect"});
-        this.name = props.name;
         this.amount = props.amount;
         this.modifier = new VariableModifier({startingValue: this.amount, type: multiplication});
     }
@@ -98,8 +100,8 @@ class ShortenEvent extends EventEffect {
     deactivate(event) {
         event.eventDuration.removeModifier(this.modifier);
     }
-    getText() {
-        return `shorten event duration by ${percentagize(this.amount)}%`
+    getEffectText() {
+        return `Change event duration by ${percentagize(this.amount)}%`
     }
 }
 
@@ -108,6 +110,11 @@ class EventChoice {
         this.name = props.name;
         this.effects = props.effects;
     }
+    getText() {
+        let text = [this.name];
+        text = text.concat(this.effects.map(effect => effect.getEffectText()));
+        return text;
+    }
 }
 
 class SettlementEvent extends Event {
@@ -115,6 +122,7 @@ class SettlementEvent extends Event {
         super(props);
         this.settlements = props.settlements;
         this.lastBonuses = null;
+        this.choiceApplied = false;
     }
     eventShouldFire() {
         return this.eventShouldFire_(this.timer.currentValue, this.settlements);
@@ -143,13 +151,31 @@ class SettlementEvent extends Event {
         throw Error("this is an abstract class, extend it"); 
     }
     getEventChoices() {
-
+        throw Error("this is an abstract class, extend it"); 
     }
-    activatEventChoice(eventChoice) {
-        if (eventChoice inst)
+    applyChoice(eventChoice) {
+        this.choiceApplied = true;
+        eventChoice.effects.forEach(effect => {
+            this.activateEventEffect(effect);
+        });
     }
-    deactivatEventChoice(eventChoice) {
-        
+    activateEventEffect(eventEffect) {
+        if (eventEffect instanceof EventEffect) {
+            eventEffect.activate(this);
+        } else if (eventEffect instanceof SettlementBonus) {
+            this.settlements.forEach(settlement => eventEffect.activate(settlement));
+        } else {
+            throw Error("what")
+        }
+    }
+    deactivateEventEffect(eventEffect) {
+        if (eventEffect instanceof EventEffect) {
+            eventEffect.deactivate(this);
+        } else if (eventEffect instanceof SettlementBonus) {
+            eventEffect.deactivate(eventEffect);
+        } else {
+            throw Error("what")
+        }
     }
     end() {
         if (this.end_) {
@@ -166,7 +192,7 @@ class SettlementEvent extends Event {
         }
     }
     getText() {
-        let text = [`Event ${this.name} will last for ${this.eventDuration.currentValue} days and has following effects:`];
+        let text = [`Event ${this.name} will last for ${this.eventDuration ? this.eventDuration.currentValue : 0} days and has following effects:`];
         text = text.concat(this.lastBonuses ? this.lastBonuses.map(bonus => bonus.getEffectText()) : [''])
         return text;
     }
@@ -198,6 +224,21 @@ export class CropBlight extends RegularSettlementEvent {
     }
     eventShouldFire_() {
         return successToTruthy(rollSuccess(1.0));
+    }
+    getEventChoices() {
+        if (this.settlements.length !== 1) {
+            throw Error("this is a single-settlement event")
+        }
+        if (this.choiceApplied) {
+            return [];
+        }
+        let amount = -1 * Math.min(1, Math.round(this.settlements[0].getBuildingByName(Farm.name).size.currentValue * 0.15));
+        return [
+            new EventChoice({name: "Destroy some fields", effects: [
+                new SpecificBuildingChangeSizeBonus({building: Farm.name, amount}),
+                new ChangeEventDuration({amount: 0.5})
+            ]})
+        ]
     }
     getBonuses() {
         this.cropBlightModifier = 0.9 - 0.2*Math.random();
@@ -257,19 +298,24 @@ export class EventComponent extends UIBase {
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                width: 400,
+                width: 600,
                 bgcolor: 'background.paper',
                 border: '2px solid #000',
                 boxShadow: 24,
                 p: 4,
                 }}>
                 <Typography id="modal-modal-title" variant="h6" component="h2">
-                Event
+                Event: {this.event.name}
                 </Typography>
-                <Typography id="modal-modal-description" sx={{ mt: 2 }}>
-                {this.event.getText().join("\n")}
-                </Typography>
-                <Button onClick={() => this.setModalOpen(false)}>Close</Button>
+                <div>
+                    {this.event.getText().map((text, i) => {return <span key={i}>{text}<br /></span>})}
+                </div>
+                <Button variant='outlined' onClick={() => this.setModalOpen(false)}>Close</Button>
+                {this.event.getEventChoices ? this.event.getEventChoices().map((choice, i) => {
+                    return <CustomTooltip key={i} items={choice.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+                        <Button variant='outlined' onClick={() => {this.event.applyChoice(choice)}}>{choice.name}</Button>
+                    </CustomTooltip>
+                }) : ''}
             </Box>
         </Modal></div>
     }

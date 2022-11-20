@@ -438,6 +438,14 @@ export class Settlement {
     getBuildings() {
         return this.otherBuildings.concat(this.resourceBuildings);
     }
+    getBuildingByName(name) {
+        for (const building of this.resourceBuildings) {
+            if (building.name === name) {
+                return building;
+            }
+        }
+        return null;
+    }
 }
 
 export class SettlementComponent extends UIBase {

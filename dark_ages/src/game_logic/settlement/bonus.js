@@ -143,6 +143,25 @@ export class SpecificBuildingMaxSizeBonus extends SettlementBonus {
     }
 };
 
+export class SpecificBuildingChangeSizeBonus extends SettlementBonus {
+    constructor(props) {
+        super(props);
+        this.buildingName = props.building;
+        this.name = props.name || `${this.buildingName} change size bonus`;
+        this.amount = props.amount;
+    }
+    activate(settlement) {
+        let building = settlement.getBuildingByName(this.buildingName);
+        building.forceNewSize(building.size.currentValue + this.amount);
+    }
+    deactivate(settlement) {
+        // This is a one-way change?
+    }
+    getEffectText() {
+        return `Change size of ${this.buildingName} by ${this.amount}`;
+    }
+};
+
 export class UnlockBuildingBonus extends SettlementBonus {
     constructor(props) {
         super(props);
