@@ -332,7 +332,7 @@ export class ResourceBuilding extends Building {
     changeOutputResource(newResource, resourceStorages, destroyOld) {
         let resourceStorage = resourceStorages.find(resourceStorage => resourceStorage.resource === this.outputResource);       
         resourceStorage.removeSupply(this.totalProduction);
-        if (destroyOld) {
+        if (destroyOld && resourceStorage.cumulates) {
             resourceStorage.oneOffDemand(resourceStorage.amount.currentValue, "resource destroyed by upgrade");
         }
         resourceStorage = resourceStorages.find(resourceStorage => resourceStorage.resource === newResource);       
