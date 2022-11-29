@@ -25,6 +25,7 @@ class Event {
         this.eventDuration = props.eventDuration ? new Variable({startingValue: props.eventDuration}) : null;
         this.lastTriggered = null;
         this.lastEnded = null;
+        this.forcePause = props.forcePause || false;
         this.timer.subscribe(() => {
             this.triggerChecks();
         });
@@ -40,6 +41,9 @@ class Event {
             if (this.eventShouldFire()) {
                 this.lastTriggered = this.timer.currentValue;
                 this.fire();
+                if (this.forcePause) {
+                    this.timer.forceStopTimer("Event: " + this.name); // it's up to the subclasses to unpause
+                }
                 this.read = false;
             }
         }
@@ -158,6 +162,9 @@ class SettlementEvent extends Event {
         eventChoice.effects.forEach(effect => {
             this.activateEventEffect(effect);
         });
+        if (this.forcePause) {
+            this.timer.unforceStopTimer("Event: " + this.name);
+        }
     }
     activateEventEffect(eventEffect) {
         if (eventEffect instanceof EventEffect) {
@@ -219,6 +226,7 @@ export class CropBlight extends RegularSettlementEvent {
             variance: 0.5, 
             eventDuration:  daysInYear / 2,
             checkImmediately: true,
+            forcePause: true,
             ...props
         });
     }
@@ -232,9 +240,10 @@ export class CropBlight extends RegularSettlementEvent {
         if (this.choiceApplied) {
             return [];
         }
-        let amount = -1 * Math.min(1, Math.round(this.settlements[0].getBuildingByName(Farm.name).size.currentValue * 0.15));
+        let amount = -1 * Math.min(1, Math.round(0.5 + this.settlements[0].getBuildingByName(Farm.name).size.currentValue * 0.2));
         return [
-            new EventChoice({name: "Destroy some fields", effects: [
+            new EventChoice({name: "Wait it out", effects: []}),
+            new EventChoice({name: "Destroy some fields to limit the damage", effects: [
                 new SpecificBuildingChangeSizeBonus({building: Farm.name, amount}),
                 new ChangeEventDuration({amount: 0.5})
             ]})
@@ -284,6 +293,7 @@ export class EventComponent extends UIBase {
         }
     }
     childRender() {
+
         return <div><CustomTooltip items={this.event.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center", color: this.event.read ? "black" : "red"}}>
             <span onClick={()=>{Logger.setInspect(this.event); this.setModalOpen(true);}}>{titleCase(this.event.name)}</span>
         </CustomTooltip>
@@ -313,7 +323,7 @@ export class EventComponent extends UIBase {
                 <Button variant='outlined' onClick={() => this.setModalOpen(false)}>Close</Button>
                 {this.event.getEventChoices ? this.event.getEventChoices().map((choice, i) => {
                     return <CustomTooltip key={i} items={choice.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                        <Button variant='outlined' onClick={() => {this.event.applyChoice(choice)}}>{choice.name}</Button>
+                        <Button variant='outlined' onClick={() => {this.event.applyChoice(choice);}}>{choice.name}</Button>
                     </CustomTooltip>
                 }) : ''}
             </Box>

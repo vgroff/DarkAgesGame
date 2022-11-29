@@ -16,15 +16,35 @@ export class Timer extends Variable {
         console.log(`New timer created ${this.name}, timer number: ${this.timerNumber}`);
         this.timeTranslator = props.timeTranslator;
         this.translatedTime =  this.timeTranslator ? this.timeTranslator(this.currentValue) : {text:`${this.currentValue} ${this.unit}`};
+        this.forceStops = [];
     }
     stopTimer() {
-        if (this.started) {
+        if (this.started && !this.isForceStopped()) {
             clearInterval(this.intervalID);
             this.started = false;
         }
     };
+    isForceStopped() {
+        return this.forceStops.length !== 0;
+    }
+    forceStopTimer(reason) {
+        if (this.started) {
+            clearInterval(this.intervalID);
+        }
+        this.forceStops.push(reason);
+    }
+    unforceStopTimer(reason) {
+        const index = this.forceStops.indexOf(reason);
+        if (index > -1) {
+            this.forceStops.splice(index, 1); // 2nd parameter means remove one item only
+        }
+        if (this.started) {
+            this.started = false;
+            this.startTimer();
+        }
+    }
     startTimer() {
-        if (!this.started) {
+        if (!this.started && !this.isForceStopped()) {
             let self = this;
             this.intervalID = setInterval(() => {
                 this.forceTick();
@@ -33,6 +53,9 @@ export class Timer extends Variable {
         }
     };
     forceTick() {
+        if (this.forceStops.length !== 0) {
+            return;
+        }
         this.translatedTime = this.timeTranslator ? this.timeTranslator(this.currentValue + 1) : {text:`${this.currentValue + 1} ${this.unit}`};
         this.setNewBaseValue(this.currentValue + 1, [this.meaning], 0);
     }

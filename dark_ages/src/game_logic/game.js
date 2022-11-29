@@ -10,7 +10,7 @@ import { HarvestEvent } from "./events";
 
 class Game {
     constructor(gameClock) {
-        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 600, timeTranslator:(value) => {
+        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 800, timeTranslator:(value) => {
             let year = parseInt(value/daysInYear) + 1;
             let day = value - (year - 1)*daysInYear + 1;
             let season = seasons[parseInt((day-1)*4/daysInYear)]
@@ -57,8 +57,7 @@ export default Game;
 
 // Stuff for now:
 // - Events:
-//     - Have the ability for events to force-pause until they are resolved
-//     - Time-based bonuses, e.g. a happiness bonus that falls off over the period of 1 season
+//     - Time-based bonuses, e.g. a happiness bonus that falls off over the period of 1 season - just use the timer variable? Need to deactivate it at some point?
 //     - Have a popup for some events (e.g. wolf attack? can try to find the wolf or not) (don't hide all the ui, but disable the pause/play buttons)
 //          - Event will need to communicate with settlement/game so that it knows it has fired so that it can display it and pause the game?
 //                 - Should be fine to trigger the settlement to pause the game and trigger a pop-up

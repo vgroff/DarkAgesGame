@@ -452,7 +452,7 @@ export class SettlementComponent extends UIBase {
     constructor(props) {
         super(props);
         this.settlement = props.settlement;
-        this.addVariables([this.settlement.happiness]);
+        this.addVariables([this.settlement.happiness, this.settlement.unemployed]);
     }
     getAmount(event, direction, multiplier) {
         event.stopPropagation();
