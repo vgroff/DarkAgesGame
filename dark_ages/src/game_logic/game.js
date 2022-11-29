@@ -57,12 +57,24 @@ export default Game;
 
 // Stuff for now:
 // - Events:
+//     - Some events might want to pause when they fire but not force-pause
 //     - Time-based bonuses, e.g. a happiness bonus that falls off over the period of 1 season - just use the timer variable? Need to deactivate it at some point?
-//     - Have a popup for some events (e.g. wolf attack? can try to find the wolf or not) (don't hide all the ui, but disable the pause/play buttons)
-//          - Event will need to communicate with settlement/game so that it knows it has fired so that it can display it and pause the game?
-//                 - Should be fine to trigger the settlement to pause the game and trigger a pop-up
-//     - Should probably also show the crop blight on the pop-up thing, and maybe also pause? but no interaction needed
-// - auto-sell excess goods to the market - important!
+//     - Make a wolf attack event!!!!
+//         - should use the forcePause variable to force a pause and give the user some choices
+//                - Choices should have transparent success chances??
+//     - More basic events: 
+//          - blizzard - increased coal demand and massively increase trade costs, 
+//          - mining accident - reduce mine size or face unhappiness, 
+//          - rats in storage - lose food, can perhaps mitigate somehow?
+//          - landslide: spend money or face unhappinness, 
+//          - warm spell: happiness, less coal
+//          - merchant boom: trading factor increase
+//          - hunting game surplus: hunter's hut increase
+//          - dry hunting lands: hunters hut significant decrease
+//          - local miracle: boost to happiness and (and immigration?)
+//          - fire: destroyed buildings (this one should pause)
+//          - large group of nomads arrives: take them in, trade with them, send them away (force pause this one?) 
+// - auto-sell excess goods to the market - important! else they get wasted
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - resource buildings should show a productivity breakdown so that user can easily see effect of terrain, crop blight etc...
@@ -70,6 +82,7 @@ export default Game;
 // - Move to the character system!
 // - Add a coastal terrain with fishin wharf + higher raid chance
 // - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?) 
+// - UI needs serious improvement to be playable
 // Thoughts on easy UI improvements to make it playable:
 // - Move resource storage to the side like in kitten games
 // - Move research into it's own tab - maybe it should use the sum of the research from all settlements? since research isn't per-settlement
