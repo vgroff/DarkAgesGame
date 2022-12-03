@@ -1,4 +1,4 @@
-import { VariableModifier, multiplication, addition } from "../UIUtils";
+import { VariableModifier, Variable, multiplication, addition, division, subtraction } from "../UIUtils";
 import { percentagize, roundNumber } from "../utils";
 
 export class Bonus {
@@ -7,14 +7,6 @@ export class Bonus {
         this.origin = props.origin;
         this.timeLimit = props.timeLimit;
         this.timer = props.timer;
-        if (props.timeLimit) {
-            this.startTime = this.timer.currentValue;
-            props.timer.subscribe(() => {
-                if (this.timer.currentValue - this.startTime > props.timeLimit) {
-                    
-                }
-            });
-        }
     }
     setOrigin(origin, rename=true) {
         this.origin = origin;
@@ -231,3 +223,41 @@ export class AddNewBuildingBonus extends Bonus {
     }
 };
 
+export class TemporaryHappinessBonus extends SettlementBonus {
+    constructor(props) {
+        props.name = props.name || "temporary happiness bonus";
+        super(props);
+        this.amount = props.amount;
+        this.type = props.type || addition;
+        this.duration = props.duration;
+        this.timer = props.timer;
+        if (!this.timer || !this.duration || !this.amount) {
+            throw Error("missing props")
+        }
+    }
+    activate(settlement) {
+        // current happiness change is startingValue amount*(1 - diff/duration)
+        this.durationFactor = new Variable({name: "duration factor", startingValue: -1*this.timer.currentValue, max: new Variable({startingValue: 1}), 
+        modifiers: [
+            new VariableModifier({variable: this.timer, type: addition}),
+            new VariableModifier({startingValue: this.duration, type: division})
+        ]});
+        this.modifier = new VariableModifier({startingValue: 1, name: this.name, type: this.type, modifiers: [
+            new VariableModifier({variable: this.durationFactor, type: subtraction}),
+            new VariableModifier({startingValue: this.amount, type: multiplication})
+        ]});
+        settlement.happiness.addModifier(this.modifier);
+        this.timer.subscribe(() => {
+            if (this.durationFactor.currentValue >= 1) {
+                settlement.happiness.removeModifier(this.modifier);
+                return false; // return false to unsub
+            }
+        })
+    }
+    deactivate(settlement) {
+        // This effect is deactivated separately
+    }
+    getEffectText() {
+        return `Happiness changed by ${roundNumber(this.amount, 2)} for up to ${this.duration} days`;
+    }
+};

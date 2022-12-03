@@ -37,7 +37,7 @@ export class TrendingVariable extends Variable {
         this.currentDepth = 0;
     }
     trend(indent) {
-        this.currentlyTrendingTo = this.currentValue;
+        this.currentlyTrendingTo = roundNumber(this.currentValue, this.trendingRoundTo);
         if (this.trendingValueAtTurnStart === undefined || this.timerStartVal === undefined) {// || this.timer.currentValue === this.timerStartVal) {
             this.trendingValueAtTurnStart = this.currentlyTrendingTo; // Reset trending as many times as needed on the first turn its created
         }

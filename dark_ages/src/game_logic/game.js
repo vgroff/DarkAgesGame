@@ -58,7 +58,6 @@ export default Game;
 // Stuff for now:
 // - Events:
 //     - Some events might want to pause when they fire but not force-pause
-//     - Time-based bonuses, e.g. a happiness bonus that falls off over the period of 1 season - just use the timer variable? Need to deactivate it at some point?
 //     - Make a wolf attack event!!!!
 //         - should use the forcePause variable to force a pause and give the user some choices
 //                - Choices should have transparent success chances??
@@ -74,6 +73,7 @@ export default Game;
 //          - local miracle: boost to happiness and (and immigration?)
 //          - fire: destroyed buildings (this one should pause)
 //          - large group of nomads arrives: take them in, trade with them, send them away (force pause this one?) 
+// - Big-time Optimisation: Force happiness, health and productivity to 2 dp? Also building productivity?
 // - auto-sell excess goods to the market - important! else they get wasted
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?

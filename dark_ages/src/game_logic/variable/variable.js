@@ -172,15 +172,31 @@ export class Variable {
         }
         return obj;
     }
-    unsubscribe(callback) {
-        this.subscriptions = this.subscriptions.filter(c => c !== callback);
+    unsubscribe(callbackOrSub) {
+        let previousLen = this.subscriptions.length;
+        this.subscriptions = this.subscriptions.filter(c => c !== callbackOrSub && c.callback !== callbackOrSub);
+        if (previousLen === this.subscriptions.length) {
+            throw Error("failed to unsub");
+        }
         this.subscriptions = this.subscriptions.sort((a,b) => b.priority - a.priority);
         if (this.printSubs) {
             console.log("unsubs from "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
         }
     }
     callSubscribers(indent) {
-        this.subscriptions.forEach(subscription => subscription.callback(indent))
+        let unsubscribers = this.subscriptions.map(subscription => {
+            let result = subscription.callback(indent);
+            if (result === false) {
+                return subscription.callback;
+            } else {
+                return null;
+            }
+        })
+        unsubscribers.forEach(unsub => {
+            if (unsub !== null) {
+                this.unsubscribe(unsub);
+            }
+        });
     }
     recalculate(reason='', indent=0, quietly=false) {
         if (!quietly) {

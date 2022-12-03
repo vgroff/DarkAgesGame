@@ -2,7 +2,7 @@ import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
 import { rollSuccess, successToNumber, successToTruthy } from "./rolling";
 import { daysInYear } from "./seasons";
-import { ChangePriceBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus } from "./settlement/bonus";
+import { ChangePriceBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus } from "./settlement/bonus";
 import { Farm } from "./settlement/building";
 import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
@@ -225,7 +225,6 @@ export class CropBlight extends RegularSettlementEvent {
             checkEveryAvg: daysInYear,
             variance: 0.5, 
             eventDuration:  daysInYear / 2,
-            checkImmediately: true,
             forcePause: true,
             ...props
         });
@@ -252,6 +251,33 @@ export class CropBlight extends RegularSettlementEvent {
     getBonuses() {
         this.cropBlightModifier = 0.9 - 0.2*Math.random();
         return [new SpecificBuildingProductivityBonus({name: "effect of crop blight", building: Farm.name, amount: this.cropBlightModifier})];
+    }
+}
+
+export class LocalMiracle extends RegularSettlementEvent {
+    constructor(props) {
+        super({
+            name: "local miracle",
+            checkEveryAvg: daysInYear*2,
+            variance: 0.5, 
+            eventDuration:  roundNumber(daysInYear/2, 0),
+            ...props
+        });
+    }
+    eventShouldFire_() {
+        return successToTruthy(rollSuccess(1.0));
+    }
+    getEventChoices() {
+        return [];
+    }
+    getBonuses() {
+        let happinessModifier = 0.15;
+        return [new TemporaryHappinessBonus({
+            name: "effect of local miracle", 
+            amount: happinessModifier,
+            duration: this.eventDuration.currentValue,
+            timer: this.timer
+        })];
     }
 }
 

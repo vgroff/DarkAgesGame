@@ -15,7 +15,7 @@ import { Market, MarketResourceComponent } from './market.js';
 import { titleCase } from '../utils.js';
 import { winter, summer, seasonToTempFactor  } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
-import { CropBlight, EventComponent } from '../events.js';
+import { CropBlight, EventComponent, LocalMiracle } from '../events.js';
 import { DefaultBuildings } from './default_buildings.js';
 
 
@@ -261,7 +261,8 @@ export class Settlement {
         this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor, bankrupt: props.bankrupt});
 
         this.settlementEvents = [
-            new CropBlight({settlements: [this], timer: this.gameClock})
+            new CropBlight({settlements: [this], timer: this.gameClock}),
+            new LocalMiracle({settlements: [this], timer: this.gameClock})
         ];
         this.tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
         this.adjustCoalDemand();
