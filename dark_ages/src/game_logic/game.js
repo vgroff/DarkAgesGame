@@ -58,20 +58,21 @@ export default Game;
 // Stuff for now:
 // - Events:
 //     - Events shouldn't all check to fire on day 2 as they currently do, add some randomness. Allow this to be overriden?
-//     - Some events might want to pause when they fire but not force-pause
-//     - Make a wolf attack event!!!!
+//     - Make a wolf attack event!!!! Probability based action!
 //         - should use the forcePause variable to force a pause and give the user some choices
-//                - Choices should have transparent success chances??
+//                - Choices should have transparent success chances?? Give them as a variable? Then they also need fail effects and event choice text needs changing
 //     - More basic events: 
+//          - just do: blizzard, warm spell, game surplus, fire, nomads
 //          - blizzard - increased coal demand and massively increase trade costs, 
 //                - don't need a special bonus for trade costs, just make a ModifySettlementVariableBonus where you pass the variable name in
+//                - add/remove modifier to coal (or any other resource's) ideal demand (see adjustCoalDemand function)
 //          - rats in storage - lose food, can perhaps mitigate somehow?
 //          - landslide: spend money or face unhappinness,  
 //          - warm spell: happiness, less coal
 //          - merchant boom: trading factor increase
 //          - hunting game surplus: hunter's hut increase
 //          - dry hunting lands: hunters hut significant decrease
-//          - local miracle: boost to happiness and (and immigration?)
+//          - local miracle: boost to happiness and (and immigration?) - partly done but no immigration
 //          - fire: destroyed buildings (this one should pause)
 //          - large group of nomads arrives: take them in, trade with them, send them away (force pause this one?) 
 // - Big-time Optimisation: Force happiness, health and productivity to 2 dp? Also building productivity?
@@ -79,14 +80,18 @@ export default Game;
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - resource buildings should show a productivity breakdown so that user can easily see effect of terrain, crop blight etc...
-// - Add rebellions % chance using happiness+legitimacy(comes from character?)
 // - Move to the character system!
+// - Rebellions come from interest groups using happiness+legitimacy
+//       - Add in interest groups like nobles, clergy, people, soldiers and merchants
+//       - Each group supports or opposes the player based on happiness, legitimacy, privileges and other modifiers
+//       - Giving privileges to nobles gives legitimacy but reduces productivity and happiness. Early on, it is the only way to maintain power
+//       - As things develop (i.e. happiness increases), you can take privileges away from nobles and support other IGs instead
 // - Add a coastal terrain with fishin wharf + higher raid chance
 // - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?) 
 // - UI needs serious improvement to be playable
 // Thoughts on easy UI improvements to make it playable:
-// - Move resource storage to the side like in kitten games
-// - Move research into it's own tab - maybe it should use the sum of the research from all settlements? since research isn't per-settlement
+// - Tabluate stuff: production, distribution, trading, research etc...
+// - Move research into it's own tab - it should use the sum of the research from all settlements? since research isn't per-settlement
 
 // Next up:
 // - Basic character/RPG system

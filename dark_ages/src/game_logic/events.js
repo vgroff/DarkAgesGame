@@ -293,7 +293,7 @@ export class MineShaftCollapse extends RegularSettlementEvent {
             checkEveryAvg: daysInYear*2,
             variance: 0.5, 
             eventDuration: 1,
-            pause: true,
+            forcePause: true,
             ...props
         });
     }
