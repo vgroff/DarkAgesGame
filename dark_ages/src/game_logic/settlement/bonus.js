@@ -144,7 +144,7 @@ export class SpecificBuildingChangeSizeBonus extends SettlementBonus {
     }
     activate(settlement) {
         let building = settlement.getBuildingByName(this.buildingName);
-        building.forceNewSize(building.size.currentValue + this.amount);
+        building.forceNewSize(Math.min(0, building.size.currentValue + this.amount));
     }
     deactivate(settlement) {
         // This is a one-way change?
@@ -223,6 +223,7 @@ export class AddNewBuildingBonus extends Bonus {
     }
 };
 
+
 export class TemporaryHappinessBonus extends SettlementBonus {
     constructor(props) {
         props.name = props.name || "temporary happiness bonus";
@@ -259,5 +260,22 @@ export class TemporaryHappinessBonus extends SettlementBonus {
     }
     getEffectText() {
         return `Happiness changed by ${roundNumber(this.amount, 2)} for up to ${this.duration} days`;
+    }
+};
+
+export class ChangePopulationBonus extends SettlementBonus {
+    constructor(props) {
+        super(props);
+        this.name = props.name || `Change population bonus`;
+        this.amount = props.amount;
+    }
+    activate(settlement) {
+        settlement.populationSizeInternal.setNewBaseValue(settlement.populationSizeInternal.currentValue + this.amount, this.name);
+    }
+    deactivate(settlement) {
+        // This is a one-way change?
+    }
+    getEffectText() {
+        return `Change population of settlement by ${this.amount}`;
     }
 };

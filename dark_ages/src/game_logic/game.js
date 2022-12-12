@@ -57,15 +57,16 @@ export default Game;
 
 // Stuff for now:
 // - Events:
+//     - Events shouldn't all check to fire on day 2 as they currently do, add some randomness. Allow this to be overriden?
 //     - Some events might want to pause when they fire but not force-pause
 //     - Make a wolf attack event!!!!
 //         - should use the forcePause variable to force a pause and give the user some choices
 //                - Choices should have transparent success chances??
 //     - More basic events: 
 //          - blizzard - increased coal demand and massively increase trade costs, 
-//          - mining accident - reduce mine size or face unhappiness, 
+//                - don't need a special bonus for trade costs, just make a ModifySettlementVariableBonus where you pass the variable name in
 //          - rats in storage - lose food, can perhaps mitigate somehow?
-//          - landslide: spend money or face unhappinness, 
+//          - landslide: spend money or face unhappinness,  
 //          - warm spell: happiness, less coal
 //          - merchant boom: trading factor increase
 //          - hunting game surplus: hunter's hut increase

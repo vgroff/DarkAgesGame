@@ -2,8 +2,8 @@ import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
 import { rollSuccess, successToNumber, successToTruthy } from "./rolling";
 import { daysInYear } from "./seasons";
-import { ChangePriceBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus } from "./settlement/bonus";
-import { Farm } from "./settlement/building";
+import { ChangePopulationBonus, ChangePriceBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus } from "./settlement/bonus";
+import { Farm, IronMine } from "./settlement/building";
 import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
 import { CustomTooltip, percentagize, randomRange, roundNumber, titleCase } from "./utils";
@@ -26,6 +26,7 @@ class Event {
         this.lastTriggered = null;
         this.lastEnded = null;
         this.forcePause = props.forcePause || false;
+        this.pause = props.pause || false;
         this.timer.subscribe(() => {
             this.triggerChecks();
         });
@@ -43,6 +44,8 @@ class Event {
                 this.fire();
                 if (this.forcePause) {
                     this.timer.forceStopTimer("Event: " + this.name); // it's up to the subclasses to unpause
+                } else if (this.pause) {
+                    this.timer.stopTimer();
                 }
                 this.read = false;
             }
@@ -127,6 +130,7 @@ class SettlementEvent extends Event {
         this.settlements = props.settlements;
         this.lastBonuses = null;
         this.choiceApplied = false;
+        this.appliedChoice = null;
     }
     eventShouldFire() {
         return this.eventShouldFire_(this.timer.currentValue, this.settlements);
@@ -162,6 +166,7 @@ class SettlementEvent extends Event {
         eventChoice.effects.forEach(effect => {
             this.activateEventEffect(effect);
         });
+        this.appliedChoice = eventChoice;
         if (this.forcePause) {
             this.timer.unforceStopTimer("Event: " + this.name);
         }
@@ -265,7 +270,7 @@ export class LocalMiracle extends RegularSettlementEvent {
         });
     }
     eventShouldFire_() {
-        return successToTruthy(rollSuccess(1.0));
+        return successToTruthy(rollSuccess(0.15));
     }
     getEventChoices() {
         return [];
@@ -276,6 +281,64 @@ export class LocalMiracle extends RegularSettlementEvent {
             name: "effect of local miracle", 
             amount: happinessModifier,
             duration: this.eventDuration.currentValue,
+            timer: this.timer
+        })];
+    }
+}
+
+export class MineShaftCollapse extends RegularSettlementEvent {
+    constructor(props) {
+        super({
+            name: "iron mine shaft collapse",
+            checkEveryAvg: daysInYear*2,
+            variance: 0.5, 
+            eventDuration: 1,
+            pause: true,
+            ...props
+        });
+    }
+    eventShouldFire_() {
+        if (this.settlements.length !== 1) {
+            throw Error("this is a single-settlement event")
+        }
+        let mine = this.settlements[0].getBuildingByName(IronMine.name);
+        if (!mine || mine.size.currentValue === 0) {
+            return false;
+        }
+        this.numWorkers = mine.filledJobs.currentValue;
+        return successToTruthy(rollSuccess(1.0));
+    }
+    getEventChoices() {
+        if (this.settlements.length !== 1) {
+            throw Error("this is a single-settlement event")
+        }
+        if (this.choiceApplied) {
+            return [];
+        }
+        let amount = -1 * Math.max(1, Math.round(0.5 + this.settlements[0].getBuildingByName(Farm.name).size.currentValue * 0.3));
+        return [
+            new EventChoice({name: "Destroy the dangerous shafts", effects: [
+                new SpecificBuildingChangeSizeBonus({building: IronMine.name, amount}),
+            ]}),
+            new EventChoice({name: "Do nothing", effects: [
+                new TemporaryHappinessBonus({
+                    name: "dissapointed at response to mine collapse", 
+                    amount: -0.05,
+                    duration: roundNumber(daysInYear*0.33, 0),
+                    timer: this.timer
+                })
+            ]})
+        ];
+    }
+    getBonuses() {
+        let numDied = Math.round(Math.min(5, Math.max(1, this.numWorkers*0.15)));
+        return [new ChangePopulationBonus({
+            name: "death from mine collapse", 
+            amount: -numDied
+        }), new TemporaryHappinessBonus({
+            name: "grieving death from mine collapse", 
+            amount: -0.05,
+            duration: roundNumber(daysInYear*0.25, 0),
             timer: this.timer
         })];
     }
@@ -319,7 +382,6 @@ export class EventComponent extends UIBase {
         }
     }
     childRender() {
-
         return <div><CustomTooltip items={this.event.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center", color: this.event.read ? "black" : "red"}}>
             <span onClick={()=>{Logger.setInspect(this.event); this.setModalOpen(true);}}>{titleCase(this.event.name)}</span>
         </CustomTooltip>
@@ -346,12 +408,18 @@ export class EventComponent extends UIBase {
                 <div>
                     {this.event.getText().map((text, i) => {return <span key={i}>{text}<br /></span>})}
                 </div>
-                <Button variant='outlined' onClick={() => this.setModalOpen(false)}>Close</Button>
                 {this.event.getEventChoices ? this.event.getEventChoices().map((choice, i) => {
                     return <CustomTooltip key={i} items={choice.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
                         <Button variant='outlined' onClick={() => {this.event.applyChoice(choice);}}>{choice.name}</Button>
                     </CustomTooltip>
                 }) : ''}
+                <br />
+                {this.event.appliedChoice ? 
+                    <div>
+                        You chose to: {this.event.appliedChoice.getText().map((text, i) => {return <span key={i}>{text}<br /></span>})}
+                    </div>
+                : ''}
+                <Button variant='outlined' onClick={() => this.setModalOpen(false)}>Close</Button>
             </Box>
         </Modal></div>
     }
