@@ -57,8 +57,8 @@ export default Game;
 
 // Stuff for now:
 // - Events:
-//     - BUG: The harvest event fires on day 2 no matter what, sort it out somehow? check it works with 12 day year?
-//     - Events shouldn't all check to fire on day 2 as they currently do, add some randomness. Allow this to be overriden?
+//     - BUG: Fire burns down the entire building
+//     - Events shouldn't all check to fire on day 2 as they currently do, add some randomness. Allow this to be overriden? Global flag for this.
 //     - Events should be able to add a little flavour text depending on how they play out - e.g. if the fire was a disaster or not, different flavours of miracles etc...
 //            - Could just allow a .flavourText field to be populated? Each event only needs to do it once
 //     - Make a wolf attack event!!!! Probability based action!

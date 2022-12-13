@@ -16,13 +16,13 @@ class Event {
     constructor(props) {
         this.name = props.name;
         this.timer = props.timer;
-        this.checkEvery = props.checkEvery;
+        this.checkEvery = Math.round(props.checkEvery);
         this.read = false;
         if (this.checkEvery === undefined || !this.timer) {
             throw Error()
         }
-        this.lastChecked = null;
-        this.eventDuration = props.eventDuration ? new Variable({startingValue: props.eventDuration}) : null;
+        this.lastChecked = -this.checkEvery + 1;
+        this.eventDuration = props.eventDuration ? new Variable({startingValue: props.eventDuration}) : new Variable({startingValue: this.checkEvery});
         this.lastTriggered = null;
         this.lastEnded = null;
         this.forcePause = props.forcePause || false;
@@ -35,11 +35,18 @@ class Event {
                 this.triggerChecks();
             });
         }
+        if (props.triggerChecks) {
+            this.triggerChecks(); // Used if subclass (e.g. SettlementEvent) needs to triggerChecks separately
+        }
     }
     triggerChecks() {
-        if (!this.isActive() && (!this.lastChecked || (this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) === 0)) {
+        this.endIfShouldEnd();
+        console.log(this.name);
+        if (!this.isActive() && (this.lastChecked === null || (this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) === 0)) {
             this.lastChecked = this.timer.currentValue;
+            console.log("event could fire");
             if (this.eventShouldFire()) {
+                console.log("event fired");
                 this.lastTriggered = this.timer.currentValue;
                 this.fire();
                 if (this.forcePause) {
@@ -50,13 +57,16 @@ class Event {
                 this.read = false;
             }
         }
+    }
+    endIfShouldEnd() {
         if (this.eventDuration && this.isActive() && this.daysLeft() <= 0) {
+            console.log("event ended");
             this.lastEnded = this.timer.currentValue;
             this.end();
         }
     }
     isActive() {
-        return this.lastTriggered && (!this.lastEnded || this.lastTriggered >= this.lastEnded);
+        return this.lastTriggered !== null && (this.lastEnded === null || this.lastTriggered >= this.lastEnded);
     }
     daysLeft() {
         return this.eventDuration.currentValue - (this.timer.currentValue - this.lastTriggered);
@@ -218,11 +228,12 @@ class RegularSettlementEvent extends SettlementEvent {
     constructor(props) {
         let variance = props.variance || 0;
         super({checkEvery: props.checkEveryAvg * randomRange(1-variance, 1+variance), ...props});
+        this.checkEveryAvg = props.checkEveryAvg;
         this.variance = props.variance || 0;
     }
     eventShouldFire() {
         let eventShouldFire = this.eventShouldFire_();
-        this.checkEvery = daysInYear * randomRange(1-this.variance, 1+this.variance);
+        this.checkEvery = this.checkEveryAvg * randomRange(1-this.variance, 1+this.variance);
         return eventShouldFire;
     }
 }
@@ -355,7 +366,7 @@ export class Fire extends RegularSettlementEvent {
             checkEveryAvg: daysInYear*3,
             variance: 0.35, 
             eventDuration: 1,
-            forcePause: true,
+            pause: true,
             ...props
         });
     }
@@ -369,6 +380,10 @@ export class Fire extends RegularSettlementEvent {
         let bonuses = [];
         let success = rollSuccess(0.15);
         let buildings = this.settlements[0].getBuildings().filter(building => building.size.currentValue > 0 && building.flammable);
+        if (buildings.length === 0) {
+            console.log("WARN: couldn't find a building to burn, this is weird");
+            return [];
+        }
         let building = buildings[Math.floor(Math.random()*buildings.length)];
         let successNumber = successToNumber(success, 1);
         let buildingSizeChange = -1*Math.round(Math.max(1, Math.min(building.size.currentValue, (0.3-0.2*successNumber)*building.size.currentValue)));
@@ -397,9 +412,8 @@ export class HarvestEvent extends SettlementEvent {
             singleSettlement: false,
             ...props
         });
-        if (this.eventShouldFire()) {
-            this.fire();
-        }
+        // this.triggerChecks(); // Harvest fires immediately
+        this.lastChecked = -this.checkEvery; // Harvest fires on day one of the year
     }
     eventShouldFire_(day, settlements) {
         return true;
