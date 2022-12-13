@@ -57,7 +57,10 @@ export default Game;
 
 // Stuff for now:
 // - Events:
+//     - BUG: The harvest event fires on day 2 no matter what, sort it out somehow? check it works with 12 day year?
 //     - Events shouldn't all check to fire on day 2 as they currently do, add some randomness. Allow this to be overriden?
+//     - Events should be able to add a little flavour text depending on how they play out - e.g. if the fire was a disaster or not, different flavours of miracles etc...
+//            - Could just allow a .flavourText field to be populated? Each event only needs to do it once
 //     - Make a wolf attack event!!!! Probability based action!
 //         - should use the forcePause variable to force a pause and give the user some choices
 //                - Choices should have transparent success chances?? Give them as a variable? Then they also need fail effects and event choice text needs changing
@@ -76,7 +79,7 @@ export default Game;
 //          - fire: destroyed buildings (this one should pause)
 //          - large group of nomads arrives: take them in, trade with them, send them away (force pause this one?) 
 // - Big-time Optimisation: Force happiness, health and productivity to 2 dp? Also building productivity?
-// - auto-sell excess goods to the market - important! else they get wasted
+// - auto-sell excess goods to the market - important! else they get wasted?
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - resource buildings should show a productivity breakdown so that user can easily see effect of terrain, crop blight etc...
@@ -84,6 +87,7 @@ export default Game;
 // - Rebellions come from interest groups using happiness+legitimacy
 //       - Add in interest groups like nobles, clergy, people, soldiers and merchants
 //       - Each group supports or opposes the player based on happiness, legitimacy, privileges and other modifiers
+//       - The more powerful the group and the more it supports/opposes, the more supports/opposition the leader has. Too much opposition and they lose
 //       - Giving privileges to nobles gives legitimacy but reduces productivity and happiness. Early on, it is the only way to maintain power
 //       - As things develop (i.e. happiness increases), you can take privileges away from nobles and support other IGs instead
 // - Add a coastal terrain with fishin wharf + higher raid chance

@@ -15,7 +15,7 @@ import { Market, MarketResourceComponent } from './market.js';
 import { titleCase } from '../utils.js';
 import { winter, summer, seasonToTempFactor  } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
-import { CropBlight, EventComponent, LocalMiracle, MineShaftCollapse } from '../events.js';
+import { CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse } from '../events.js';
 import { DefaultBuildings } from './default_buildings.js';
 
 
@@ -263,7 +263,8 @@ export class Settlement {
         this.settlementEvents = [
             new CropBlight({settlements: [this], timer: this.gameClock}),
             new LocalMiracle({settlements: [this], timer: this.gameClock}),
-            new MineShaftCollapse({settlements: [this], timer: this.gameClock})
+            new MineShaftCollapse({settlements: [this], timer: this.gameClock}),
+            new Fire({settlements: [this], timer: this.gameClock})
         ];
         this.tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
         this.adjustCoalDemand();
@@ -434,14 +435,16 @@ export class Settlement {
         })
         this.market.setNewIdealPrices(this.idealPrices);
     }
-    addPriceModifier(resource, modifier) {
-
-    }
     getBuildings() {
         return this.otherBuildings.concat(this.resourceBuildings);
     }
     getBuildingByName(name) {
         for (const building of this.resourceBuildings) {
+            if (building.name === name) {
+                return building;
+            }
+        }
+        for (const building of this.otherBuildings) {
             if (building.name === name) {
                 return building;
             }
@@ -518,7 +521,7 @@ export class SettlementComponent extends UIBase {
             }}/>} label="Auto-assign unemployed"  style={{maxHeight:'80%', minHeight:'80%'}}/>
         </Grid>
         <Grid item xs={12}>
-            <h4>Active Events</h4>
+            {this.settlement.settlementEvents.filter(events => events.isActive()).length ? <h4>Active Events</h4> : null}
             {this.settlement.settlementEvents.filter(events => events.isActive()).map((ev, i) => {
                 return <EventComponent key={`${ev.name}_${i}`} event={ev}/>
             })}

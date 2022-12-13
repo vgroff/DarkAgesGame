@@ -1,9 +1,9 @@
 import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
-import { rollSuccess, successToNumber, successToTruthy } from "./rolling";
+import { rollSuccess, successToNumber, successToTruthy, majorFailureText } from "./rolling";
 import { daysInYear } from "./seasons";
 import { ChangePopulationBonus, ChangePriceBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus } from "./settlement/bonus";
-import { Farm, IronMine } from "./settlement/building";
+import { Church, Farm, IronMine, LumberjacksHut } from "./settlement/building";
 import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
 import { CustomTooltip, percentagize, randomRange, roundNumber, titleCase } from "./utils";
@@ -131,6 +131,10 @@ class SettlementEvent extends Event {
         this.lastBonuses = null;
         this.choiceApplied = false;
         this.appliedChoice = null;
+        this.singleSettlement = props.singleSettlement || true;
+        if (this.singleSettlement && this.settlements.length !== 1) {
+            throw Error("this is a single-settlement event")
+        }
     }
     eventShouldFire() {
         return this.eventShouldFire_(this.timer.currentValue, this.settlements);
@@ -263,20 +267,20 @@ export class LocalMiracle extends RegularSettlementEvent {
     constructor(props) {
         super({
             name: "local miracle",
-            checkEveryAvg: daysInYear*2,
-            variance: 0.5, 
-            eventDuration:  roundNumber(daysInYear/2, 0),
+            checkEveryAvg: daysInYear*4,
+            variance: 0.25, 
+            eventDuration:  roundNumber(daysInYear*0.75, 0),
             ...props
         });
     }
     eventShouldFire_() {
-        return successToTruthy(rollSuccess(0.15));
+        return successToTruthy(rollSuccess(0.25));
     }
     getEventChoices() {
         return [];
     }
     getBonuses() {
-        let happinessModifier = 0.15;
+        let happinessModifier = 0.2;
         return [new TemporaryHappinessBonus({
             name: "effect of local miracle", 
             amount: happinessModifier,
@@ -323,8 +327,8 @@ export class MineShaftCollapse extends RegularSettlementEvent {
             new EventChoice({name: "Do nothing", effects: [
                 new TemporaryHappinessBonus({
                     name: "dissapointed at response to mine collapse", 
-                    amount: -0.05,
-                    duration: roundNumber(daysInYear*0.33, 0),
+                    amount: -0.07,
+                    duration: roundNumber(daysInYear, 0),
                     timer: this.timer
                 })
             ]})
@@ -337,10 +341,51 @@ export class MineShaftCollapse extends RegularSettlementEvent {
             amount: -numDied
         }), new TemporaryHappinessBonus({
             name: "grieving death from mine collapse", 
-            amount: -0.05,
-            duration: roundNumber(daysInYear*0.25, 0),
+            amount: -0.03,
+            duration: roundNumber(daysInYear*0.75, 0),
             timer: this.timer
         })];
+    }
+}
+
+export class Fire extends RegularSettlementEvent {
+    constructor(props) {
+        super({
+            name: "fire!",
+            checkEveryAvg: daysInYear*3,
+            variance: 0.35, 
+            eventDuration: 1,
+            forcePause: true,
+            ...props
+        });
+    }
+    eventShouldFire_() {
+        return successToTruthy(rollSuccess(1.0));
+    }
+    getEventChoices() {
+        return [];
+    }
+    getBonuses() {
+        let bonuses = [];
+        let success = rollSuccess(0.15);
+        let buildings = this.settlements[0].getBuildings().filter(building => building.size.currentValue > 0 && building.flammable);
+        let building = buildings[Math.floor(Math.random()*buildings.length)];
+        let successNumber = successToNumber(success, 1);
+        let buildingSizeChange = -1*Math.round(Math.max(1, Math.min(building.size.currentValue, (0.3-0.2*successNumber)*building.size.currentValue)));
+        bonuses.push(new SpecificBuildingChangeSizeBonus({building: building.name, amount: buildingSizeChange}));
+        if (!successToTruthy(success)) {
+            let numDead = Math.round(Math.max(1, Math.min(10, building.size.currentValue*(0.5-successNumber)))); // successNumber negative here
+            bonuses.push(new ChangePopulationBonus({
+                name: "death from fire", 
+                amount: -numDead
+            }), new TemporaryHappinessBonus({
+                name: "grieving death from fire", 
+                amount: 0.025*successNumber, // successNumber negative here
+                duration: roundNumber(daysInYear*0.75, 0),
+                timer: this.timer
+            }));
+        }
+        return bonuses;
     }
 }
 
@@ -349,6 +394,7 @@ export class HarvestEvent extends SettlementEvent {
         super({
             name: "harvest event",
             checkEvery: daysInYear,
+            singleSettlement: false,
             ...props
         });
         if (this.eventShouldFire()) {

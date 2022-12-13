@@ -23,6 +23,7 @@ export class Building {
         this.buildInputs = props.buildInputs;
         this.unlocked = (props.unlocked || this.size.currentValue > 0) ? true : false;
         this.upgrades = props.upgrades || [];
+        this.flammable = props.flammable || false;
         this.upgrades = this.upgrades.map(upgrade => {
             return new BuildingUpgrade({name: upgrade.name, newBuildCost: upgrade.newBuildCost, newDisplayName: upgrade.newDisplayName, 
                 changes: upgrade.changes.map(changes => {
@@ -477,6 +478,7 @@ export class Farm extends ResourceBuilding {
         super({name: Farm.name, 
             outputResource: Resources.food, 
             buildInputs: [[Resources.labourTime, 5], [Resources.wood, 5]],
+            flammable: true,
             sizeJobsMultiplier: 5,
             ...props
         })
@@ -489,6 +491,7 @@ export class HuntingCabin extends ResourceBuilding {
         super({name: HuntingCabin.name, 
             outputResource: Resources.food, 
             buildInputs: [[Resources.labourTime, 20], [Resources.wood, 25]],
+            flammable: true,
             sizeJobsMultiplier: 3,
             startingProductivity: 1.45,
             maxSize: 3,
@@ -522,6 +525,7 @@ export class Housing extends ResourceBuilding {
             sizeJobsMultiplier: 0,
             passiveProductionPerSize: 10,
             upgrades: Housing.upgrades,
+            flammable: true,
             ...props
         })
     }
@@ -534,6 +538,7 @@ export class LumberjacksHut extends ResourceBuilding {
             outputResource: Resources.wood, 
             buildInputs: [[Resources.labourTime, 25], [Resources.wood, 40]],
             sizeJobsMultiplier: 3,
+            flammable: true,
             ...props
         })
     }
@@ -560,6 +565,7 @@ export class Brewery extends ResourceBuilding {
             buildInputs: [[Resources.labourTime, 35], [Resources.wood, 50]],
             inputResources: [{resource:Resources.food, multiplier: 0.2}],
             sizeJobsMultiplier: 3,
+            flammable: true,
             ...props
         })
     }
@@ -573,6 +579,7 @@ export class Apothecary extends ResourceBuilding {
             buildInputs: [[Resources.labourTime, 15], [Resources.wood, 25]],
             inputResources: [],
             sizeJobsMultiplier: 2,
+            flammable: true,
             ...props
         })
     }
@@ -585,6 +592,7 @@ export class Library extends ResourceBuilding {
             outputResource: Resources.research, 
             buildInputs: [[Resources.labourTime, 50], [Resources.wood, 35]],
             sizeJobsMultiplier: 2,
+            flammable: true,
             ...props
         })
     }
@@ -609,6 +617,7 @@ export class Church extends ResourceBuilding {
             outputResource: Resources.religion, 
             buildInputs: [[Resources.labourTime, 100], [Resources.stone, 75]],
             sizeJobsMultiplier: 1,
+            flammable: true,
             ...props
         })
     }
@@ -622,6 +631,7 @@ export class Tavern extends ResourceBuilding {
             buildInputs: [[Resources.labourTime, 50], [Resources.wood, 50]],
             inputResources: [{resource:Resources.food, multiplier: 0.1}, {resource:Resources.beer, multiplier: 0.1}],
             sizeJobsMultiplier: 2,
+            flammable: true,
             ...props
         })
     }
@@ -775,6 +785,7 @@ export class Toolmaker extends ResourceBuilding {
             inputResources: [{resource:Resources.stone, multiplier: 0.05}, {resource:Resources.wood, multiplier: 0.05}],
             sizeJobsMultiplier: 2,
             upgrades: Toolmaker.upgrades,
+            flammable: true,
             ...props
         })
     }
