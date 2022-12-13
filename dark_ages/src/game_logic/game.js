@@ -59,13 +59,14 @@ export default Game;
 // - Events:
 //     - BUG: Fire burns down the entire building
 //     - Events shouldn't all check to fire on day 2 as they currently do, add some randomness. Allow this to be overriden? Global flag for this.
+//             - set lastChecked to do this
 //     - Events should be able to add a little flavour text depending on how they play out - e.g. if the fire was a disaster or not, different flavours of miracles etc...
 //            - Could just allow a .flavourText field to be populated? Each event only needs to do it once
 //     - Make a wolf attack event!!!! Probability based action!
 //         - should use the forcePause variable to force a pause and give the user some choices
 //                - Choices should have transparent success chances?? Give them as a variable? Then they also need fail effects and event choice text needs changing
 //     - More basic events: 
-//          - just do: blizzard, warm spell, game surplus, fire, nomads
+//          - just do: blizzard, warm spell, game surplus, fire, nomads, pestilence
 //          - blizzard - increased coal demand and massively increase trade costs, 
 //                - don't need a special bonus for trade costs, just make a ModifySettlementVariableBonus where you pass the variable name in
 //                - add/remove modifier to coal (or any other resource's) ideal demand (see adjustCoalDemand function)
@@ -78,7 +79,9 @@ export default Game;
 //          - local miracle: boost to happiness and (and immigration?) - partly done but no immigration
 //          - fire: destroyed buildings (this one should pause)
 //          - large group of nomads arrives: take them in, trade with them, send them away (force pause this one?) 
+//          - pestilence: lose health, then choose to isolate for a productivity hit or lose even more health
 // - Big-time Optimisation: Force happiness, health and productivity to 2 dp? Also building productivity?
+// - Potential Balance/exploit issue: if productivities are very different in different buildings, trading will be preferred. Research boosts need to be not to aggressive, and trade needs to penalise
 // - auto-sell excess goods to the market - important! else they get wasted?
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?

@@ -144,7 +144,7 @@ export class SpecificBuildingChangeSizeBonus extends SettlementBonus {
     }
     activate(settlement) {
         let building = settlement.getBuildingByName(this.buildingName);
-        building.forceNewSize(Math.min(0, building.size.currentValue + this.amount));
+        building.forceNewSize(Math.max(0, building.size.currentValue + this.amount));
     }
     deactivate(settlement) {
         // This is a one-way change?

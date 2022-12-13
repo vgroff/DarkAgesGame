@@ -387,6 +387,7 @@ export class Fire extends RegularSettlementEvent {
         let building = buildings[Math.floor(Math.random()*buildings.length)];
         let successNumber = successToNumber(success, 1);
         let buildingSizeChange = -1*Math.round(Math.max(1, Math.min(building.size.currentValue, (0.3-0.2*successNumber)*building.size.currentValue)));
+        console.log(buildingSizeChange);
         bonuses.push(new SpecificBuildingChangeSizeBonus({building: building.name, amount: buildingSizeChange}));
         if (!successToTruthy(success)) {
             let numDead = Math.round(Math.max(1, Math.min(10, building.size.currentValue*(0.5-successNumber)))); // successNumber negative here

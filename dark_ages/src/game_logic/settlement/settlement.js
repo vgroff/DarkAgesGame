@@ -261,9 +261,9 @@ export class Settlement {
         this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor, bankrupt: props.bankrupt});
 
         this.settlementEvents = [
-            // new CropBlight({settlements: [this], timer: this.gameClock}),
-            // new LocalMiracle({settlements: [this], timer: this.gameClock}),
-            // new MineShaftCollapse({settlements: [this], timer: this.gameClock}),
+            new CropBlight({settlements: [this], timer: this.gameClock}),
+            new LocalMiracle({settlements: [this], timer: this.gameClock}),
+            new MineShaftCollapse({settlements: [this], timer: this.gameClock}),
             new Fire({settlements: [this], timer: this.gameClock})
         ];
         this.tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
