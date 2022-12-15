@@ -2,7 +2,7 @@ import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
 import { rollSuccess, successToNumber, successToTruthy, majorFailureText } from "./rolling";
 import { daysInYear } from "./seasons";
-import { ChangePopulationBonus, ChangePriceBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus } from "./settlement/bonus";
+import { ChangePopulationBonus, ChangePriceBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus, TemporaryHealthBonus } from "./settlement/bonus";
 import { Church, Farm, IronMine, LumberjacksHut } from "./settlement/building";
 import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
@@ -10,7 +10,7 @@ import { CustomTooltip, percentagize, randomRange, roundNumber, titleCase } from
 import {Box, Button, Modal, Typography} from "@mui/material";
 import { Variable, multiplication, VariableModifier } from "./UIUtils";
 
-
+const forceLastCheckedDebug = true; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
 
 class Event {
     constructor(props) {
@@ -21,7 +21,11 @@ class Event {
         if (this.checkEvery === undefined || !this.timer) {
             throw Error()
         }
-        this.lastChecked = -this.checkEvery + 1;
+        if (forceLastCheckedDebug) {
+            this.lastChecked = Math.min(-1, -this.checkEvery + 1);
+        } else {
+            this.lastChecked = Math.min(-1, Math.round((-this.checkEvery + 1)*(0.5+0.5*Math.random())));
+        }
         this.eventDuration = props.eventDuration ? new Variable({startingValue: props.eventDuration}) : new Variable({startingValue: this.checkEvery});
         this.lastTriggered = null;
         this.lastEnded = null;
@@ -387,7 +391,6 @@ export class Fire extends RegularSettlementEvent {
         let building = buildings[Math.floor(Math.random()*buildings.length)];
         let successNumber = successToNumber(success, 1);
         let buildingSizeChange = -1*Math.round(Math.max(1, Math.min(building.size.currentValue, (0.3-0.2*successNumber)*building.size.currentValue)));
-        console.log(buildingSizeChange);
         bonuses.push(new SpecificBuildingChangeSizeBonus({building: building.name, amount: buildingSizeChange}));
         if (!successToTruthy(success)) {
             let numDead = Math.round(Math.max(1, Math.min(10, building.size.currentValue*(0.5-successNumber)))); // successNumber negative here
@@ -401,6 +404,38 @@ export class Fire extends RegularSettlementEvent {
                 timer: this.timer
             }));
         }
+        return bonuses;
+    }
+}
+
+export class Pestilence extends RegularSettlementEvent {
+    constructor(props) {
+        super({
+            name: "pestilence",
+            checkEveryAvg: daysInYear*4,
+            variance: 0.35, 
+            eventDuration: daysInYear*0.5,
+            pause: true,
+            ...props
+        });
+    }
+    eventShouldFire_() {
+        return successToTruthy(rollSuccess(1.0));
+    }
+    getEventChoices() {
+        return [];
+    }
+    getBonuses() {
+        let bonuses = [];
+        let success = rollSuccess(0.5);
+        let successNumber = successToNumber(success, 0.5);
+        let healthDamage = -Math.min(0.35, Math.max(0.05, 0.1*(2-successNumber)));
+        bonuses.push(new TemporaryHealthBonus({
+            name: "pestilence", 
+            amount: healthDamage,
+            duration: roundNumber(daysInYear*0.75, 0),
+            timer: this.timer
+        }));
         return bonuses;
     }
 }

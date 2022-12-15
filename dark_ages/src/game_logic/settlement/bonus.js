@@ -1,5 +1,6 @@
 import { VariableModifier, Variable, multiplication, addition, division, subtraction } from "../UIUtils";
-import { percentagize, roundNumber } from "../utils";
+import { percentagize, roundNumber, titleCase } from "../utils";
+import { unnamedVariableName } from "../variable/variable";
 
 export class Bonus {
     constructor(props) {
@@ -224,15 +225,16 @@ export class AddNewBuildingBonus extends Bonus {
 };
 
 
-export class TemporaryHappinessBonus extends SettlementBonus {
+export class TemporaryModifierBonus extends SettlementBonus {
     constructor(props) {
-        props.name = props.name || "temporary happiness bonus";
+        props.name = props.name || `temporary ${props.variable} bonus`;
         super(props);
         this.amount = props.amount;
+        this.variableAccessor = props.variableAccessor;
         this.type = props.type || addition;
         this.duration = props.duration;
         this.timer = props.timer;
-        if (!this.timer || !this.duration || !this.amount) {
+        if (!this.variableAccessor || !this.timer || !this.duration || !this.amount) {
             throw Error("missing props")
         }
     }
@@ -247,7 +249,8 @@ export class TemporaryHappinessBonus extends SettlementBonus {
             new VariableModifier({variable: this.durationFactor, type: subtraction}),
             new VariableModifier({startingValue: this.amount, type: multiplication})
         ]});
-        settlement.happiness.addModifier(this.modifier);
+        settlement[this.variableAccessor].addModifier(this.modifier);
+        this.variableName = settlement[this.variableAccessor].name;
         this.timer.subscribe(() => {
             if (this.durationFactor.currentValue >= 1) {
                 settlement.happiness.removeModifier(this.modifier);
@@ -259,9 +262,25 @@ export class TemporaryHappinessBonus extends SettlementBonus {
         // This effect is deactivated separately
     }
     getEffectText() {
-        return `Happiness changed by ${roundNumber(this.amount, 2)} for up to ${this.duration} days`;
+        let name = this.variableAccessor;
+        if (this.variableName && this.variableName !== unnamedVariableName) {
+            name = this.variableName;
+        }
+        return `${titleCase(name)} changed by ${roundNumber(this.amount, 2)} for up to ${this.duration} days`;
     }
 };
+
+export class TemporaryHappinessBonus extends TemporaryModifierBonus {
+    constructor(props) {
+        super({...props, variableAccessor: 'happiness'})
+    }
+}
+
+export class TemporaryHealthBonus extends TemporaryModifierBonus {
+    constructor(props) {
+        super({...props, variableAccessor: 'health'})
+    }
+}
 
 export class ChangePopulationBonus extends SettlementBonus {
     constructor(props) {

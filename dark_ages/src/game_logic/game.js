@@ -57,16 +57,13 @@ export default Game;
 
 // Stuff for now:
 // - Events:
-//     - BUG: Fire burns down the entire building
-//     - Events shouldn't all check to fire on day 2 as they currently do, add some randomness. Allow this to be overriden? Global flag for this.
-//             - set lastChecked to do this
 //     - Events should be able to add a little flavour text depending on how they play out - e.g. if the fire was a disaster or not, different flavours of miracles etc...
 //            - Could just allow a .flavourText field to be populated? Each event only needs to do it once
 //     - Make a wolf attack event!!!! Probability based action!
 //         - should use the forcePause variable to force a pause and give the user some choices
 //                - Choices should have transparent success chances?? Give them as a variable? Then they also need fail effects and event choice text needs changing
 //     - More basic events: 
-//          - just do: blizzard, warm spell, game surplus, fire, nomads, pestilence
+//          - just do: blizzard, warm spell, game surplus, nomads, pestilence - pestilence is ongoing!!!!!!
 //          - blizzard - increased coal demand and massively increase trade costs, 
 //                - don't need a special bonus for trade costs, just make a ModifySettlementVariableBonus where you pass the variable name in
 //                - add/remove modifier to coal (or any other resource's) ideal demand (see adjustCoalDemand function)
@@ -77,12 +74,14 @@ export default Game;
 //          - hunting game surplus: hunter's hut increase
 //          - dry hunting lands: hunters hut significant decrease
 //          - local miracle: boost to happiness and (and immigration?) - partly done but no immigration
-//          - fire: destroyed buildings (this one should pause)
 //          - large group of nomads arrives: take them in, trade with them, send them away (force pause this one?) 
+//                  - a chance that they can rob you in the night? Would need to trigger another event later? Could have a one-time event
 //          - pestilence: lose health, then choose to isolate for a productivity hit or lose even more health
-// - Big-time Optimisation: Force happiness, health and productivity to 2 dp? Also building productivity?
+// - Big-time Optimisation: Force happiness, health to 3 dp? Also building productivity? 
+//          - add new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200}) to building productivtity
 // - Potential Balance/exploit issue: if productivities are very different in different buildings, trading will be preferred. Research boosts need to be not to aggressive, and trade needs to penalise
 // - auto-sell excess goods to the market - important! else they get wasted?
+// - option to "buy/sell now" in the market which allows you to buy/sell as much as you can right then
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
 // - Add a history to variables - short term, long term and super long term. Plot them?
 // - resource buildings should show a productivity breakdown so that user can easily see effect of terrain, crop blight etc...
@@ -99,13 +98,13 @@ export default Game;
 // Thoughts on easy UI improvements to make it playable:
 // - Tabluate stuff: production, distribution, trading, research etc...
 // - Move research into it's own tab - it should use the sum of the research from all settlements? since research isn't per-settlement
+// - Have warnings a la Paradox if you have homeless/unemployement/rebellions etc...
 
 // Next up:
 // - Basic character/RPG system
 // - Basic combat system - have bandit raids
-// - Basic event system with user responses and success chances depending on character - crop failures, wolf attacks etc... check phone for ideas
 // - Add civilian and military rebellions - add a legitimacy system and low legitmacy+happiness triggers rebellions
-// - Semi-tutorial system: give hints and introduce new buildings gardually (through research unlocks?)
+// - Have warnings a la Paradox if you have homeless/unemployement etc...
 
 // Requirements for MVP:
 // - Should test balance with tests -> set up conditions and measure happiness
@@ -114,15 +113,15 @@ export default Game;
 // - Basic combat system - have bandit raids
 // - Saving/Loading system? -> 
 //     - I can probably do a lot of this with Object.entries(). I need to make sure that any objects that are present in multiple places are reconstructed correctly, so I probably need some global Set() object that get populated/read from
-//     - Biggest problem is going to be making sure that stored functions are copied over correctly? can we find a way of storing a re-viving subscriptions for example? is that enough?
-//          - It feels like just reconstructing the objects and then overwriting the k,v pairs would work for this though? We would just have to copy over all the subscribers afterwards
-//               - Does this work for the lambdas related to events? I think so right? So long as the timer and all the data is right?
-//     - Otherwise, potentially slightly more painful solutions:
-//          - Could change the constructor to recieve props,loadedObject and then read everything you can from the loadedObject instead, but still do all the constructing as usual - this way all the lambdas are correctly hooked up?
+//     - We need a way to figure out what class to rebuild the object as so that it has the right methods/prototypes potentially use tools
+//     - Need to find a way to store lambdas, which are basically all subscribes() in/to variables/modifiers. I.e. not that much work
+//         - We could have some kind of init() function on all objects that does the necessary subscribing after construction. I.e. give the variables it's modifiers as objects, then call init() for it to subcribe once everything's ready
+//         - All subscribes() could be changed so that they refer to a class method, that way they can be referred to by string - unfortunate that this is a bit inefficient
+//     - Some tools
 //          - If the only real problem is with serialising stored functions in subscribe() fashion, can we find a way of storing a re-viving subscriptions?
-//          - https://github.com/denostack/superserial this sounds like it might help maybe? not sure it deals with functions though 
-//          - https://github.com/iconico/JavaScript-Serializer or this? might actually deal with functions
-//          - https://www.npmjs.com/package/javascript-serializer maybe this? not sure it handles functions tbh
+//          - https://github.com/denostack/superserial this sounds like it might help maybe? 
+//          - https://github.com/iconico/JavaScript-Serializer or this? 
+//          - https://www.npmjs.com/package/javascript-serializer 
 // - Do some UX improvement work
 // - Playtesting! Myself and friends
 

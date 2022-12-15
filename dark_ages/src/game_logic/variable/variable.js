@@ -3,7 +3,7 @@ import { AbstractModifier } from './modifier';
 import { roundNumber, HTMLTooltip, titleCase } from '../utils';
 import {Logger} from '../logger'
 
-const unnamedVariableName = 'unnamed variable';
+export const unnamedVariableName = 'unnamed variable';
 
 
 var textFile;
