@@ -35,8 +35,10 @@ class Game {
         this.treasury = new Cumulator({name: 'Treasury', startingValue: 10, timer:this.gameClock, modifiers:[this.totalMarketIncome]});
         this.treasury.subscribe(() => {
             if (this.treasury.baseValue < 0 && this.bankrupt.currentValue === 0) {
+                console.log("user bankrupt");
                 this.bankrupt.setNewBaseValue(1, 'user bankrupt');
             } else if (this.treasury.baseValue > 0 && this.bankrupt.currentValue !== 0){
+                console.log("user liquid");
                 this.bankrupt.setNewBaseValue(0, 'user liquid');
             }
         });
@@ -57,6 +59,9 @@ export default Game;
 
 // Stuff for now:
 // - Bug: going bankrupt doesn't seem to work properly
+//        - we are showing the currentValue and the expected change, but I'm not sure this makes sense
+//        - Instead, we should show the value at turn start and the expected change?
+//        - The problem is that the variable and it's current value are often not what we want? OR maybe it is and we just want to show the user the rest?
 // - Events:
 //     - Events should be able to add a little flavour text depending on how they play out - e.g. if the fire was a disaster or not, different flavours of miracles etc...
 //            - Could just allow a .flavourText field to be populated? Each event only needs to do it once

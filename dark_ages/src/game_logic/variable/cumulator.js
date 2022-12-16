@@ -15,7 +15,7 @@ export class Cumulator extends Variable {
         this.valueAtTurnStart = this.baseValue;
         this.timer.subscribe(() => {
             // console.log("aggregated on timer");
-            self.aggregate(0);
+            self.aggregate();
         });
         this.subscribe(() => {
             this.recalculateLastChange();
@@ -23,12 +23,12 @@ export class Cumulator extends Variable {
     }
     recalculateLastChange() {
         this.expectedChange = this.currentValue - this.baseValue;
-    } // lastChange, previousAgg
+    }
     aggregate() {
         this.valueAtTurnStart = this.currentValue;
-        this.recalculateLastChange();
         if (this.baseValue !== this.currentValue) {
             this.setNewBaseValue(this.currentValue, `Turn start: ${roundNumber(this.valueAtTurnStart, this.displayRound)}`, 0);
+            this.recalculateLastChange();
         } else {
             return;
         }

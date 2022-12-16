@@ -324,7 +324,7 @@ export class VariableComponent extends React.Component {
             }
         }
     }
-    render (extraChildren, extraStyle) {
+    render (extraChildren, extraStyle, miscProps={}) {
         let alerts = this.variable.visualAlerts ? this.variable.visualAlerts(this.variable) : null;
         let extraExtraStyle = alerts ? {color: "red"} : {};
         let ownerText = (this.variable.owner && this.props.showOwner && this.variable.owner.name !== unnamedVariableName) ? `${this.variable.owner.name}'s ` : '';
@@ -354,18 +354,19 @@ export class VariableComponent extends React.Component {
         abridgedExplanations = abridgedExplanations.concat(alerts ? alerts.map(alert => {
             return <span style={{textAlign: "right", ...extraExtraStyle}} key={alert} >{titleCase(alert)}<br /></span>;
         }) : []);
+        let preText = miscProps.preText || null;
         if (!this.props.expanded) {
             return <HTMLTooltip title={abridgedExplanations} style={{textAlign: "right"}}>
                 <span style={{"textAlign": "center", ...this.props.style, ...extraStyle, ...extraExtraStyle}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
-                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{maxText}{this.props.children}{extraChildren}</span>
+                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{preText}{displayValue}{maxText}{this.props.children}{extraChildren}</span>
                 </span>
                 </HTMLTooltip>
         } else {
             return <div>
                 <div style={{"textAlign": "right", ...this.props.style, ...extraStyle}}>
                     <span key={0} onClick={() => {Logger.setInspect(this.variable.owner)}}>{ownerText}</span>
-                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{displayValue}{maxText}{this.props.children}{extraChildren}</span>
+                    <span key={1} onClick={() => {Logger.setInspect(this.variable)}}>{nameText}{preText}{displayValue}{maxText}{this.props.children}{extraChildren}</span>
                 </div>
                 <div style={{"textAlign": "center", "fontWeight": "bold", ...this.props.style}}>
                     <span style={{}}>Explanation:</span> <br/>
