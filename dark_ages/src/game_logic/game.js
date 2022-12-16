@@ -58,10 +58,6 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Bug: going bankrupt doesn't seem to work properly
-//        - we are showing the currentValue and the expected change, but I'm not sure this makes sense
-//        - Instead, we should show the value at turn start and the expected change?
-//        - The problem is that the variable and it's current value are often not what we want? OR maybe it is and we just want to show the user the rest?
 // - Events:
 //     - Events should be able to add a little flavour text depending on how they play out - e.g. if the fire was a disaster or not, different flavours of miracles etc...
 //            - Could just allow a .flavourText field to be populated? Each event only needs to do it once
@@ -85,6 +81,9 @@ export default Game;
 //          - pestilence: lose health, then choose to isolate for a productivity hit or lose even more health -  The health penalty shouldnt be temporary!
 // - Big-time Optimisation: Force happiness, health to 3 dp? Also building productivity? 
 //          - add new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200}) to building productivtity
+// - Optimisation: the game appears to be really slow when the user switches between bankruptcy and being liquid
+//          - Examine what is so expensive via logging, maybe deal with it
+//          - Otherwise consider letting the user go bankrupt and lending out to them if so, with negative consequences if they dont pay back - like less market access?
 // - Potential Balance/exploit issue: if productivities are very different in different buildings, trading will be preferred. Research boosts need to be not to aggressive, and trade needs to penalise
 // - auto-sell excess goods to the market - important! else they get wasted?
 // - option to "buy/sell now" in the market which allows you to buy/sell as much as you can right then

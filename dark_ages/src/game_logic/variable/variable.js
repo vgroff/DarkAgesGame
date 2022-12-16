@@ -330,7 +330,7 @@ export class VariableComponent extends React.Component {
         let ownerText = (this.variable.owner && this.props.showOwner && this.variable.owner.name !== unnamedVariableName) ? `${this.variable.owner.name}'s ` : '';
         let nameText = (this.props.showName && this.variable.name !== unnamedVariableName) ? <span>{ownerText ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
         let displayValue = roundNumber(this.props.showBase ? this.variable.baseValue : this.variable.currentValue, this.variable.displayRound);
-        let maxText = (this.props.showMax && this.variable.max) ? `/${this.variable.max.currentValue}` : null;
+        let maxText = (this.props.showMax && this.variable.max) ? `/${roundNumber(this.variable.max.currentValue, this.variable.displayRound)}` : null;
         function mapExplanationToHTML(explanation, i) {
             if (explanation.variable && explanation.textPriority) {
                 return <span style={{textAlign: "right"}} key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.text)}<br /></span> 

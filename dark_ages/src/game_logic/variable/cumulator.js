@@ -43,7 +43,7 @@ export class CumulatorComponent extends VariableComponent {
     render () {
         let expectedChange = 0;
         if (this.variable.expectedChange) {
-            expectedChange = parseFloat(this.variable.expectedChange.toFixed(3));
+            expectedChange = roundNumber(parseFloat(this.variable.expectedChange.toFixed(3)), this.displayRound);
         }
         return super.render([
             <span key={2}>{this.props.showChange ? (expectedChange > 0 ? `(+${expectedChange})`: `(${expectedChange})`) : ''}</span>

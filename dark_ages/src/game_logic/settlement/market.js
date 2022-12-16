@@ -1,6 +1,7 @@
 import { Variable, VariableModifier, addition, subtraction, scaledMultiplication, scaledAddition, multiplication, VariableComponent } from "../UIUtils";
 import { Button } from "@mui/material";
 import UIBase from "../UIBase";
+import { roundNumber } from "../utils";
 
 
 export class Market {
@@ -101,8 +102,8 @@ export class Market {
         this.idealPrices = idealPrices;
         this.marketResources.forEach(marketResource => {
             marketResource.idealPrice = this.idealPrices[marketResource.resource.name];
-            marketResource.marketSellPrice.setNewBaseValue(this.idealPrices[marketResource.resource.name], 'resetting prices');
-            marketResource.marketBuyPrice.setNewBaseValue(this.idealPrices[marketResource.resource.name], 'resetting prices');
+            marketResource.marketSellPrice.setNewBaseValue(this.idealPrices[marketResource.resource.name], `ideal price: ${roundNumber(this.idealPrices[marketResource.resource.name], 2)}`);
+            marketResource.marketBuyPrice.setNewBaseValue(this.idealPrices[marketResource.resource.name], `ideal price: ${roundNumber(this.idealPrices[marketResource.resource.name], 2)}`);
         });
     }
 }
