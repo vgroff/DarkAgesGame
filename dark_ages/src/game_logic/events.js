@@ -2,7 +2,7 @@ import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
 import { rollSuccess, successToNumber, successToTruthy, majorFailureText } from "./rolling";
 import { daysInYear } from "./seasons";
-import { ChangePopulationBonus, ChangePriceBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus, TemporaryHealthBonus } from "./settlement/bonus";
+import { ChangePopulationBonus, ChangePriceBonus, GeneralProductivityBonus, HealthBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus, TemporaryHealthBonus } from "./settlement/bonus";
 import { Church, Farm, IronMine, LumberjacksHut } from "./settlement/building";
 import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
@@ -415,7 +415,7 @@ export class Pestilence extends RegularSettlementEvent {
             checkEveryAvg: daysInYear*4,
             variance: 0.35, 
             eventDuration: daysInYear*0.5,
-            pause: true,
+            forcePause: true,
             ...props
         });
     }
@@ -423,18 +423,45 @@ export class Pestilence extends RegularSettlementEvent {
         return successToTruthy(rollSuccess(1.0));
     }
     getEventChoices() {
-        return [];
+        return [
+            new EventChoice({name: "Do nothing", effects: [
+                new HealthBonus({
+                    name: "pestilence spreading", 
+                    amount: 0.7,
+                })
+            ]}),
+            new EventChoice({name: "Quarantine the sick", effects: [
+                new GeneralProductivityBonus({
+                    name: "the sick are quarantined",
+                    amount: 0.9
+                }),
+                new HealthBonus({
+                    name: "pestilence slightly spreading", 
+                    amount: 0.85,
+                }),
+                new ChangeEventDuration({
+                   amount: 0.2
+                })
+            ]}),
+            new EventChoice({name: "Quarantine the sick and their families", effects: [
+                new GeneralProductivityBonus({
+                    name: "the sick & their family quarantined",
+                    amount: 0.7
+                }),
+                new ChangeEventDuration({
+                    amount: 0.5
+                })
+            ]})
+        ];
     }
     getBonuses() {
         let bonuses = [];
         let success = rollSuccess(0.5);
-        let successNumber = successToNumber(success, 0.5);
-        let healthDamage = -Math.min(0.35, Math.max(0.05, 0.1*(2-successNumber)));
-        bonuses.push(new TemporaryHealthBonus({
+        let successNumber = successToNumber(success, 2); // can be -3,-1,1,3
+        let healthDamage = Math.min(0.35, Math.max(0.05, 0.07*(2-0.7*successNumber)));
+        bonuses.push(new HealthBonus({
             name: "pestilence", 
-            amount: healthDamage,
-            duration: roundNumber(daysInYear*0.75, 0),
-            timer: this.timer
+            amount: 1 - healthDamage,
         }));
         return bonuses;
     }

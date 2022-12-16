@@ -57,12 +57,13 @@ export default Game;
 
 // Stuff for now:
 // - Events:
+//     - pestilence is ongoing!!!!!! The health penalty shouldnt be temporary!
 //     - Events should be able to add a little flavour text depending on how they play out - e.g. if the fire was a disaster or not, different flavours of miracles etc...
 //            - Could just allow a .flavourText field to be populated? Each event only needs to do it once
 //     - Make a wolf attack event!!!! Probability based action!
 //         - should use the forcePause variable to force a pause and give the user some choices
 //                - Choices should have transparent success chances?? Give them as a variable? Then they also need fail effects and event choice text needs changing
-//     - More basic events: 
+//     - More basic events: - pestilence is ongoing!!!!!! The health penalty shouldnt be temporary!
 //          - just do: blizzard, warm spell, game surplus, nomads, pestilence - pestilence is ongoing!!!!!!
 //          - blizzard - increased coal demand and massively increase trade costs, 
 //                - don't need a special bonus for trade costs, just make a ModifySettlementVariableBonus where you pass the variable name in
@@ -76,7 +77,7 @@ export default Game;
 //          - local miracle: boost to happiness and (and immigration?) - partly done but no immigration
 //          - large group of nomads arrives: take them in, trade with them, send them away (force pause this one?) 
 //                  - a chance that they can rob you in the night? Would need to trigger another event later? Could have a one-time event
-//          - pestilence: lose health, then choose to isolate for a productivity hit or lose even more health
+//          - pestilence: lose health, then choose to isolate for a productivity hit or lose even more health -  The health penalty shouldnt be temporary!
 // - Big-time Optimisation: Force happiness, health to 3 dp? Also building productivity? 
 //          - add new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200}) to building productivtity
 // - Potential Balance/exploit issue: if productivities are very different in different buildings, trading will be preferred. Research boosts need to be not to aggressive, and trade needs to penalise

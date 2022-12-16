@@ -23,7 +23,7 @@ export function rollSuccess(successChance, majorModifier=0.33) {
     }
 }
 
-export function successToNumber(successFailure, majorModifier=0.5) {
+export function successToNumber(successFailure, majorModifier=0.5) { // majorModifier=2 for linear behaviour
     if (successFailure === successText) {
         return 1;
     } else if (successFailure === majorSuccessText) {

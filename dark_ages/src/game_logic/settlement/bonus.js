@@ -33,22 +33,50 @@ export class SettlementBonus extends Bonus {
     }
 };
 
-export class GeneralProductivityBonus extends SettlementBonus {
+export class SimpleSettlementModifier extends SettlementBonus {
     constructor(props) {
-        props.name = props.name || "productivity bonus";
+        props.name = props.name || `${props.variableAccessor} bonus`
         super(props);
         this.amount = props.amount;
+        this.variableAccessor = props.variableAccessor;
+        this.variableHumanReadable = props.variableHumanReadable || null;
+        this.type = props.type || multiplication;
+        if (!this.variableAccessor || !this.amount) {
+            throw Error("missing props")
+        }
     }
     activate(settlement) {
-        this.modifier = new VariableModifier({startingValue: this.amount, name: this.name, type: multiplication});
-        settlement.generalProductivity.addModifier(this.modifier);
+        this.modifier = new VariableModifier({startingValue: this.amount, name: this.name, type: this.type});
+        settlement[this.variableAccessor].addModifier(this.modifier);
     }
     deactivate(settlement) {
-        settlement.generalProductivity.removeModifier(this.modifier);
+        settlement[this.variableAccessor].removeModifier(this.modifier);
     }
     getEffectText() {
-        let percentage = percentagize(this.amount)
-        return `Increase general productivity by ${percentage}%`;
+        let name = this.variableHumanReadable || this.variableAccessor;
+        if (!this.variableHumanReadable && this.variableName && this.variableName !== unnamedVariableName) {
+            name = this.variableName;
+        }
+        let numberText;
+        if (this.type === multiplication) {
+            numberText = percentagize(this.amount) + "%";
+        } else if (this.type === addition) {
+            numberText = roundNumber(this.amount, 2);
+        }
+        return `${titleCase(name)} changed by ${numberText} `;
+    }
+};
+
+
+export class GeneralProductivityBonus extends SimpleSettlementModifier {
+    constructor(props) {
+        super({...props, variableAccessor: "generalProductivity", variableHumanReadable: "productivity"});
+    }
+};
+
+export class HealthBonus extends SimpleSettlementModifier {
+    constructor(props) {
+        super({...props, variableAccessor: "health", variableHumanReadable: "health"});
     }
 };
 
@@ -266,7 +294,13 @@ export class TemporaryModifierBonus extends SettlementBonus {
         if (this.variableName && this.variableName !== unnamedVariableName) {
             name = this.variableName;
         }
-        return `${titleCase(name)} changed by ${roundNumber(this.amount, 2)} for up to ${this.duration} days`;
+        let numberText;
+        if (this.type === multiplication) {
+            numberText = percentagize(this.amount);
+        } else if (this.type === addition) {
+            numberText = roundNumber(this.amount, 2);
+        }
+        return `${titleCase(name)} changed by ${numberText} for up to ${this.duration} days`;
     }
 };
 

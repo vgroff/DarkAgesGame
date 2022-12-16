@@ -242,7 +242,7 @@ export function createResearchTree() {
             new Research({
                 name: "Basic Administration",
                 researchCost: 150,
-                researchBonuses: [new GeneralProductivityBonus({bamount: 1.02})],
+                researchBonuses: [new GeneralProductivityBonus({amount: 1.02})],
             }),
             new Research({
                 name: "Productivity Incentives",
