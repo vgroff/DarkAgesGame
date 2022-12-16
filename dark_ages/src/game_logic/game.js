@@ -56,15 +56,15 @@ class Game {
 export default Game;
 
 // Stuff for now:
+// - Bug: going bankrupt doesn't seem to work properly
 // - Events:
-//     - pestilence is ongoing!!!!!! The health penalty shouldnt be temporary!
 //     - Events should be able to add a little flavour text depending on how they play out - e.g. if the fire was a disaster or not, different flavours of miracles etc...
 //            - Could just allow a .flavourText field to be populated? Each event only needs to do it once
 //     - Make a wolf attack event!!!! Probability based action!
 //         - should use the forcePause variable to force a pause and give the user some choices
 //                - Choices should have transparent success chances?? Give them as a variable? Then they also need fail effects and event choice text needs changing
-//     - More basic events: - pestilence is ongoing!!!!!! The health penalty shouldnt be temporary!
-//          - just do: blizzard, warm spell, game surplus, nomads, pestilence - pestilence is ongoing!!!!!!
+//     - More basic events:
+//          - just do: blizzard, warm spell, game surplus, nomads
 //          - blizzard - increased coal demand and massively increase trade costs, 
 //                - don't need a special bonus for trade costs, just make a ModifySettlementVariableBonus where you pass the variable name in
 //                - add/remove modifier to coal (or any other resource's) ideal demand (see adjustCoalDemand function)

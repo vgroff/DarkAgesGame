@@ -531,10 +531,11 @@ export class EventComponent extends UIBase {
                 <div>
                     {this.event.getText().map((text, i) => {return <span key={i}>{text}<br /></span>})}
                 </div>
+                <br />
                 {this.event.getEventChoices ? this.event.getEventChoices().map((choice, i) => {
-                    return <CustomTooltip key={i} items={choice.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+                    return <div key={i}><CustomTooltip key={i} items={choice.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
                         <Button variant='outlined' onClick={() => {this.event.applyChoice(choice);}}>{choice.name}</Button>
-                    </CustomTooltip>
+                    </CustomTooltip></div>
                 }) : ''}
                 <br />
                 {this.event.appliedChoice ? 
