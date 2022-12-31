@@ -11,9 +11,9 @@ import {Box, Button, Modal, Typography} from "@mui/material";
 import { Variable, multiplication, VariableModifier } from "./UIUtils";
 import { toHaveDisplayValue } from "@testing-library/jest-dom/dist/matchers";
 
-const forceLastCheckedDebug = true; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
-const forceFireEvents = true; // Force all events to fire no matter what eventShouldFire_() says
-
+const forceLastCheckedDebug = false; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
+const forceFireEvents = false; // Force all events to fire no matter what eventShouldFire_() says
+// Setting both of the above the true can make debugging events easier as it forces them all to fire on day 2 
 
 class Event {
     constructor(props) {
@@ -629,12 +629,14 @@ export class WolfAttack extends RegularSettlementEvent {
             bonuses.push(new ChangePopulationBonus({
                 name: "death from wolf attack", 
                 amount: numDead
-            }, new TemporaryHappinessBonus({
+            }));
+            bonuses.push(new TemporaryHappinessBonus({
                 name: "grieving death from wolf attack", 
-                amount: 0.03*(-2 + successNumber),// this number is negative
+                amount: 1 + 0.05*(-2 + successNumber),// between 0.95 and 0.75, mulitplicative
                 duration: roundNumber(daysInYear, 0),
+                type: multiplication,
                 timer: this.timer
-            })));
+            }));
             this.bonusFlavourText += "they killed some villagers";
         } else {
             this.bonusFlavourText += "we got lucky, no one was hurt";

@@ -269,15 +269,30 @@ export class TemporaryModifierBonus extends SettlementBonus {
     activate(settlement) {
         // current change is startingValue amount*(1 - diff/duration) - this is if we interpolate between 0 and amount for the sake of addition,
         // but what if we interpolate between amount and 1 for the sake of multiplication?
+        // durationFactor is diff/duration i.e. goes from 0 to 1
         this.durationFactor = new Variable({name: "duration factor", startingValue: -1*this.timer.currentValue, max: new Variable({startingValue: 1}), 
-        modifiers: [
-            new VariableModifier({variable: this.timer, type: addition}),
-            new VariableModifier({startingValue: this.duration, type: division})
-        ]});
-        this.modifier = new VariableModifier({startingValue: 1, name: this.name, type: this.type, modifiers: [
-            new VariableModifier({variable: this.durationFactor, type: subtraction}),
-            new VariableModifier({startingValue: this.amount, type: multiplication})
-        ]});
+            modifiers: [
+                new VariableModifier({variable: this.timer, type: addition}),
+                new VariableModifier({startingValue: this.duration, type: division})
+            ]
+        });
+        if (this.type === addition || this.type === subtraction) {
+            this.modifier = new VariableModifier({startingValue: 1, name: this.name, type: this.type, modifiers: [
+                new VariableModifier({variable: this.durationFactor, type: subtraction}),
+                new VariableModifier({startingValue: this.amount, type: multiplication})
+            ]});
+        } else if (this.type === multiplication) {
+            // It should go from amount to 1 so it should be amount + durationFactor*(1-amount) = amount + durationFactor - durationFactor * amount
+            this.modifier = new VariableModifier({startingValue: this.amount, name: this.name, type: this.type, modifiers: [
+                new VariableModifier({variable: this.durationFactor, type: addition}),
+                new VariableModifier({type: subtraction, variable: new Variable({startingValue: 1, modifiers: [
+                    new VariableModifier({variable: this.durationFactor, type: multiplication}),
+                    new VariableModifier({startingValue: this.amount, type: multiplication}),
+                ]})})
+            ]});
+        } else {
+            throw Error("need to implement the behaviour in question")
+        }
         settlement[this.variableAccessor].addModifier(this.modifier);
         this.variableName = settlement[this.variableAccessor].name;
         this.timer.subscribe(() => {
@@ -297,7 +312,7 @@ export class TemporaryModifierBonus extends SettlementBonus {
         }
         let numberText;
         if (this.type === multiplication) {
-            numberText = percentagize(this.amount);
+            numberText = percentagize(this.amount) + '%';
         } else if (this.type === addition) {
             numberText = roundNumber(this.amount, 2);
         }
