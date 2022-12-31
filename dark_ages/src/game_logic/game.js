@@ -59,7 +59,7 @@ export default Game;
 
 // Stuff for now:
 // - Currently: made probabilistic events, just need to hook it in to a wolf attack event
-//           - add some flavour text in too
+//            - Succesfully attacking the wolf hut should gurantee the event doesnt happen for a long time
 // - Events:
 //     - The type on the temporary happiness change I'm not sure is working correctly?
 //            - I think a multiplication needs to interpolate between 1 and the number instead? Might just need to be a differente startingValue or smth

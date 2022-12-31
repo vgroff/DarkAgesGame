@@ -9,6 +9,7 @@ import UIBase from "./UIBase";
 import { CustomTooltip, percentagize, randomRange, roundNumber, titleCase } from "./utils";
 import {Box, Button, Modal, Typography} from "@mui/material";
 import { Variable, multiplication, VariableModifier } from "./UIUtils";
+import { toHaveDisplayValue } from "@testing-library/jest-dom/dist/matchers";
 
 const forceLastCheckedDebug = true; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
 
@@ -18,6 +19,7 @@ class Event {
         this.timer = props.timer;
         this.checkEvery = Math.round(props.checkEvery);
         this.read = false;
+        this.bannedUntil = -1e9;
         if (this.checkEvery === undefined || !this.timer) {
             throw Error()
         }
@@ -43,14 +45,17 @@ class Event {
             this.triggerChecks(); // Used if subclass (e.g. SettlementEvent) needs to triggerChecks separately
         }
     }
+    setEventBan(banLength) { // Disables event for some amount of days
+        if (this.timer.currentValue + banLength > this.bannedUntil) {
+            this.bannedUntil = this.timer.currentValue + banLength;
+        }
+    }
     triggerChecks() {
         this.endIfShouldEnd();
-        console.log(this.name);
         if (!this.isActive() && (this.lastChecked === null || (this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) === 0)) {
             this.lastChecked = this.timer.currentValue;
-            console.log("event could fire");
-            if (this.eventShouldFire()) {
-                console.log("event fired");
+            let notBanned = this.timer.currentValue > this.bannedUntil;
+            if (this.eventShouldFire() && notBanned) {
                 this.lastTriggered = this.timer.currentValue;
                 this.fire();
                 if (this.forcePause) {
@@ -111,7 +116,7 @@ class EventEffect {
 
 class ChangeEventDuration extends EventEffect {
     constructor(props) {
-        super({props, name: "Short Event Effect"});
+        super({props, name: "Change Event duration"});
         this.amount = props.amount;
         this.modifier = new VariableModifier({startingValue: this.amount, type: multiplication});
     }
@@ -123,6 +128,21 @@ class ChangeEventDuration extends EventEffect {
     }
     getEffectText() {
         return `Change event duration by ${percentagize(this.amount)}%`
+    }
+}
+
+class TemporaryEventDisabled extends EventEffect {
+    constructor(props) {
+        super({props, name: "Disable event temporarily"});
+        this.amount = props.amount;
+    }
+    activate(event) {
+        event.setEventBan(this.amount);
+    }
+    deactivate(event) {
+    }
+    getEffectText() {
+        return `This event cannot fire for another ${this.amount} days`
     }
 }
 
@@ -199,6 +219,7 @@ class SettlementEvent extends Event {
     }
     fire() {
         this.choiceApplied = false;
+        this.appliedChoice = null;
         if (this.fire_) {
             return this.fire_(this.timer.currentValue, this.settlements);
         } else {
@@ -522,7 +543,7 @@ export class WolfAttack extends RegularSettlementEvent {
     constructor(props) {
         super({
             name: "wolf attack",
-            checkEveryAvg: daysInYear*2,
+            checkEveryAvg: daysInYear*3,
             variance: 0.35, 
             eventDuration: 1,
             forcePause: true,
@@ -543,12 +564,15 @@ export class WolfAttack extends RegularSettlementEvent {
                 })
             ]}),
             new ProbabilisticEventChoice({name: "Hunt the wolves down", effects: [],
-                successChance: new Variable({startingValue: 0.5}), successEffects: [
+                successChance: new Variable({startingValue: 0.65}), successEffects: [
                     // Need to fill this out
+                    new TemporaryEventDisabled({
+                        amount: 4*this.checkEveryAvg
+                    })
                 ], failEffects: [
                     new ChangePopulationBonus({
                         name: "death from wolf hunting down wolves", 
-                        amount: -2
+                        amount: -1
                     })
                 ]
             })
