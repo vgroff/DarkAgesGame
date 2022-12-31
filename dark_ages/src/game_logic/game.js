@@ -58,7 +58,11 @@ class Game {
 export default Game;
 
 // Stuff for now:
+// - Currently: made probabilistic events, just need to hook it in to a wolf attack event
+//           - add some flavour text in too
 // - Events:
+//     - The type on the temporary happiness change I'm not sure is working correctly?
+//            - I think a multiplication needs to interpolate between 1 and the number instead? Might just need to be a differente startingValue or smth
 //     - Events should be able to add a little flavour text depending on how they play out - e.g. if the fire was a disaster or not, different flavours of miracles etc...
 //            - Could just allow a .flavourText field to be populated? Each event only needs to do it once
 //     - Make a wolf attack event!!!! Probability based action!
@@ -82,8 +86,7 @@ export default Game;
 // - Big-time Optimisation: Force happiness, health to 3 dp? Also building productivity? 
 //          - add new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200}) to building productivtity
 // - Optimisation: the game appears to be really slow when the user switches between bankruptcy and being liquid
-//          - Examine what is so expensive via logging, maybe deal with it
-//          - Otherwise consider letting the user go bankrupt and lending out to them if so, with negative consequences if they dont pay back - like less market access?
+//          - Examine what is so expensive via logging, maybe deal with it. Might be fine to use round dp
 // - Potential Balance/exploit issue: if productivities are very different in different buildings, trading will be preferred. Research boosts need to be not to aggressive, and trade needs to penalise
 // - auto-sell excess goods to the market - important! else they get wasted?
 // - option to "buy/sell now" in the market which allows you to buy/sell as much as you can right then

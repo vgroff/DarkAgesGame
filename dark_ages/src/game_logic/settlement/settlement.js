@@ -15,7 +15,7 @@ import { Market, MarketResourceComponent } from './market.js';
 import { titleCase } from '../utils.js';
 import { winter, summer, seasonToTempFactor  } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
-import { CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence } from '../events.js';
+import { CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack } from '../events.js';
 import { DefaultBuildings } from './default_buildings.js';
 
 
@@ -265,7 +265,8 @@ export class Settlement {
             // new LocalMiracle({settlements: [this], timer: this.gameClock}),
             // new MineShaftCollapse({settlements: [this], timer: this.gameClock}),
             new Fire({settlements: [this], timer: this.gameClock}),
-            new Pestilence({settlements: [this], timer: this.gameClock})
+            new Pestilence({settlements: [this], timer: this.gameClock}),
+            new WolfAttack({settlements:[this], timer: this.gameClock})
         ];
         this.tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
         this.adjustCoalDemand();

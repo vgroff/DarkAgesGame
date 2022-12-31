@@ -1,6 +1,6 @@
 import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
-import { rollSuccess, successToNumber, successToTruthy, majorFailureText } from "./rolling";
+import { rollSuccess, successToNumber, successToTruthy, majorFailureText, majorSuccessText } from "./rolling";
 import { daysInYear } from "./seasons";
 import { ChangePopulationBonus, ChangePriceBonus, GeneralProductivityBonus, HealthBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus, TemporaryHealthBonus } from "./settlement/bonus";
 import { Church, Farm, IronMine, LumberjacksHut } from "./settlement/building";
@@ -131,9 +131,53 @@ class EventChoice {
         this.name = props.name;
         this.effects = props.effects;
     }
+    getEffects() {
+        return this.effects;
+    }
     getText() {
         let text = [this.name];
         text = text.concat(this.effects.map(effect => effect.getEffectText()));
+        return text;
+    }
+}
+
+class ProbabilisticEventChoice extends EventChoice {
+    constructor(props) {
+        super(props);
+        this.successChance = props.successChance;
+        this.successEffects = props.successEffects;
+        this.failEffects = props.failEffects || [];
+        this.didSucceed = null;
+        if (this.successChance === undefined || this.successEffects === undefined) {    
+            throw Error("undefined variables for event choice");
+        }
+    }
+    getEffects() {
+        this.didSucceed = successToTruthy(rollSuccess(this.successChance.currentValue));
+        if (this.didSucceed) {
+            return this.effects.concat(this.successEffects);
+        } else {
+            return this.effects.concat(this.failEffects);
+        }
+    }
+    getText() {
+        let text = [this.name];
+        text = text.concat(this.effects.map(effect => effect.getEffectText()));
+        if (this.didSucceed === null) {
+            text.push(`There is a ${percentagize(1+this.successChance.currentValue)}% of success with the following effects:`)
+            text = text.concat(this.successEffects.map(effect => effect.getEffectText()));
+            text.push(``)
+            text.push(`On failure, the following effects will trigger:`)
+            text = text.concat(this.failEffects.map(effect => effect.getEffectText()));
+        } else if (this.didSucceed) {
+            text.push("Roll suceeded, the effects are:")
+            text = text.concat(this.successEffects.map(effect => effect.getEffectText()));
+            return text;
+        } else {
+            text.push("Roll failed, the effects are:")
+            text = text.concat(this.failEffects.map(effect => effect.getEffectText()));
+            return text;
+        }
         return text;
     }
 }
@@ -154,6 +198,7 @@ class SettlementEvent extends Event {
         return this.eventShouldFire_(this.timer.currentValue, this.settlements);
     }
     fire() {
+        this.choiceApplied = false;
         if (this.fire_) {
             return this.fire_(this.timer.currentValue, this.settlements);
         } else {
@@ -180,8 +225,11 @@ class SettlementEvent extends Event {
         throw Error("this is an abstract class, extend it"); 
     }
     applyChoice(eventChoice) {
+        if (this.choiceApplied) {
+            throw Error("shouldn't apply choice twice");
+        }
         this.choiceApplied = true;
-        eventChoice.effects.forEach(effect => {
+        eventChoice.getEffects().forEach(effect => {
             this.activateEventEffect(effect);
         });
         this.appliedChoice = eventChoice;
@@ -224,6 +272,9 @@ class SettlementEvent extends Event {
     getText() {
         let text = [`Event ${this.name} will last for ${this.eventDuration ? this.eventDuration.currentValue : 0} days and has following effects:`];
         text = text.concat(this.lastBonuses ? this.lastBonuses.map(bonus => bonus.getEffectText()) : [''])
+        if (this.bonusFlavourText) {
+            text = [this.bonusFlavourText].concat(text);
+        }
         return text;
     }
 }
@@ -399,7 +450,7 @@ export class Fire extends RegularSettlementEvent {
                 amount: -numDead
             }), new TemporaryHappinessBonus({
                 name: "grieving death from fire", 
-                amount: 0.025*successNumber, // successNumber negative here
+                amount: 0.04*successNumber, // successNumber negative here
                 duration: roundNumber(daysInYear*0.75, 0),
                 timer: this.timer
             }));
@@ -440,7 +491,7 @@ export class Pestilence extends RegularSettlementEvent {
                     amount: 0.85,
                 }),
                 new ChangeEventDuration({
-                   amount: 0.2
+                   amount: 0.85
                 })
             ]}),
             new EventChoice({name: "Quarantine the sick and their families", effects: [
@@ -463,6 +514,68 @@ export class Pestilence extends RegularSettlementEvent {
             name: "pestilence", 
             amount: 1 - healthDamage,
         }));
+        return bonuses;
+    }
+}
+
+export class WolfAttack extends RegularSettlementEvent {
+    constructor(props) {
+        super({
+            name: "wolf attack",
+            checkEveryAvg: daysInYear*2,
+            variance: 0.35, 
+            eventDuration: 1,
+            forcePause: true,
+            ...props
+        });
+    }
+    eventShouldFire_() {
+        return successToTruthy(rollSuccess(1.0));
+    }
+    getEventChoices() {
+        return [
+            new EventChoice({name: "Do nothing", effects: [
+                new TemporaryHappinessBonus({
+                    name: "did nothing about wolf attack", 
+                    amount: -0.05,// this number is negative
+                    duration: roundNumber(daysInYear, 0),
+                    timer: this.timer
+                })
+            ]}),
+            new ProbabilisticEventChoice({name: "Hunt the wolves down", effects: [],
+                successChance: new Variable({startingValue: 0.5}), successEffects: [
+                    // Need to fill this out
+                ], failEffects: [
+                    new ChangePopulationBonus({
+                        name: "death from wolf hunting down wolves", 
+                        amount: -2
+                    })
+                ]
+            })
+        ];
+    }
+    getBonuses() {
+        let bonuses = [];
+        let success = rollSuccess(0.35);
+        let successNumber = successToNumber(success, 2); // can be -3,-1,1,3
+        this.bonusFlavourText = "Some wolves attacked and "
+        if (success !== majorSuccessText) {
+            let population = this.settlements[0].populationSizeExternal.currentValue;
+            let numDead = -Math.round(Math.min(7, Math.max(1, (2 - successNumber)*population/50.0)))
+            bonuses.push(new ChangePopulationBonus({
+                name: "death from wolf attack", 
+                amount: numDead
+            }, new TemporaryHappinessBonus({
+                name: "grieving death from wolf attack", 
+                amount: 0.03*(-2 + successNumber),// this number is negative
+                duration: roundNumber(daysInYear, 0),
+                timer: this.timer
+            })));
+            this.bonusFlavourText += "they killed some villagers";
+        } else {
+            this.bonusFlavourText += "we got lucky, no one was hurt";
+        }
+
         return bonuses;
     }
 }
@@ -532,7 +645,7 @@ export class EventComponent extends UIBase {
                     {this.event.getText().map((text, i) => {return <span key={i}>{text}<br /></span>})}
                 </div>
                 <br />
-                {this.event.getEventChoices ? this.event.getEventChoices().map((choice, i) => {
+                {!this.event.appliedChoice && this.event.getEventChoices ? this.event.getEventChoices().map((choice, i) => {
                     return <div key={i}><CustomTooltip key={i} items={choice.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
                         <Button variant='outlined' onClick={() => {this.event.applyChoice(choice);}}>{choice.name}</Button>
                     </CustomTooltip></div>

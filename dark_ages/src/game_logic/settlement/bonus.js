@@ -259,7 +259,7 @@ export class TemporaryModifierBonus extends SettlementBonus {
         super(props);
         this.amount = props.amount;
         this.variableAccessor = props.variableAccessor;
-        this.type = props.type || addition;
+        this.type = props.type || addition; // Not sure this works properly besides addition
         this.duration = props.duration;
         this.timer = props.timer;
         if (!this.variableAccessor || !this.timer || !this.duration || !this.amount) {
@@ -267,7 +267,8 @@ export class TemporaryModifierBonus extends SettlementBonus {
         }
     }
     activate(settlement) {
-        // current happiness change is startingValue amount*(1 - diff/duration)
+        // current change is startingValue amount*(1 - diff/duration) - this is if we interpolate between 0 and amount for the sake of addition,
+        // but what if we interpolate between amount and 1 for the sake of multiplication?
         this.durationFactor = new Variable({name: "duration factor", startingValue: -1*this.timer.currentValue, max: new Variable({startingValue: 1}), 
         modifiers: [
             new VariableModifier({variable: this.timer, type: addition}),
@@ -281,7 +282,7 @@ export class TemporaryModifierBonus extends SettlementBonus {
         this.variableName = settlement[this.variableAccessor].name;
         this.timer.subscribe(() => {
             if (this.durationFactor.currentValue >= 1) {
-                settlement.happiness.removeModifier(this.modifier);
+                settlement[this.variableAccessor].removeModifier(this.modifier);
                 return false; // return false to unsub
             }
         })
