@@ -12,6 +12,8 @@ import { Variable, multiplication, VariableModifier } from "./UIUtils";
 import { toHaveDisplayValue } from "@testing-library/jest-dom/dist/matchers";
 
 const forceLastCheckedDebug = true; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
+const forceFireEvents = true; // Force all events to fire no matter what eventShouldFire_() says
+
 
 class Event {
     constructor(props) {
@@ -55,7 +57,7 @@ class Event {
         if (!this.isActive() && (this.lastChecked === null || (this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) === 0)) {
             this.lastChecked = this.timer.currentValue;
             let notBanned = this.timer.currentValue > this.bannedUntil;
-            if (this.eventShouldFire() && notBanned) {
+            if ((forceFireEvents || this.eventShouldFire()) && notBanned) {
                 this.lastTriggered = this.timer.currentValue;
                 this.fire();
                 if (this.forcePause) {
@@ -364,7 +366,7 @@ export class CropBlight extends RegularSettlementEvent {
         });
     }
     eventShouldFire_() {
-        return successToTruthy(rollSuccess(1.0));
+        return successToTruthy(rollSuccess(0.2));
     }
     getEventChoices() {
         if (this.settlements.length !== 1) {
@@ -435,7 +437,7 @@ export class MineShaftCollapse extends RegularSettlementEvent {
             return false;
         }
         this.numWorkers = mine.filledJobs.currentValue;
-        return successToTruthy(rollSuccess(1.0));
+        return successToTruthy(rollSuccess(0.2));
     }
     getEventChoices() {
         if (this.settlements.length !== 1) {
@@ -485,7 +487,7 @@ export class Fire extends RegularSettlementEvent {
         });
     }
     eventShouldFire_() {
-        return successToTruthy(rollSuccess(1.0));
+        return successToTruthy(rollSuccess(0.25));
     }
     getEventChoices() {
         return [];
@@ -524,13 +526,13 @@ export class Pestilence extends RegularSettlementEvent {
             name: "pestilence",
             checkEveryAvg: daysInYear*4,
             variance: 0.35, 
-            eventDuration: daysInYear*0.5,
+            eventDuration: daysInYear*0.65,
             forcePause: true,
             ...props
         });
     }
     eventShouldFire_() {
-        return successToTruthy(rollSuccess(1.0));
+        return successToTruthy(rollSuccess(0.25));
     }
     getEventChoices() {
         return [
@@ -581,7 +583,7 @@ export class WolfAttack extends RegularSettlementEvent {
     constructor(props) {
         super({
             name: "wolf attack",
-            checkEveryAvg: daysInYear*4,
+            checkEveryAvg: daysInYear*3,
             variance: 0.35, 
             eventDuration: 1,
             forcePause: true,
@@ -589,7 +591,7 @@ export class WolfAttack extends RegularSettlementEvent {
         });
     }
     eventShouldFire_() {
-        return successToTruthy(rollSuccess(1.0));
+        return successToTruthy(rollSuccess(0.25));
     }
     getEventChoices() {
         return [
@@ -618,7 +620,7 @@ export class WolfAttack extends RegularSettlementEvent {
     }
     getBonuses() {
         let bonuses = [];
-        let success = rollSuccess(0.35);
+        let success = rollSuccess(0.4);
         let successNumber = successToNumber(success, 2); // can be -3,-1,1,3
         this.bonusFlavourText = "Some wolves attacked and "
         if (success !== majorSuccessText) {
