@@ -27,6 +27,9 @@ export class Timer extends Variable {
     isForceStopped() {
         return this.forceStops.length !== 0;
     }
+    isRunning() {
+        return this.started;
+    }
     forceStopTimer(reason) {
         if (this.started) {
             clearInterval(this.intervalID);

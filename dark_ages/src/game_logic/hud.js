@@ -30,19 +30,19 @@ class HUD extends UIBase {
                 <Grid item xs={4} style={{"textAlign": "center", margin: "auto"}}>
                     <CustomTooltip items={this.props.gameClock.isForceStopped() ? ['Game clock force stopped by: '].concat(this.props.gameClock.forceStops) :['Play'] 
                         } style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                        <Button variant={this.props.gameClock.isForceStopped() ? 'disabled' : config.buttonVariant} onClick={this.props.gameClock.startTimer.bind(this.props.gameClock)}>Play</Button>
+                        <Button variant={this.props.gameClock.isRunning() || this.props.gameClock.isForceStopped() ? 'disabled' : config.buttonVariant} onClick={this.props.gameClock.startTimer.bind(this.props.gameClock)}>Play</Button>
                     </CustomTooltip>
                 </Grid>
                 <Grid item xs={4} style={{"textAlign": "center", margin: "auto"}}>
                     <CustomTooltip items={this.props.gameClock.isForceStopped() ? ['Game clock force stopped by: '].concat(this.props.gameClock.forceStops) :['Pause'] 
                         } style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                        <Button variant={config.buttonVariant} onClick={this.props.gameClock.stopTimer.bind(this.props.gameClock)}>Pause</Button>
+                        <Button variant={!this.props.gameClock.isRunning() ? 'disabled' : config.buttonVariant} onClick={this.props.gameClock.stopTimer.bind(this.props.gameClock)}>Pause</Button>
                     </CustomTooltip>
                 </Grid>
                 <Grid item xs={4} style={{"textAlign": "center", margin: "auto"}}>
                     <CustomTooltip items={this.props.gameClock.isForceStopped() ? ['Game clock force stopped by: '].concat(this.props.gameClock.forceStops) :['Next Day'] 
                         } style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                        <Button variant={config.buttonVariant} onClick={this.props.gameClock.forceTick.bind(this.props.gameClock)}>Next Day</Button>
+                        <Button variant={!this.props.gameClock.isRunning() ? 'disabled' : config.buttonVariant} onClick={this.props.gameClock.forceTick.bind(this.props.gameClock)}>Next Day</Button>
                     </CustomTooltip>
                 </Grid>
             </Grid>

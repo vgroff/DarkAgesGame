@@ -666,9 +666,9 @@ export class HarvestEvent extends SettlementEvent {
         return true;
     }
     getBonuses() {
-        this.harvestSuccess = rollSuccess(0.65);
-        let harvestSuccess  = successToNumber(this.harvestSuccess, 0.5);
-        this.harvestModifier = 0.95 + 0.1*(harvestSuccess/Math.abs(harvestSuccess))*harvestSuccess**2; // varies between ~0.7 and ~1.1
+        this.harvestSuccess = rollSuccess(0.7);
+        let harvestSuccess  = successToNumber(this.harvestSuccess, 3);
+        this.harvestModifier = 0.95 + 0.05*harvestSuccess; // varies between ~0.75 and ~1.15
         return [
             new SpecificBuildingProductivityBonus({name: "effect of weather on the harvest", building: Farm.name, amount: this.harvestModifier}),
             new ChangePriceBonus({name: "effect of weather on the harvest", resource: Resources.food, amount: 1/this.harvestModifier})
