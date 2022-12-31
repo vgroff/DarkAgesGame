@@ -262,11 +262,11 @@ export class Settlement {
 
         this.settlementEvents = [
             new CropBlight({settlements: [this], timer: this.gameClock}),
-            new LocalMiracle({settlements: [this], timer: this.gameClock}),
-            new MineShaftCollapse({settlements: [this], timer: this.gameClock}),
-            new Fire({settlements: [this], timer: this.gameClock}),
-            new Pestilence({settlements: [this], timer: this.gameClock}),
-            new WolfAttack({settlements:[this], timer: this.gameClock})
+            // new LocalMiracle({settlements: [this], timer: this.gameClock}),
+            // new MineShaftCollapse({settlements: [this], timer: this.gameClock}),
+            // new Fire({settlements: [this], timer: this.gameClock}),
+            // new Pestilence({settlements: [this], timer: this.gameClock}),
+            // new WolfAttack({settlements:[this], timer: this.gameClock})
         ];
         this.tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
         this.adjustCoalDemand();

@@ -11,8 +11,8 @@ import {Box, Button, Modal, Typography} from "@mui/material";
 import { Variable, multiplication, VariableModifier } from "./UIUtils";
 import { toHaveDisplayValue } from "@testing-library/jest-dom/dist/matchers";
 
-const forceLastCheckedDebug = false; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
-const forceFireEvents = false; // Force all events to fire no matter what eventShouldFire_() says
+const forceLastCheckedDebug = true; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
+const forceFireEvents = true; // Force all events to fire no matter what eventShouldFire_() says
 // Setting both of the above the true can make debugging events easier as it forces them all to fire on day 2 
 
 class Event {
@@ -126,6 +126,7 @@ class ChangeEventDuration extends EventEffect {
         event.eventDuration.addModifier(this.modifier);
     }
     deactivate(event) {
+        console.log("deactive event effect");
         event.eventDuration.removeModifier(this.modifier);
     }
     getEffectText() {
@@ -199,7 +200,7 @@ class ProbabilisticEventChoice extends EventChoice {
     }
     getText() {
         let text = [this.name];
-        if (this.effects.lenght) {
+        if (this.effects.length) {
             text.push("Has the following effects:")
             text = text.concat(this.effects.map(effect => effect.getEffectText()));
         }
@@ -258,25 +259,33 @@ class SettlementEvent extends Event {
         return this.eventShouldFire_(this.timer.currentValue, this.settlements);
     }
     fire() {
-        this.choiceApplied = false;
-        this.appliedChoice = null;
         if (this.fire_) {
             return this.fire_(this.timer.currentValue, this.settlements);
         } else {
             let bonuses = this.getBonuses(this.timer.currentValue, this.settlements);
-            if (this.lastBonuses) {
-                this.lastBonuses.forEach( bonus => {
-                    this.settlements.forEach( settlement => {
-                        settlement.deactivateBonus(bonus);
-                    });
-                });
-            }
+            this.deactivateBonusesAndEventEffects();
+            this.choiceApplied = false;
+            this.appliedChoice = null;
             bonuses.forEach( bonus => {
                 this.settlements.forEach( settlement => {
                     settlement.activateBonus(bonus);
                 });
             });
             this.lastBonuses = bonuses;
+        }
+    }
+    deactivateBonusesAndEventEffects() {
+        if (this.lastBonuses) {
+            this.lastBonuses.forEach( bonus => {
+                this.settlements.forEach( settlement => {
+                    settlement.deactivateBonus(bonus);
+                });
+            });
+        }     
+        if (this.appliedChoice) {
+            this.appliedChoice.getEffects().forEach(effect => {
+                this.deactivateEventEffect(effect);
+            });
         }
     }
     getBonuses() {
@@ -320,14 +329,10 @@ class SettlementEvent extends Event {
         if (this.end_) {
             return this.end_(this.timer.currentValue, this.settlements);
         } else {
-            if (this.lastBonuses) {
-                this.lastBonuses.forEach( bonus => {
-                    this.settlements.forEach( settlement => {
-                        settlement.deactivateBonus(bonus);
-                    });
-                });
-            }
+            this.deactivateBonusesAndEventEffects();
             this.lastBonuses = null;
+            this.choiceApplied = false;
+            this.appliedChoice = null;
         }
     }
     getText() {

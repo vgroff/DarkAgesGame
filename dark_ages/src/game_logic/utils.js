@@ -15,11 +15,7 @@ export function roundNumber(number, dp = 3) {
 }
 
 export function percentagize(amount) {
-    if (amount > 1) {
-        return `${roundNumber((amount - 1)*100, 1)}`;
-    } else {
-        return `${roundNumber((1 - 1/amount)*100, 1)}`;
-    }
+    return `${roundNumber((amount - 1)*100, 1)}`
 }
 
 export function randomRange(low, high) {

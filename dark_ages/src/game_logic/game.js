@@ -58,7 +58,8 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - BUG: peat bog doesnt count as a building for jobs?
+// - It should be obvious from the UI if the game is paused or not (disabled buttons)
+// - Not clear that listAggModifiers really work as intended - they might need to be manually re-triggered...
 // - Events Notes:
 //     - Make the wolf attack depended on how much weaponry you have available
 //     - More basic events:

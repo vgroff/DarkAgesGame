@@ -3,7 +3,7 @@ export const summer = 'summer';
 export const autumn = 'autumn';
 export const winter = 'winter';
 export const seasons = [spring, summer, autumn, winter];
-export const daysInYear = 60;
+export const daysInYear = 12;
 
 
 export function seasonToTempFactor(season) {
