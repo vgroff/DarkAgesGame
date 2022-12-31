@@ -65,27 +65,6 @@ export class Settlement {
             return new ResourceStorage({resource: resource, size: this.storageSize, startingAmount: 0, gameClock: this.gameClock})
         });
         this.resourceBuildings = [] // Keep resource buildings separate for jobsTaken
-        this.generalProductivity = new Variable({name: "general productivity", owner: this, startingValue: 1});
-        this.generalProductivityModifier = new VariableModifier({variable: this.generalProductivity, type: multiplication});
-        this.addBuilding(new Farm({startingSize: 4, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Housing({startingSize: 4, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new HuntingCabin({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new CharcoalKiln({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new LumberjacksHut({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new ConstructionSite({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Library({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Tavern({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Church({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Toolmaker({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Roads({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Brewery({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Apothecary({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Quarry({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Stonecutters({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new IronMine({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new CoalMine({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new Bowyer({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
-        this.addBuilding(new WeaponMaker({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.totalJobs = new SumAggModifier(
             {
                 name: "Total Jobs",
@@ -108,6 +87,27 @@ export class Settlement {
                 type: addition
             }
         ); 
+        this.generalProductivity = new Variable({name: "general productivity", owner: this, startingValue: 1});
+        this.generalProductivityModifier = new VariableModifier({variable: this.generalProductivity, type: multiplication});
+        this.addBuilding(new Farm({startingSize: 4, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Housing({startingSize: 4, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new HuntingCabin({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new CharcoalKiln({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new LumberjacksHut({startingSize: 2, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new ConstructionSite({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Library({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Tavern({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Church({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Toolmaker({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Roads({startingSize: 1, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Brewery({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Apothecary({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Quarry({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Stonecutters({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new IronMine({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new CoalMine({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new Bowyer({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
+        this.addBuilding(new WeaponMaker({startingSize: 0, productivityModifiers: [], resourceStorages: this.resourceStorages}));
         this.unemployed = new Variable({name: "Unemployed", startingValue: 0, modifiers: [
             new VariableModifier({variable: this.populationSizeExternal, type:addition}),
             new VariableModifier({variable: this.jobsTaken.variable, type:subtraction})
@@ -278,7 +278,9 @@ export class Settlement {
         console.log(`Adding ${building.name}`);
         if (building instanceof ResourceBuilding) {
             this.resourceBuildings.push(building);
-            building.productivity.addModifier(this.generalProductivityModifier)
+            building.productivity.addModifier(this.generalProductivityModifier);
+            this.totalJobs.resubscribeToVariables();
+            this.jobsTaken.resubscribeToVariables();
         } else {
             this.otherBuildings.push(building);
         }

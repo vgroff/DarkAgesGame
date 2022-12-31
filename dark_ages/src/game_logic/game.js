@@ -58,7 +58,7 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - BUG: 
+// - BUG: peat bog doesnt count as a building for jobs?
 // - Events Notes:
 //     - Make the wolf attack depended on how much weaponry you have available
 //     - More basic events:
