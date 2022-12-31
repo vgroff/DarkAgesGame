@@ -3,8 +3,9 @@ export const successText = "success";
 export const failureText = "failure";
 export const majorSuccessText = "major success";
 export const majorFailureText = "major failure";
+export const defaultMajorModifier = 0.33;
 
-export function rollSuccess(successChance, majorModifier=0.33) {
+export function rollSuccess(successChance, majorModifier=defaultMajorModifier) {
     let roll = Math.random();
     if (roll < successChance) {
         if (roll < successChance*majorModifier) {
@@ -20,6 +21,15 @@ export function rollSuccess(successChance, majorModifier=0.33) {
         } else {
             return failureText
         }
+    }
+}
+
+export function getProbabilities(successChance, majorModifier=defaultMajorModifier) {
+    return {
+        successText: successChance * (1-majorModifier),
+        majorSuccessText: successChance * majorModifier,
+        failureText: (1 - successChance) * (1-majorModifier),
+        majorFailureText: (1 - successChance) * majorModifier,    
     }
 }
 

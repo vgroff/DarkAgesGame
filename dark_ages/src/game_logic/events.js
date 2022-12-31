@@ -1,6 +1,6 @@
 import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
-import { rollSuccess, successToNumber, successToTruthy, majorFailureText, majorSuccessText } from "./rolling";
+import { rollSuccess, successToNumber, successToTruthy, majorFailureText, majorSuccessText, successText, getProbabilities, defaultMajorModifier, failureText } from "./rolling";
 import { daysInYear } from "./seasons";
 import { ChangePopulationBonus, ChangePriceBonus, GeneralProductivityBonus, HealthBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus, TemporaryHealthBonus } from "./settlement/bonus";
 import { Church, Farm, IronMine, LumberjacksHut } from "./settlement/building";
@@ -165,38 +165,76 @@ class ProbabilisticEventChoice extends EventChoice {
     constructor(props) {
         super(props);
         this.successChance = props.successChance;
+        this.majorModifier = props.majorModifier || defaultMajorModifier;
+        this.majorSuccessEffects = props.majorSuccessEffects || null;
         this.successEffects = props.successEffects;
-        this.failEffects = props.failEffects || [];
+        this.failureEffects = props.failureEffects || null;
+        this.majorFailureEffects = props.majorFailureEffects || null;
         this.didSucceed = null;
+        this.lastRoll = null;
         if (this.successChance === undefined || this.successEffects === undefined) {    
             throw Error("undefined variables for event choice");
         }
     }
     getEffects() {
-        this.didSucceed = successToTruthy(rollSuccess(this.successChance.currentValue));
-        if (this.didSucceed) {
-            return this.effects.concat(this.successEffects);
-        } else {
-            return this.effects.concat(this.failEffects);
-        }
+        this.lastRoll = rollSuccess(this.successChance.currentValue, this.majorModifier);
+        return this.effects.concat(this.getEffectsWithRoll(this.lastRoll));
+    }
+    getEffectsWithRoll(roll) {
+        if (roll === majorSuccessText || roll === successText) {
+            if (this.majorSuccessEffects && roll === majorSuccessText) {
+                return this.majorSuccessEffects;
+            } else {
+                return this.successEffects || [];
+            }
+        } else if (roll === majorFailureText || roll === failureText) {
+            if (this.majorFailureEffects && roll === majorFailureText) {
+                return this.majorFailureEffects;
+            } else {
+                return this.failureEffects || [];
+            }
+        } else { throw Error(); }
     }
     getText() {
         let text = [this.name];
-        text = text.concat(this.effects.map(effect => effect.getEffectText()));
-        if (this.didSucceed === null) {
-            text.push(`There is a ${percentagize(1+this.successChance.currentValue)}% of success with the following effects:`)
+        if (this.effects.lenght) {
+            text.push("Has the following effects:")
+            text = text.concat(this.effects.map(effect => effect.getEffectText()));
+        }
+        let probs = getProbabilities(this.successChance.currentValue);
+        if (this.lastRoll === null) {
+            let majorSuccess = this.majorSuccessEffects !== null;
+            let introText = `There is a ${percentagize(majorSuccess ? 1+probs.successText : 1+this.successChance.currentValue)}% of success`;
+            if (this.successEffects.length > 0) {
+                introText += ' which gives the following effects:'
+            }
+            text.push(introText)
             text = text.concat(this.successEffects.map(effect => effect.getEffectText()));
-            text.push(``)
-            text.push(`On failure, the following effects will trigger:`)
-            text = text.concat(this.failEffects.map(effect => effect.getEffectText()));
-        } else if (this.didSucceed) {
-            text.push("Roll suceeded, the effects are:")
-            text = text.concat(this.successEffects.map(effect => effect.getEffectText()));
-            return text;
+            if (majorSuccess) {
+                text.push(``)
+                text.push(`There is also a ${percentagize(1+probs.majorSuccessText)}% chance of major success, which gives the following effects:`)
+                if (this.majorSuccessEffects.length === 0) {
+                    text.push('No effect');
+                }
+                text = text.concat(this.majorSuccessEffects.map(effect => effect.getEffectText()));               
+            }
+            let majorFail = this.majorFailureEffects !== null;
+            if (this.failureEffects !== null) {
+                text.push(``)
+                text.push(`On failure, the following effects will trigger:`)
+                text = text.concat(this.failureEffects.map(effect => effect.getEffectText()));
+            }
+            if (majorFail) {
+                text.push(``)
+                text.push(`There is also a ${percentagize(1+probs.majorFailureText)}% chance of major failure, which gives the following effects:`)
+                if (this.majorFailureEffects.length === 0) {
+                    text.push('No effect');
+                }
+                text = text.concat(this.majorFailureEffects.map(effect => effect.getEffectText()));               
+            }
         } else {
-            text.push("Roll failed, the effects are:")
-            text = text.concat(this.failEffects.map(effect => effect.getEffectText()));
-            return text;
+            text.push(`Rolled ${this.lastRoll}`);
+            text = text.concat(this.getEffectsWithRoll(this.lastRoll).map(effect => effect.getEffectText()));
         }
         return text;
     }
@@ -543,7 +581,7 @@ export class WolfAttack extends RegularSettlementEvent {
     constructor(props) {
         super({
             name: "wolf attack",
-            checkEveryAvg: daysInYear*3,
+            checkEveryAvg: daysInYear*4,
             variance: 0.35, 
             eventDuration: 1,
             forcePause: true,
@@ -569,7 +607,7 @@ export class WolfAttack extends RegularSettlementEvent {
                     new TemporaryEventDisabled({
                         amount: 4*this.checkEveryAvg
                     })
-                ], failEffects: [
+                ], majorFailureEffects: [
                     new ChangePopulationBonus({
                         name: "death from wolf hunting down wolves", 
                         amount: -1
