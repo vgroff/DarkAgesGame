@@ -1,6 +1,6 @@
 import UIBase from './UIBase';
 import Grid from  '@mui/material/Grid';
-import { SettlementComponent } from './settlement/settlement';
+import { Settlement, SettlementComponent } from './settlement/settlement';
 
 
 class MainUI extends UIBase {
@@ -10,9 +10,10 @@ class MainUI extends UIBase {
         this.addVariables([props.internalTimer]);
     }
     childRender() {
+        this.game = this.props.game;
         return <Grid container spacing={2}>
             <Grid item xs={12}>
-                <SettlementComponent settlement={this.game.settlements[this.props.currentSettlement]}/>
+                {this.props.selected instanceof Settlement ? <SettlementComponent settlement={this.props.selected}/> : <span>Nothing</span>}
             </Grid>
         </Grid>
     }

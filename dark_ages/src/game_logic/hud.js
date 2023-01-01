@@ -42,7 +42,7 @@ class HUD extends UIBase {
                 <Grid item xs={4} style={{"textAlign": "center", margin: "auto"}}>
                     <CustomTooltip items={this.props.gameClock.isForceStopped() ? ['Game clock force stopped by: '].concat(this.props.gameClock.forceStops) :['Next Day'] 
                         } style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                        <Button variant={!this.props.gameClock.isRunning() ? 'disabled' : config.buttonVariant} onClick={this.props.gameClock.forceTick.bind(this.props.gameClock)}>Next Day</Button>
+                        <Button variant={this.props.gameClock.isRunning() ? 'disabled' : config.buttonVariant} onClick={this.props.gameClock.forceTick.bind(this.props.gameClock)}>Next Day</Button>
                     </CustomTooltip>
                 </Grid>
             </Grid>

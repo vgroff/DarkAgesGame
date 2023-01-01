@@ -19,6 +19,7 @@ class Game {
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt}),
+            new Settlement({name: 'Village 2', gameClock: this.gameClock, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt})
         ];
         this.totalMarketIncome = new SumAggModifier(
             {
@@ -58,8 +59,36 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - It should be obvious from the UI if the game is paused or not (disabled buttons)
-// - Not clear that listAggModifiers really work as intended - they might need to be manually re-triggered...
+// - Move to the character+culture+faction stuff
+// - auto-sell excess goods to the market - important! else they get wasted?
+// - Rebellions come from interest groups using happiness+legitimacy
+//       - Add in interest groups like nobles, clergy, people, soldiers and merchants
+//       - Each group supports or opposes the player based on happiness, legitimacy, privileges and other modifiers
+//       - The more powerful the group and the more it supports/opposes, the more supports/opposition the leader has. Too much opposition and they lose
+//       - Giving privileges to nobles gives legitimacy but reduces productivity and happiness. Early on, it is the only way to maintain power
+//       - As things develop (i.e. happiness increases), you can take privileges away from nobles and support other IGs instead
+
+// - Big-time Optimisation: Force happiness, health to 3 dp? Also building productivity? 
+//          - add new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200}) to building productivtity
+// - Optimisation: the game appears to be really slow when the user switches between bankruptcy and being liquid
+//          - Examine what is so expensive via logging, maybe deal with it. Might be fine to use round dp
+// - Potential Balance/exploit issue: if productivities are very different in different buildings, trading will be preferred. Research boosts need to be not to aggressive, and trade needs to penalise
+// - option to "buy/sell now" in the market which allows you to buy/sell as much as you can right then from storage
+// - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
+// - auto-sell excess goods to the market - important! else they get wasted?
+// - Add a history to some variables - short term, long term and super long term. Plot them? Snapshot their explanations over time?
+// - resource buildings should show a productivity breakdown so that user can easily see effect of terrain, crop blight etc...
+// - Add a coastal terrain with fishin wharf + higher raid chance
+// - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?) 
+// - UI needs serious improvement to be playable
+// Thoughts on easy UI improvements to make it playable:
+// - Tabluate stuff: production, distribution, trading, research etc...
+// - Move research into it's own tab - it should use the sum of the research from all settlements? since research isn't per-settlement
+// - Have warnings a la Paradox if you have homeless/unemployement/rebellions etc...
+
+// Content notes:
+// - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
+// - Add a coastal terrain with fishin wharf + higher raid chances
 // - Events Notes:
 //     - Make the wolf attack depended on how much weaponry you have available
 //     - More basic events:
@@ -78,30 +107,6 @@ export default Game;
 //                  - a chance that they can rob you in the night? Would need to trigger another event later? Could have a one-time event
 //          - pestilence: lose health, then choose to isolate for a productivity hit or lose even more health -  The health penalty shouldnt be temporary!
 
-// - Big-time Optimisation: Force happiness, health to 3 dp? Also building productivity? 
-//          - add new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200}) to building productivtity
-// - Optimisation: the game appears to be really slow when the user switches between bankruptcy and being liquid
-//          - Examine what is so expensive via logging, maybe deal with it. Might be fine to use round dp
-// - Potential Balance/exploit issue: if productivities are very different in different buildings, trading will be preferred. Research boosts need to be not to aggressive, and trade needs to penalise
-// - auto-sell excess goods to the market - important! else they get wasted?
-// - option to "buy/sell now" in the market which allows you to buy/sell as much as you can right then
-// - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)
-// - Add a history to variables - short term, long term and super long term. Plot them?
-// - resource buildings should show a productivity breakdown so that user can easily see effect of terrain, crop blight etc...
-// - Move to the character system!
-// - Rebellions come from interest groups using happiness+legitimacy
-//       - Add in interest groups like nobles, clergy, people, soldiers and merchants
-//       - Each group supports or opposes the player based on happiness, legitimacy, privileges and other modifiers
-//       - The more powerful the group and the more it supports/opposes, the more supports/opposition the leader has. Too much opposition and they lose
-//       - Giving privileges to nobles gives legitimacy but reduces productivity and happiness. Early on, it is the only way to maintain power
-//       - As things develop (i.e. happiness increases), you can take privileges away from nobles and support other IGs instead
-// - Add a coastal terrain with fishin wharf + higher raid chance
-// - Should be able to buy resources on the market that you need as inputs even if you don't produce them (e.g. no iron mine?) 
-// - UI needs serious improvement to be playable
-// Thoughts on easy UI improvements to make it playable:
-// - Tabluate stuff: production, distribution, trading, research etc...
-// - Move research into it's own tab - it should use the sum of the research from all settlements? since research isn't per-settlement
-// - Have warnings a la Paradox if you have homeless/unemployement/rebellions etc...
 
 // Next up:
 // - Basic character/RPG system

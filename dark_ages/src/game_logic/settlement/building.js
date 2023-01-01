@@ -408,7 +408,8 @@ export class BuildingComponent extends UIBase {
         this.addVariables(this.toolTipVars);
     }
     childRender() {
-        let extraStyle = {};
+        this.building = this.props.building;
+        let extraStyle = {}
         let extraVars = [];
         if (this.building instanceof ResourceBuilding) {
             extraVars = [``, `Output resource: ${this.building.outputResource.name}`];

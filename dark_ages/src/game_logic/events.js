@@ -250,7 +250,10 @@ class SettlementEvent extends Event {
         this.lastBonuses = null;
         this.choiceApplied = false;
         this.appliedChoice = null;
-        this.singleSettlement = props.singleSettlement || true;
+        this.singleSettlement = props.singleSettlement;
+        if (this.singleSettlement === undefined) {  
+            this.singleSettlement = true;
+        }
         if (this.singleSettlement && this.settlements.length !== 1) {
             throw Error("this is a single-settlement event")
         }
@@ -689,6 +692,8 @@ export class EventComponent extends UIBase {
         }
     }
     childRender() {
+        this.event = this.props.event;
+        console.log(this.event.appliedChoice);
         return <div><CustomTooltip items={this.event.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center", color: this.event.read ? "black" : "red"}}>
             <span onClick={()=>{Logger.setInspect(this.event); this.setModalOpen(true);}}>{titleCase(this.event.name)}</span>
         </CustomTooltip>

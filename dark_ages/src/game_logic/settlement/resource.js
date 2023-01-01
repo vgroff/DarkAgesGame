@@ -151,6 +151,8 @@ export class ResourceStorageComponent extends UIBase {
         this.addVariables([this.resourceStorage.amount]);
     }
     childRender() {
+        this.resourceStorage = this.props.resourceStorage;
+
         if (this.resourceStorage.cumulates) {
             return <span style={{alignItems: "center", justifyContent: "center"}}>
                 <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>{titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>

@@ -29,10 +29,13 @@ class UIBase extends React.Component {
                 debugger;
             }
             sub.callback = sub.variable.subscribe(() => {
-                self.setState({ready: true, key: sub.key, variable: sub.variable});
+                let newState = self.state;
+                newState[sub.key] = sub.variable;
+                self.setState({...newState});//, () => console.log("settingg mount 1", this.constructor.name, this.state, {...newState}));
             });
             state[sub.key] = sub.variable;
-            this.setState(state)
+            state.ready = true;
+            this.setState({...self.state, ...state});//, () => console.log("settingg mount 2", this.state));
         });
     }
     componentWillUnmount() {

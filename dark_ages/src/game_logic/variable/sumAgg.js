@@ -4,7 +4,8 @@ import { VariableModifier } from "./modifier";
 export class SumAggModifier extends ListAggModifier { 
 
     constructor(props) {
-        props.aggregatorCallback = (variable, variables, modifiers=props.useModifiers || true) => {
+        props.aggregatorCallback = (variable, variables, modifiers=props.useModifiers) => {
+            if (modifiers === undefined) {modifiers = true}
             if (!modifiers) {
                 return {
                     value: variables.reduce((partial_sum, variable) => partial_sum + variable.currentValue, 0),

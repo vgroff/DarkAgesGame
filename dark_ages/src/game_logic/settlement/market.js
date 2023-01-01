@@ -117,6 +117,7 @@ export class MarketResourceComponent extends UIBase {
         this.addVariables([this.marketResource.buyProp, this.marketResource.desiredSellProp, this.marketResource.marketSellPrice])
     }
     childRender() {
+        this.marketResource = this.props.marketResource;
         return <span style={{alignItems: "center", justifyContent: "center", fontSize: 14}}>
             <div>
             <VariableComponent variable={this.marketResource.marketSellPrice} /><br/>

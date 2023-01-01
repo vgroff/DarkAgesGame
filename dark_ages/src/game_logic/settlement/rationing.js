@@ -298,6 +298,9 @@ export class RationingComponent extends UIBase {
         this.addVariables([props.demandedRation, props.recievedRation])
     }
     childRender() {
+        this.demandedRation = this.props.demandedRation;
+        this.recievedRation = this.props.recievedRation;
+        this.idealRation = this.props.idealRation;
         return <span style={{alignItems: "center", justifyContent: "center"}}>
             <div>
             <VariableComponent variable={this.idealRation} /><br/>

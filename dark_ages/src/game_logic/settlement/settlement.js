@@ -502,6 +502,8 @@ export class SettlementComponent extends UIBase {
         }
     }
     childRender() {
+        this.settlement = this.props.settlement;
+        console.log(this.settlement.settlementEvents[0].appliedChoice);
         return <Grid container justifyContent="center" alignItems="center"  style={{alignItems: "center", justifyContent: "center"}} >
         <Grid item xs={12}>
             <h4>Information</h4>
