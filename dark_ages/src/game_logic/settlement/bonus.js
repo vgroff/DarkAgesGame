@@ -348,3 +348,76 @@ export class ChangePopulationBonus extends SettlementBonus {
         return `Change population of settlement by ${this.amount}`;
     }
 };
+
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+// Character Bonuses ////////////////////////////////
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+
+export class CharacterBonus extends Bonus {
+    activate(character) {
+        throw Error("need an activation");
+    }
+    deactivate(character) {
+        throw Error("need an deactivation");
+    }
+}
+
+export class SimpleCharacterModifier extends CharacterBonus {
+    constructor(props) {
+        props.name = props.name || `${props.variableAccessor} bonus`
+        super(props);
+        this.amount = props.amount;
+        this.variableAccessor = props.variableAccessor;
+        this.variableHumanReadable = props.variableHumanReadable || null;
+        this.type = props.type || multiplication;
+        if (!this.variableAccessor || !this.amount) {
+            throw Error("missing props")
+        }
+    }
+    activate(character) {
+        this.modifier = new VariableModifier({startingValue: this.amount, name: this.name, type: this.type});
+        character[this.variableAccessor].addModifier(this.modifier);
+    }
+    deactivate(character) {
+        character[this.variableAccessor].removeModifier(this.modifier);
+    }
+    getEffectText() {
+        let name = this.variableHumanReadable || this.variableAccessor;
+        if (!this.variableHumanReadable && this.variableName && this.variableName !== unnamedVariableName) {
+            name = this.variableName;
+        }
+        let numberText;
+        if (this.type === multiplication) {
+            numberText = percentagize(this.amount) + "%";
+        } else if (this.type === addition) {
+            numberText = roundNumber(this.amount, 2);
+        }
+        return `${titleCase(name)} changed by ${numberText} `;
+    }
+};
+
+export class LegitimacyBonus extends SimpleCharacterModifier {
+    constructor(props) {
+        super({...props, variableAccessor: "legitimacy", variableHumanReadable: "legitimacy"});
+    }
+};
+export class StrategyBonus extends SimpleCharacterModifier {
+    constructor(props) {
+        super({...props, variableAccessor: "strategy", variableHumanReadable: "strategy"});
+    }
+};
+
+export class DiplomacyBonus extends SimpleCharacterModifier {
+    constructor(props) {
+        super({...props, variableAccessor: "diplomacy", variableHumanReadable: "diplomacy"});
+    }
+};
+
+export class AdministrationBonus extends SimpleCharacterModifier {
+    constructor(props) {
+        super({...props, variableAccessor: "administration", variableHumanReadable: "administration"});
+    }
+};
+

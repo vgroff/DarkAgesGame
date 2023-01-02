@@ -270,6 +270,7 @@ class SettlementEvent extends Event {
             this.choiceApplied = false;
             this.appliedChoice = null;
             bonuses.forEach( bonus => {
+                bonus.setOrigin("Event:" + this.name);
                 this.settlements.forEach( settlement => {
                     settlement.activateBonus(bonus);
                 });
@@ -693,7 +694,6 @@ export class EventComponent extends UIBase {
     }
     childRender() {
         this.event = this.props.event;
-        console.log(this.event.appliedChoice);
         return <div><CustomTooltip items={this.event.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center", color: this.event.read ? "black" : "red"}}>
             <span onClick={()=>{Logger.setInspect(this.event); this.setModalOpen(true);}}>{titleCase(this.event.name)}</span>
         </CustomTooltip>

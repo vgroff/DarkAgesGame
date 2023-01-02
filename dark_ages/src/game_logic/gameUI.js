@@ -9,7 +9,6 @@ import {SidePanel} from './sidePanelUI'
 class GameUI extends UIBase {
     constructor(props) {
         super(props);
-        console.log("created new");
         this.game = new Game();
         this.gameClock = this.game.gameClock;
 
@@ -28,7 +27,7 @@ class GameUI extends UIBase {
                     <HUD gameClock={this.gameClock} treasury={this.game.treasury} harvestEvent={this.game.harvestEvent}/>
                 </div>
                 <div>
-                    <MainUI selected={this.state.selected} gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game}/>
+                    <MainUI selected={this.state.selected || this.game.playerCharacter} gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game}/>
                 </div>
             </Grid>
             <Grid item xs={2}>

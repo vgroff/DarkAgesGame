@@ -7,6 +7,7 @@ import { integerPropType } from "@mui/utils";
 import {daysInYear, seasons} from './seasons'
 import { Farmlands, Marshlands, NoTerrain } from "./settlement/terrain";
 import { HarvestEvent } from "./events";
+import { Celtic, Character, Cultures } from "./character";
 
 class Game {
     constructor(gameClock) {
@@ -17,9 +18,10 @@ class Game {
             return {day, season, year, text: `Day ${day}, ${titleCase(season)}, Year ${year}`}
         }});
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
+        this.playerCharacter = new Character({name:"player", culture: Cultures.Celtic});
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt}),
-            new Settlement({name: 'Village 2', gameClock: this.gameClock, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt})
+            // new Settlement({name: 'Village 2', gameClock: this.gameClock, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt})
         ];
         this.totalMarketIncome = new SumAggModifier(
             {
@@ -59,7 +61,13 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - Move to the character+culture+faction stuff
+// - Move to the character+culture+faction+legitimacy stuff
+//          - Culture should now affect all people of that culture with certain things, and all settlements of that culture through ownership?
+//          - Seems like setting ownership of a settlement will be a bit of work, as expected. The effects of culture and other character effects on a settlement will need to be applied correctly
+//                   - Should all character effects be collated by the character somehow? Each separately, but aggregated on demand?
+// - UIBase doesn't currently work correctly since e.g. the props.character in the CharacterComponent can change, but the subscriptions won'
+//        - Instead, they need to be given a callback that gets the appropriate variables and passes them on so that it can re-run during component didUpdate(), including clearing the old ones
+// - court intrigue events and nomad events for growth
 // - auto-sell excess goods to the market - important! else they get wasted?
 // - Rebellions come from interest groups using happiness+legitimacy
 //       - Add in interest groups like nobles, clergy, people, soldiers and merchants
@@ -103,6 +111,7 @@ export default Game;
 //          - hunting game surplus: hunter's hut increase
 //          - dry hunting lands: hunters hut significant decrease
 //          - local miracle: boost to happiness and (and immigration?) - partly done but no immigration
+//          - "court intrigue" events - trials, corruption, dealings with nobles etc... change legitimacy and happiness and depend on character abilities
 //          - large group of nomads arrives: take them in, trade with them, send them away (force pause this one?) 
 //                  - a chance that they can rob you in the night? Would need to trigger another event later? Could have a one-time event
 //          - pestilence: lose health, then choose to isolate for a productivity hit or lose even more health -  The health penalty shouldnt be temporary!
