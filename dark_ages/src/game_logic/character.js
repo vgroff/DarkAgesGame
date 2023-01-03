@@ -261,6 +261,32 @@ export class Character {
             ]})})
         ]});
         this.traits = [];
+        this.settlements = [];
+    }
+    addSettlement(settlement) {
+        this.settlements.push(settlement);
+        this.traits.forEach(trait => {
+            let effects = trait.pastEffects ? trait.pastEffects : trait.getEffects()
+            effects.forEach(effect => {
+                if (effect instanceof SettlementBonus) {
+                    settlement.activateBonus(effect);
+                }
+            });
+        });
+    }
+    removeSettlement(settlement) {
+        const index = this.traits.indexOf(settlement);
+        if (index > -1) { // only splice array when item is found
+            this.settlements.splice(index, 1); // 2nd parameter means remove one item only
+        }
+        this.traits.forEach(trait => {
+            let effects = trait.pastEffects ? trait.pastEffects : trait.getEffects()
+            effects.forEach(effect => {
+                if (effect instanceof SettlementBonus) {
+                    settlement.deactivateBonus(effect);
+                }
+            });
+        });
     }
     addTrait(trait) {
         trait.activate(this);
@@ -290,8 +316,7 @@ export class Character {
         if (bonus instanceof CharacterBonus) {
             bonus.activate(this);
         } else if (bonus instanceof SettlementBonus) {
-            // handle these
-            throw Error("didn't recognise bonus")
+            this.settlements.forEach(settlement => settlement.activateBonus(bonus));
         } else {
             throw Error("didn't recognise bonus")
         }
@@ -300,8 +325,7 @@ export class Character {
         if (bonus instanceof CharacterBonus) {
             bonus.deactivate(this);
         } else if (bonus instanceof SettlementBonus) {
-            // handle these
-            throw Error("didn't recognise bonus")
+            this.settlements.forEach(settlement => settlement.deactivate(bonus));
         } else {
             throw Error("didn't recognise bonus")
         }  
@@ -389,8 +413,8 @@ export class CharacterComponent extends UIBase {
 }
 
 // Notes
-// - Need to handle settlement-based effects
-//     - Need a method for setting and losing ownership of settlements in order to apply appropriate trait stuff
-// - Do culture part - check phone
+// - Do culture part 
+//     - Celtic: druids (health+apothecary), elected kings (legitimacy), foresters (lumberjack prod. + hunting size/prod)
+//     - 
 // - Faction
 // - (later?) Religion

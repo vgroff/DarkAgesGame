@@ -46,22 +46,27 @@ export class SimpleSettlementModifier extends SettlementBonus {
         }
     }
     activate(settlement) {
-        this.modifier = new VariableModifier({startingValue: this.amount, name: this.name, type: this.type});
+        if (this.amount instanceof Variable) {
+            this.modifier = new VariableModifier({variable: this.amount, name: this.name, type: this.type});
+        } else {
+            this.modifier = new VariableModifier({startingValue: this.amount, name: this.name, type: this.type});
+        }
         settlement[this.variableAccessor].addModifier(this.modifier);
     }
     deactivate(settlement) {
         settlement[this.variableAccessor].removeModifier(this.modifier);
     }
     getEffectText() {
+        let amount = this.amount instanceof Variable ? this.amount.currentValue : this.amount;
         let name = this.variableHumanReadable || this.variableAccessor;
         if (!this.variableHumanReadable && this.variableName && this.variableName !== unnamedVariableName) {
             name = this.variableName;
         }
         let numberText;
         if (this.type === multiplication) {
-            numberText = percentagize(this.amount) + "%";
+            numberText = percentagize(amount) + "%";
         } else if (this.type === addition) {
-            numberText = roundNumber(this.amount, 2);
+            numberText = roundNumber(amount, 2);
         }
         return `${titleCase(name)} changed by ${numberText} `;
     }

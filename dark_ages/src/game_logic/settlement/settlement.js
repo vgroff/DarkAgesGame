@@ -10,7 +10,7 @@ import { Cumulator } from '../UIUtils.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
 import { getBasePopDemands, RationingComponent, applyRationingModifiers } from './rationing.js';
 import { createResearchTree, ResearchComponent } from './research.js';
-import { AddNewBuildingBonus, SettlementBonus } from './bonus.js';
+import { AddNewBuildingBonus, GeneralProductivityBonus, SettlementBonus } from './bonus.js';
 import { Market, MarketResourceComponent } from './market.js';
 import { titleCase } from '../utils.js';
 import { winter, summer, seasonToTempFactor  } from '../seasons.js';
@@ -265,10 +265,17 @@ export class Settlement {
             // new LocalMiracle({settlements: [this], timer: this.gameClock}),
             // new MineShaftCollapse({settlements: [this], timer: this.gameClock}),
             // new Fire({settlements: [this], timer: this.gameClock}),
-            new Pestilence({settlements: [this], timer: this.gameClock}),
+            // new Pestilence({settlements: [this], timer: this.gameClock}),
             // new WolfAttack({settlements:[this], timer: this.gameClock})
         ];
         this.tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
+
+        if (!props.leader) {
+            throw Error("no leader");
+        } else {
+            this.setLeader(props.leader);
+        }
+
         this.adjustCoalDemand();
         this.gameClock.subscribe(() => {
             this.adjustCoalDemand();
@@ -284,6 +291,17 @@ export class Settlement {
         } else {
             this.otherBuildings.push(building);
         }
+    }
+    setLeader(leader) {
+        if (this.leader) {
+            this.removeLeader()
+        }
+        this.leader = leader;
+        this.leader.addSettlement(this);
+    }
+    removeLeader() {
+        this.leader = null;
+        this.leader.removeSettlement(this);
     }
     populateBuildings() {
         this.adjustJobs();
@@ -503,7 +521,6 @@ export class SettlementComponent extends UIBase {
     }
     childRender() {
         this.settlement = this.props.settlement;
-        console.log(this.settlement.settlementEvents[0].appliedChoice);
         return <Grid container justifyContent="center" alignItems="center"  style={{alignItems: "center", justifyContent: "center"}} >
         <Grid item xs={12}>
             <h4>Information</h4>

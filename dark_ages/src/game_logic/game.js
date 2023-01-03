@@ -20,7 +20,7 @@ class Game {
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
         this.playerCharacter = new Character({name:"player", culture: Cultures.Celtic});
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt}),
             // new Settlement({name: 'Village 2', gameClock: this.gameClock, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt})
         ];
         this.totalMarketIncome = new SumAggModifier(
@@ -63,9 +63,8 @@ export default Game;
 // Stuff for now:
 // - Move to the character+culture+faction+legitimacy stuff
 //          - Notes in character.js
-//          - Culture should now affect all people of that culture with certain things, and all settlements of that culture through ownership?
-//          - Seems like setting ownership of a settlement will be a bit of work, as expected. The effects of culture and other character effects on a settlement will need to be applied correctly
-//                   - Should all character effects be collated by the character somehow? Each separately, but aggregated on demand?
+//          - Build culture system using traits, do celtic and maybe one or two others
+//          - Build faction privilege system + maybe add one or two faction features
 // - UIBase doesn't currently work correctly since e.g. the props.character in the CharacterComponent can change, but the subscriptions won'
 //        - Instead, they need to be given a callback that gets the appropriate variables and passes them on so that it can re-run during component didUpdate(), including clearing the old ones
 // - court intrigue events and nomad events for growth
