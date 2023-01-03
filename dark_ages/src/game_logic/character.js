@@ -1,7 +1,7 @@
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import TextField from "@mui/material/TextField";
 import React from "react";
-import { AdministrationBonus, Bonus, CharacterBonus, DiplomacyBonus, LegitimacyBonus, SettlementBonus, StrategyBonus } from "./settlement/bonus";
+import { AdministrationBonus, Bonus, CharacterBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, StrategyBonus } from "./settlement/bonus";
 import UIBase from "./UIBase";
 import { addition, multiplication, Variable, VariableComponent, VariableModifier } from "./UIUtils";
 import { CustomTooltip, percentagize, roundNumber, titleCase } from "./utils";
@@ -96,8 +96,144 @@ export class MerchantUpbringing extends Trait {
     }
 }
 
+export class PeasantUpbringing extends Trait {
+    constructor() {
+        super({name: "pesant upbringing", effects: [
+            new LegitimacyBonus({amount: 0.92, type: multiplication}),
+            new GeneralProductivityBonus({amount: 1.02, type: multiplication}),
+            new DiplomacyBonus({amount: TraitScaler, type: addition}),
+            new StrategyBonus({amount: TraitScaler, type: addition}),
+            new AdministrationBonus({amount: TraitScaler, type: addition})
+        ]})
+    }
+}
 
-export const ChildhoodTraits = [NobleUpbringing, MilitaryUpbringing, MerchantUpbringing];
+export const ChildhoodTraits = [NobleUpbringing, MilitaryUpbringing, MerchantUpbringing, PeasantUpbringing];
+
+export class SmoothTalker extends Trait {
+    constructor() {
+        super({name: "smooth talker", effects: [
+            new DiplomacyBonus({amount: 2*TraitScaler, type: addition}),
+        ]})
+    }
+}
+
+export class Intelligent extends Trait {
+    constructor() {
+        super({name: "intelligent", effects: [
+            new AdministrationBonus({amount: 2*TraitScaler, type: addition}),
+        ]})
+    }
+}
+
+export class Strategic extends Trait {
+    constructor() {
+        super({name: "strategic", effects: [
+            new StrategyBonus({amount: 2*TraitScaler, type: addition})
+        ]})
+    }
+}
+
+export const AbilityTraits = [SmoothTalker, Intelligent, Strategic];
+
+export class Witty extends Trait {
+    constructor() {
+        super({name: "witty", effects: [
+            new DiplomacyBonus({amount: TraitScaler, type: addition}),
+        ]})
+    }
+}
+
+export class Careful extends Trait {
+    constructor() {
+        super({name: "careful", effects: [
+            new AdministrationBonus({amount: TraitScaler, type: addition}),
+        ]})
+    }
+}
+
+export class Brave extends Trait {
+    constructor() {
+        super({name: "strategic", effects: [
+            new StrategyBonus({amount: TraitScaler, type: addition})
+        ]})
+    }
+}
+
+export const PersonalityTraits = [Witty, Careful, Brave];
+
+export class Regalia extends Trait {
+    constructor() {
+        super({name: "regalia", effects: [
+            new DiplomacyBonus({amount: TraitScaler, type: addition}),
+        ]})
+    }
+}
+
+export class Ledger extends Trait {
+    constructor() {
+        super({name: "ledger", effects: [
+            new AdministrationBonus({amount: TraitScaler, type: addition}),
+        ]})
+    }
+}
+
+export class Sword extends Trait {
+    constructor() {
+        super({name: "sword", effects: [
+            new StrategyBonus({amount: TraitScaler, type: addition})
+        ]})
+    }
+}
+
+export const TrinketTraits = [Regalia, Ledger, Sword];
+
+export class JoustingChampion extends Trait {
+    constructor() {
+        super({name: "jousting champion", effects: [
+            new DiplomacyBonus({amount: TraitScaler, type: addition}),
+            new StrategyBonus({amount: 2*TraitScaler, type: addition})
+        ]})
+    }
+}
+
+export class Orator extends Trait {
+    constructor() {
+        super({name: "orator", effects: [
+            new DiplomacyBonus({amount: 3*TraitScaler, type: addition}),
+        ]})
+    }
+}
+
+export class Officer extends Trait {
+    constructor() {
+        super({name: "officer", effects: [
+            new StrategyBonus({amount: 2*TraitScaler, type: addition}),
+            new AdministrationBonus({amount: TraitScaler, type: addition})
+        ]})
+    }
+}
+
+export class PoliticalVeteran extends Trait {
+    constructor() {
+        super({name: "political veteran", effects: [
+            new DiplomacyBonus({amount: TraitScaler, type: addition}),
+            new StrategyBonus({amount: TraitScaler, type: addition}),
+            new AdministrationBonus({amount: TraitScaler, type: addition})
+        ]})
+    }
+}
+
+export class SuccesfulMerchant extends Trait {
+    constructor() {
+        super({name: "succesful merchant", effects: [
+            new DiplomacyBonus({amount: TraitScaler, type: addition}),
+            new AdministrationBonus({amount: 2*TraitScaler, type: addition})
+        ]})
+    }
+}
+
+export const FameTraits = [JoustingChampion, Orator, Officer, PoliticalVeteran, SuccesfulMerchant];
 
 export class Character {
     constructor(props) {
@@ -107,24 +243,36 @@ export class Character {
         if (!this.culture) {
             throw Error("everyone needs a culture")
         }
+        this.traitGroups = {
+            childhoodTrait: {trait: props.childhoodTrait, choices:ChildhoodTraits, name: "childhood trait"},
+            abilityTrait: {trait: props.abilityTrait, choices:AbilityTraits, name: "ability trait"},
+            personalityTrait: {trait: props.personalityTrait, choices:PersonalityTraits, name: "personality trait"},
+            fameTrait: {trait: props.fameTrait, choices:FameTraits, name: "fame trait"},
+            trinketTrait: {trait: props.trinketTrait, choices:TrinketTraits, name: "trinket trait"}
+        }
         this.legitimacy = new Variable({name:`legitimacy`, startingValue:0.2});
         this.diplomacy = new Variable({name:`diplomacy`, startingValue:props.diplomacy});
         this.strategy = new Variable({name:`strategy`, startingValue:props.strategy});
         this.administration = new Variable({name:`administration`, startingValue:props.administration});
-        this.childhoodTrait = props.childhoodTrait;
-        this.personalityTrait = props.personalityTrait;
-        this.knownForTrait = props.knownForTrait;
+        this.administrativeEfficiency = new Variable({name:`administration efficiency`, startingValue:0.9, modifiers:[
+            new VariableModifier({type:addition, variable: new Variable({name:"effect of administration", startingValue:0, modifiers: [
+                new VariableModifier({variable: this.administration, type: addition}),
+                new VariableModifier({startingValue:0.3, type: multiplication})
+            ]})})
+        ]});
         this.traits = [];
     }
     addTrait(trait) {
         trait.activate(this);
         this.traits.push(trait);
-        if (ChildhoodTraits.some(chTrait => trait instanceof chTrait)) {
-            if (this.childhoodTrait) {
-                throw Error("setting childhood traits twice");
+        Object.entries(this.traitGroups).forEach(([key, traitGroup]) => {
+            if (traitGroup.choices.some(chTrait => trait instanceof chTrait)) {
+                if (traitGroup.trait) {
+                    throw Error("setting trait twice");
+                }
+                traitGroup.trait = trait;
             }
-            this.childhoodTrait = trait;
-        }
+        });
     }
     removeTrait(trait) {
         trait.deactivate(this);
@@ -132,9 +280,11 @@ export class Character {
         if (index > -1) { // only splice array when item is found
             this.traits.splice(index, 1); // 2nd parameter means remove one item only
         }
-        if (ChildhoodTraits.some(chTrait => trait instanceof chTrait)) {
-            this.childhoodTrait = null;
-        }
+        Object.entries(this.traitGroups).forEach(([key, traitGroup]) => {
+            if (traitGroup.choices.some(chTrait => trait instanceof chTrait)) {
+                traitGroup.trait = null;
+            }
+        });
     }
     activateBonus(bonus) {
         if (bonus instanceof CharacterBonus) {
@@ -172,10 +322,10 @@ export class TraitComponent extends React.Component {
             this.edit = true;
         }
         return <div>
-            {!this.edit ? 
+            {!this.edit && this.trait ? 
             <div onClick = {() => !this.edit && this.choices ? this.setState({edit: !this.state.edit}) : null}>
                 <CustomTooltip items={this.trait.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                    <span>{this.traitGroupName ? `${this.traitGroupName}: ` : null}{this.trait.name}</span>
+                    <span>{this.traitGroupName ? `${titleCase(this.traitGroupName)}: ` : null}{titleCase(this.trait.name)}</span>
                 </CustomTooltip>
             </div> :
             <FormControl fullWidth size={"small"}>
@@ -210,7 +360,6 @@ export class CharacterComponent extends UIBase {
     }
     childRender() {
         this.character = this.props.character;
-        let childhoodTraits = ChildhoodTraits.map(trait => new trait());
         return <div>
             
             <div onClick = {() => !this.state.editName ? this.setState({editName: !this.state.editName}) : null}>
@@ -223,20 +372,25 @@ export class CharacterComponent extends UIBase {
             Faction: {this.character.faction ? titleCase(this.character.faction.name) : "None"}<br />
             Culture: {this.character.culture ? titleCase(this.character.culture.name) : "None"}<br />
             </p>
-            {<TraitComponent key={`childhood trait`} trait={this.character.childhoodTrait} choices={childhoodTraits} traitGroupName={"Childhood trait"} handleTraitChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/>}
-            <VariableComponent showOwner={false} variable={this.character.legitimacy} /><br />
+            <br />
+            {Object.entries(this.character.traitGroups).map(([key, traitGroup]) => 
+                <TraitComponent key={`${key}`} trait={traitGroup.trait} choices={traitGroup.choices.map(choice => new choice())} traitGroupName={traitGroup.name} handleTraitChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/>)
+            }
+            <br />
+            Skills <br />
             <VariableComponent showOwner={false} variable={this.character.diplomacy} /><br />
             <VariableComponent showOwner={false} variable={this.character.strategy} /><br />
             <VariableComponent showOwner={false} variable={this.character.administration} /><br />
-            All traits: <br />
-            {this.character.traits.map((trait, i) => <TraitComponent key={`trait_${trait.name}_${i}`} trait={trait}></TraitComponent>)}
+            Attributes <br />
+            <VariableComponent showOwner={false} variable={this.character.legitimacy} /><br />
+            <VariableComponent showOwner={false} variable={this.character.administrativeEfficiency} /><br />
         </div>
     }
 }
 
-// Character traits should be:
-// - Make a TraitComponent for displaying traits and their effects
+// Notes
+// - Need to handle settlement-based effects
+//     - Need a method for setting and losing ownership of settlements in order to apply appropriate trait stuff
+// - Do culture part - check phone
 // - Faction
-// - Culture
-// - Skills: Diplomacy, Strategy, Administration
 // - (later?) Religion

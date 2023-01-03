@@ -62,6 +62,7 @@ export default Game;
 
 // Stuff for now:
 // - Move to the character+culture+faction+legitimacy stuff
+//          - Notes in character.js
 //          - Culture should now affect all people of that culture with certain things, and all settlements of that culture through ownership?
 //          - Seems like setting ownership of a settlement will be a bit of work, as expected. The effects of culture and other character effects on a settlement will need to be applied correctly
 //                   - Should all character effects be collated by the character somehow? Each separately, but aggregated on demand?
@@ -93,6 +94,7 @@ export default Game;
 // - Tabluate stuff: production, distribution, trading, research etc...
 // - Move research into it's own tab - it should use the sum of the research from all settlements? since research isn't per-settlement
 // - Have warnings a la Paradox if you have homeless/unemployement/rebellions etc...
+// - Hide research and market behind having the library building and the market building
 
 // Content notes:
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)

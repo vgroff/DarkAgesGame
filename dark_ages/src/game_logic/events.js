@@ -54,7 +54,7 @@ class Event {
     }
     triggerChecks() {
         this.endIfShouldEnd();
-        if (!this.isActive() && (this.lastChecked === null || (this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) === 0)) {
+        if (!this.isActive() && (this.lastChecked === null || (this.timer.currentValue - this.lastChecked) % Math.round(this.checkEvery) > 0)) {
             this.lastChecked = this.timer.currentValue;
             let notBanned = this.timer.currentValue > this.bannedUntil;
             if ((forceFireEvents || this.eventShouldFire()) && notBanned) {
@@ -368,7 +368,7 @@ export class CropBlight extends RegularSettlementEvent {
         super({
             name: "crop blight",
             checkEveryAvg: daysInYear,
-            variance: 0.5, 
+            variance: 0.45, 
             eventDuration:  daysInYear / 2,
             forcePause: true,
             ...props
@@ -405,7 +405,7 @@ export class LocalMiracle extends RegularSettlementEvent {
             name: "local miracle",
             checkEveryAvg: daysInYear*4,
             variance: 0.25, 
-            eventDuration:  roundNumber(daysInYear*0.75, 0),
+            eventDuration:  roundNumber(daysInYear*1.5, 0),
             ...props
         });
     }
@@ -463,8 +463,8 @@ export class MineShaftCollapse extends RegularSettlementEvent {
             new EventChoice({name: "Do nothing", effects: [
                 new TemporaryHappinessBonus({
                     name: "dissapointed at response to mine collapse", 
-                    amount: -0.07,
-                    duration: roundNumber(daysInYear, 0),
+                    amount: -0.05,
+                    duration: roundNumber(daysInYear*1.5, 0),
                     timer: this.timer
                 })
             ]})
@@ -478,7 +478,7 @@ export class MineShaftCollapse extends RegularSettlementEvent {
         }), new TemporaryHappinessBonus({
             name: "grieving death from mine collapse", 
             amount: -0.03,
-            duration: roundNumber(daysInYear*0.75, 0),
+            duration: roundNumber(daysInYear, 0),
             timer: this.timer
         })];
     }
@@ -521,7 +521,7 @@ export class Fire extends RegularSettlementEvent {
             }), new TemporaryHappinessBonus({
                 name: "grieving death from fire", 
                 amount: 0.04*successNumber, // successNumber negative here
-                duration: roundNumber(daysInYear*0.75, 0),
+                duration: roundNumber(daysInYear*1.5, 0),
                 timer: this.timer
             }));
         }
