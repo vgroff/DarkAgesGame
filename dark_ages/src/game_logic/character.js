@@ -1,7 +1,8 @@
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import TextField from "@mui/material/TextField";
 import React from "react";
-import { AdministrationBonus, Bonus, CharacterBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, StrategyBonus } from "./settlement/bonus";
+import { AdministrationBonus, Bonus, CharacterBonus, HealthBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, StrategyBonus } from "./settlement/bonus";
+import { Apothecary, HuntingCabin, LumberjacksHut } from "./settlement/building";
 import UIBase from "./UIBase";
 import { addition, multiplication, Variable, VariableComponent, VariableModifier } from "./UIUtils";
 import { CustomTooltip, percentagize, roundNumber, titleCase } from "./utils";
@@ -20,12 +21,34 @@ export class Culture {
             throw Error("Culture needs name");
         }
     }
+    getTraits() {
+        throw Error("abstract class")
+    }
 }
 
 export class Celtic extends Culture {
     constructor(props) {
         super({...props, name: "celtic"})
     }  
+    getTraits() {
+        this.lastTraits = [
+            new Trait({name: "elected kings", effects: [new LegitimacyBonus({amount:0.95, type:multiplication})]}),
+            new Trait({name: "druidic traditions", effects: [
+                new SpecificBuildingProductivityBonus({amount:1.25, building:Apothecary.name, type:multiplication}),
+                new HealthBonus({amount:1.03, type:multiplication})
+            ]}),
+            new Trait({name: "foresters", effects: [
+                new SpecificBuildingProductivityBonus({amount:1.15, building:LumberjacksHut.name, type:multiplication}),
+                new SpecificBuildingProductivityBonus({amount:1.1, building:HuntingCabin.name, type:multiplication})
+            ]}),
+        ]
+        return this.lastTraits;
+    }
+    getText(extensive=false) {
+        let text = [`Culture ${this.name} has following traits:`];
+        text = text.concat(this.lastTraits ? this.lastTraits.map(trait => extensive ? trait.getText() : trait.name).flatten() : [''])
+        return text;
+    }
 }
 
 export const Cultures = {
@@ -61,7 +84,8 @@ export class Trait {
     }
     getText() {
         let text = [`Trait ${this.name} has following effects:`];
-        text = text.concat(this.effects ? this.effects.map(bonus => bonus.getEffectText()) : [''])
+        let effects = this.pastEffects ? this.pastEffects : this.getEffects();
+        text = text.concat(this.pastEffects ? this.pastEffects.map(bonus => bonus.getEffectText()) : [''])
         return text;
     }
 }
