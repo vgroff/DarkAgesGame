@@ -61,6 +61,7 @@ class Game {
 export default Game;
 
 // Stuff for now:
+// - Consider making population a different kind of cumulator variable that doesn't change throughout the day, only on day start
 // - Move to the character+culture+faction+legitimacy stuff
 //          - Notes in character.js
 //          - Build culture system using traits, do celtic and maybe one or two others
@@ -94,6 +95,7 @@ export default Game;
 // - Move research into it's own tab - it should use the sum of the research from all settlements? since research isn't per-settlement
 // - Have warnings a la Paradox if you have homeless/unemployement/rebellions etc...
 // - Hide research and market behind having the library building and the market building
+// - Add descriptions to some variables (e.g. character/settlement ones)
 
 // Content notes:
 // - Potential simple/important buildings: cemetery(trivial), bathhouse(trivial), suclpture/artists studio(trivial), sportsballfield(trivial)

@@ -262,6 +262,9 @@ export class Character {
         ]});
         this.traits = [];
         this.settlements = [];
+        this.characterEffects = [
+            new GeneralProductivityBonus({name: "Leader administration", amount: this.administrativeEfficiency, type:multiplication})
+        ];
     }
     addSettlement(settlement) {
         this.settlements.push(settlement);
@@ -272,6 +275,11 @@ export class Character {
                     settlement.activateBonus(effect);
                 }
             });
+        });
+        this.characterEffects.forEach(effect => {
+            if (effect instanceof SettlementBonus) {
+                settlement.activateBonus(effect);
+            }
         });
     }
     removeSettlement(settlement) {
@@ -286,6 +294,11 @@ export class Character {
                     settlement.deactivateBonus(effect);
                 }
             });
+        });
+        this.characterEffects.forEach(effect => {
+            if (effect instanceof SettlementBonus) {
+                settlement.deactivateBonus(effect);
+            }
         });
     }
     addTrait(trait) {

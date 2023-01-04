@@ -29,8 +29,6 @@ export class Cumulator extends Variable {
         if (this.baseValue !== this.currentValue) {
             this.setNewBaseValue(this.currentValue, `Turn start: ${roundNumber(this.valueAtTurnStart, this.displayRound)}`, 0);
             this.recalculateLastChange();
-        } else {
-            return;
         }
     }
 }
