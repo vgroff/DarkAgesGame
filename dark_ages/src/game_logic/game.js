@@ -18,7 +18,7 @@ class Game {
             return {day, season, year, text: `Day ${day}, ${titleCase(season)}, Year ${year}`}
         }});
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
-        this.playerCharacter = new Character({name:"player", culture: Cultures.Celtic});
+        this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic()});
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt}),
             // new Settlement({name: 'Village 2', gameClock: this.gameClock, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt})
@@ -61,11 +61,11 @@ class Game {
 export default Game;
 
 // Stuff for now:
+// - use linear modifier thing for admin efficency and possibly elsewhere in events and stuff
 // - Consider making population a different kind of cumulator variable that doesn't change throughout the day, only on day start
 // - Move to the character+culture+faction+legitimacy stuff
-//          - Notes in character.js
-//          - Build culture system using traits, do celtic and maybe one or two others
 //          - Build faction privilege system + maybe add one or two faction features
+//          - Link events in with character stats
 // - UIBase doesn't currently work correctly since e.g. the props.character in the CharacterComponent can change, but the subscriptions won'
 //        - Instead, they need to be given a callback that gets the appropriate variables and passes them on so that it can re-run during component didUpdate(), including clearing the old ones
 // - court intrigue events and nomad events for growth

@@ -2,7 +2,7 @@ import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import TextField from "@mui/material/TextField";
 import React from "react";
 import { AdministrationBonus, Bonus, CharacterBonus, HealthBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, StrategyBonus } from "./settlement/bonus";
-import { Apothecary, HuntingCabin, LumberjacksHut } from "./settlement/building";
+import { Apothecary, HuntingCabin, Library, LumberjacksHut } from "./settlement/building";
 import UIBase from "./UIBase";
 import { addition, multiplication, Variable, VariableComponent, VariableModifier } from "./UIUtils";
 import { CustomTooltip, percentagize, roundNumber, titleCase } from "./utils";
@@ -24,6 +24,12 @@ export class Culture {
     getTraits() {
         throw Error("abstract class")
     }
+    getText(extensive=false) {
+        let text = [`Culture ${this.name} has following traits:`];
+        let traits = this.lastTraits ? this.lastTraits : this.getTraits()
+        text = text.concat(traits ? traits.map(trait => extensive ? trait.getText() : trait.name).flat() : [''])
+        return text;
+    }
 }
 
 export class Celtic extends Culture {
@@ -44,16 +50,33 @@ export class Celtic extends Culture {
         ]
         return this.lastTraits;
     }
-    getText(extensive=false) {
-        let text = [`Culture ${this.name} has following traits:`];
-        text = text.concat(this.lastTraits ? this.lastTraits.map(trait => extensive ? trait.getText() : trait.name).flatten() : [''])
-        return text;
+}
+
+export class Roman extends Culture {
+    constructor(props) {
+        super({...props, name: "celtic"})
+    }  
+    getTraits() {
+        this.lastTraits = [
+            new Trait({name: "obsolete military tactics", effects: [new StrategyBonus({amount:0.85, type:multiplication})]}),
+            new Trait({name: "academic traditions", effects: [
+                new SpecificBuildingProductivityBonus({amount:1.2, building:Library.name, type:multiplication}),
+            ]}),
+            new Trait({name: "roman plumbing", effects: [
+                new HealthBonus({amount:1.05, type:multiplication}),
+            ]}),
+            new Trait({name: "rhetorical training", effects: [
+                new DiplomacyBonus({amount:1.1, type:multiplication}),
+            ]}),
+        ]
+        return this.lastTraits;
     }
 }
 
 export const Cultures = {
-    Celtic: new Celtic(),
-}
+    Celtic: Celtic,
+    Roman: Roman
+};
 
 export class Trait {
     constructor(props) {
@@ -85,7 +108,7 @@ export class Trait {
     getText() {
         let text = [`Trait ${this.name} has following effects:`];
         let effects = this.pastEffects ? this.pastEffects : this.getEffects();
-        text = text.concat(this.pastEffects ? this.pastEffects.map(bonus => bonus.getEffectText()) : [''])
+        text = text.concat(effects ? effects.map(bonus => bonus.getEffectText()) : [''])
         return text;
     }
 }
@@ -163,7 +186,7 @@ export const AbilityTraits = [SmoothTalker, Intelligent, Strategic];
 export class Witty extends Trait {
     constructor() {
         super({name: "witty", effects: [
-            new DiplomacyBonus({amount: TraitScaler, type: addition}),
+            new DiplomacyBonus({amount: 1.5*TraitScaler, type: addition}),
         ]})
     }
 }
@@ -171,7 +194,7 @@ export class Witty extends Trait {
 export class Careful extends Trait {
     constructor() {
         super({name: "careful", effects: [
-            new AdministrationBonus({amount: TraitScaler, type: addition}),
+            new AdministrationBonus({amount: 1.5*TraitScaler, type: addition}),
         ]})
     }
 }
@@ -179,7 +202,7 @@ export class Careful extends Trait {
 export class Brave extends Trait {
     constructor() {
         super({name: "strategic", effects: [
-            new StrategyBonus({amount: TraitScaler, type: addition})
+            new StrategyBonus({amount: 1.5*TraitScaler, type: addition})
         ]})
     }
 }
@@ -263,10 +286,6 @@ export class Character {
     constructor(props) {
         this.name = props.name || "Unnamed Character";
         this.faction = props.faction || null;
-        this.culture = props.culture;
-        if (!this.culture) {
-            throw Error("everyone needs a culture")
-        }
         this.traitGroups = {
             childhoodTrait: {trait: props.childhoodTrait, choices:ChildhoodTraits, name: "childhood trait"},
             abilityTrait: {trait: props.abilityTrait, choices:AbilityTraits, name: "ability trait"},
@@ -289,6 +308,10 @@ export class Character {
         this.characterEffects = [
             new GeneralProductivityBonus({name: "Leader administration", amount: this.administrativeEfficiency, type:multiplication})
         ];
+        this.changeCulture(props.culture);
+        if (!this.culture) {
+            throw Error("everyone needs a culture")
+        }
     }
     addSettlement(settlement) {
         this.settlements.push(settlement);
@@ -324,6 +347,13 @@ export class Character {
                 settlement.deactivateBonus(effect);
             }
         });
+    }
+    changeCulture(culture) {
+        if (this.culture) {
+            this.culture.lastTraits.forEach(lastTrait => this.removeTrait(lastTrait));
+        }
+        this.culture = culture;
+        this.culture.getTraits().forEach(lastTrait => this.addTrait(lastTrait));
     }
     addTrait(trait) {
         trait.activate(this);
@@ -362,44 +392,45 @@ export class Character {
         if (bonus instanceof CharacterBonus) {
             bonus.deactivate(this);
         } else if (bonus instanceof SettlementBonus) {
-            this.settlements.forEach(settlement => settlement.deactivate(bonus));
+            this.settlements.forEach(settlement => settlement.deactivateBonus(bonus));
         } else {
             throw Error("didn't recognise bonus")
         }  
     }
 }
 
-export class TraitComponent extends React.Component {
+export class ChoiceComponent extends React.Component {
     constructor(props) {
         super(props);
         this.state = {edit: false};
     }
     render() {
-        this.trait = this.props.trait;
-        this.traitGroupName = this.props.traitGroupName;
+        this.chosen = this.props.chosen;
+        this.groupName = this.props.groupName;
         this.choices = this.props.choices;
         this.edit = this.state.edit;
-        if (!this.trait && this.choices) {
+        if (!this.chosen && this.choices) {
             this.edit = true;
         }
+        if (this.chosen) {console.log(this.chosen.getText()) ;}
         return <div>
-            {!this.edit && this.trait ? 
+            {!this.edit && this.chosen ? 
             <div onClick = {() => !this.edit && this.choices ? this.setState({edit: !this.state.edit}) : null}>
-                <CustomTooltip items={this.trait.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                    <span>{this.traitGroupName ? `${titleCase(this.traitGroupName)}: ` : null}{titleCase(this.trait.name)}</span>
+                <CustomTooltip items={this.chosen.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+                    <span>{this.groupName ? `${titleCase(this.groupName)}: ` : null}{titleCase(this.chosen.name)}</span>
                 </CustomTooltip>
             </div> :
             <FormControl fullWidth size={"small"}>
-                <InputLabel id="demo-simple-select-label">{this.traitGroupName}</InputLabel>
+                <InputLabel id="demo-simple-select-label">{this.groupName}</InputLabel>
                 <Select
                     labelId="demo-simple-select-label"
                     id="demo-simple-select"
-                    value={this.trait || ''}
-                    label={this.traitGroupName}
-                    onChange={(e) => {this.props.handleTraitChange(e.target.value, this.trait); this.setState({edit: false});}}
+                    value={this.chosen || ''}
+                    label={this.groupName}
+                    onChange={(e) => {this.props.handleChange(e.target.value, this.chosen); this.setState({edit: false});}}
                 >
                     {this.choices.map((choice,i) => {
-                        return <MenuItem key={choice.name+i} value={choice}><TraitComponent trait={choice} edit={false}/></MenuItem>
+                        return <MenuItem key={choice.name+i} value={choice}><ChoiceComponent chosen={choice} edit={false}/></MenuItem>
                     })}
                 </Select>
             </FormControl>}
@@ -419,6 +450,9 @@ export class CharacterComponent extends UIBase {
         }
         this.character.addTrait(newTrait);
     }
+    handleCultureChange(newCulture, oldCulture) {
+        this.character.changeCulture(newCulture);
+    }
     childRender() {
         this.character = this.props.character;
         return <div>
@@ -430,18 +464,22 @@ export class CharacterComponent extends UIBase {
                     : this.character.name}<br />
             </div>
             <p>
-            Faction: {this.character.faction ? titleCase(this.character.faction.name) : "None"}<br />
-            Culture: {this.character.culture ? titleCase(this.character.culture.name) : "None"}<br />
+            Faction: {this.character.faction ? titleCase(this.character.faction.name) : "None"}
             </p>
-            <br />
-            {Object.entries(this.character.traitGroups).map(([key, traitGroup]) => 
-                <TraitComponent key={`${key}`} trait={traitGroup.trait} choices={traitGroup.choices.map(choice => new choice())} traitGroupName={traitGroup.name} handleTraitChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/>)
+            <ChoiceComponent key={`culture`} chosen={this.character.culture} choices={Object.values(Cultures).map(choice => new choice())} groupName={"Culture"} handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)}/>
+            Cultural Traits:
+            <ul>{this.character.culture.lastTraits ? this.character.culture.lastTraits.map((trait, i) => 
+                <li key={`cultural_trait_${trait.name}_${i}`}><ChoiceComponent chosen={trait} /></li>)
+             : null}</ul>            
+            {Object.entries(this.character.traitGroups).map(([key, traitGroup], i) => 
+                <ChoiceComponent key={`trait_group_${key}_${i}`} chosen={traitGroup.trait} choices={traitGroup.choices.map(choice => new choice())} groupName={traitGroup.name} handleChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/>)
             }
             <br />
             Skills <br />
             <VariableComponent showOwner={false} variable={this.character.diplomacy} /><br />
             <VariableComponent showOwner={false} variable={this.character.strategy} /><br />
             <VariableComponent showOwner={false} variable={this.character.administration} /><br />
+            <br />
             Attributes <br />
             <VariableComponent showOwner={false} variable={this.character.legitimacy} /><br />
             <VariableComponent showOwner={false} variable={this.character.administrativeEfficiency} /><br />
@@ -450,8 +488,7 @@ export class CharacterComponent extends UIBase {
 }
 
 // Notes
-// - Do culture part 
-//     - Celtic: druids (health+apothecary), elected kings (legitimacy), foresters (lumberjack prod. + hunting size/prod)
-//     - 
-// - Faction
+// - use linear modifier thing for admin efficency
+// - Faction:
+//     - Do faction name and privileges
 // - (later?) Religion
