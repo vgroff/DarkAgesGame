@@ -1,16 +1,91 @@
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import TextField from "@mui/material/TextField";
 import React from "react";
-import { AdministrationBonus, Bonus, CharacterBonus, HealthBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, StrategyBonus } from "./settlement/bonus";
-import { Apothecary, HuntingCabin, Library, LumberjacksHut } from "./settlement/building";
+import { getProbabilities } from "./rolling";
+import { AdministrationBonus, Bonus, CharacterBonus, HealthBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, StrategyBonus, HappinessBonus } from "./settlement/bonus";
+import { Apothecary, Church, HuntingCabin, Library, LumberjacksHut } from "./settlement/building";
 import UIBase from "./UIBase";
 import { addition, multiplication, Variable, VariableComponent, VariableModifier } from "./UIUtils";
-import { CustomTooltip, percentagize, roundNumber, titleCase } from "./utils";
-import { unnamedVariableName } from "./variable/variable";
+import { CustomTooltip, titleCase } from "./utils";
 
 export class Faction {
     constructor(props) {
         this.name = props.name || "Unnamed Faction";
+        this.leader = props.leader;
+        if (!this.leader) {
+            throw Error("faction should be created by it's leader");
+        }
+        this.members = [this.leader];
+        this.numPrivilegesAllowed = 4;
+        this.privileges = [
+            {
+                num: 4,
+                name: "noble privileges",
+                traits: [
+                    new Trait({name: "small nobility", effects: [
+                        new LegitimacyBonus({amount: 0.15, type:addition}),
+                        new GeneralProductivityBonus({amount: 0.975, type:multiplication}),
+                    ]}),
+                    new Trait({name: "extensive nobility", effects: [
+                        new LegitimacyBonus({amount: 0.3, type:addition}),
+                        new GeneralProductivityBonus({amount: 0.95, type:multiplication}),
+                    ]}),
+                    new Trait({name: "noble privileges", effects: [
+                        new LegitimacyBonus({amount: 0.45, type:addition}),
+                        new GeneralProductivityBonus({amount: 0.925, type:multiplication}),               
+                    ]}),
+                    new Trait({name: "extensive noble privileges", effects: [
+                        new LegitimacyBonus({amount: 0.6, type:addition}),
+                        new GeneralProductivityBonus({amount: 0.90, type:multiplication}),               
+                    ]})
+                ]
+            },
+            {
+                name: "citizen privileges",
+                num: 0,
+                traits: [new Trait({name: "sunday afternoons off", effects: [
+                    new HappinessBonus({amount: 1.05, type:addition}),
+                    new GeneralProductivityBonus({amount: 0.98, type:multiplication}),
+                ]})]
+            },
+            {
+                name: "clergy privileges",
+                num: 0,
+                traits: [new Trait({name: "longer services", effects: [
+                    new HappinessBonus({amount: 1.05, type:addition}),
+                    new SpecificBuildingProductivityBonus({amount: 1.35, building: Church.name}),
+                    new GeneralProductivityBonus({amount: 0.98, type:multiplication}),
+                ]})]
+            }
+        ]
+    }
+    getNumPrivileges() {
+        return this.privileges.reduce((prev, curr) => prev + curr.num, 0);
+    }
+    joinFaction(member) {
+        if (member in this.members) {
+            return;
+        }
+        this.members.push(member);
+    }
+    updatePrivileges() {
+        // need to update every member
+        this.members.forEach(member => member.updateFactionTraits());
+    }
+    getTraits() {
+        this.lastTraits = this.privileges.reduce((prev, curr) => {
+            if (curr.num > 0) {
+                prev.push(curr.traits[curr.num - 1]);
+            }
+            return prev;
+        }, []);
+        return this.lastTraits;
+    }
+    getText(extensive=false) {
+        let text = [`Faction ${this.name} has the following traits:`];
+        let traits = this.lastTraits ? this.lastTraits : this.getTraits();
+        text = text.concat(traits ? traits.map(trait => extensive ? trait.getText() : trait.name).flat() : ['']);
+        return text;
     }
 }
 
@@ -186,7 +261,7 @@ export const AbilityTraits = [SmoothTalker, Intelligent, Strategic];
 export class Witty extends Trait {
     constructor() {
         super({name: "witty", effects: [
-            new DiplomacyBonus({amount: 1.5*TraitScaler, type: addition}),
+            new DiplomacyBonus({amount: 2*TraitScaler, type: addition}),
         ]})
     }
 }
@@ -194,7 +269,7 @@ export class Witty extends Trait {
 export class Careful extends Trait {
     constructor() {
         super({name: "careful", effects: [
-            new AdministrationBonus({amount: 1.5*TraitScaler, type: addition}),
+            new AdministrationBonus({amount: 2*TraitScaler, type: addition}),
         ]})
     }
 }
@@ -202,7 +277,7 @@ export class Careful extends Trait {
 export class Brave extends Trait {
     constructor() {
         super({name: "strategic", effects: [
-            new StrategyBonus({amount: 1.5*TraitScaler, type: addition})
+            new StrategyBonus({amount: 2*TraitScaler, type: addition})
         ]})
     }
 }
@@ -308,10 +383,27 @@ export class Character {
         this.characterEffects = [
             new GeneralProductivityBonus({name: "Leader administration", amount: this.administrativeEfficiency, type:multiplication})
         ];
+        this.setFaction(new Faction({leader: this, name: props.factionName}));
         this.changeCulture(props.culture);
         if (!this.culture) {
             throw Error("everyone needs a culture")
         }
+    }
+    setFaction(faction) {
+        if (this.faction) {
+            this.factionTraits.forEach(trait => this.removeTrait(trait));
+        }
+        this.faction = faction;
+        this.faction.joinFaction(this);
+        this.factionTraits = this.faction.getTraits(); // intentional that we generate new traits each time
+        this.factionTraits.forEach(trait => this.addTrait(trait));
+    }
+    updateFactionTraits() {
+        if (this.factionTraits) {
+            this.factionTraits.forEach(trait => this.removeTrait(trait));
+        }
+        this.factionTraits = this.faction.getTraits(); // intentional that we generate new traits each time
+        this.factionTraits.forEach(trait => this.addTrait(trait));
     }
     addSettlement(settlement) {
         this.settlements.push(settlement);
@@ -408,11 +500,11 @@ export class ChoiceComponent extends React.Component {
         this.chosen = this.props.chosen;
         this.groupName = this.props.groupName;
         this.choices = this.props.choices;
-        this.edit = this.state.edit;
+        this.editable = this.props.edit;
+        this.edit = this.state.edit && this.editable;
         if (!this.chosen && this.choices) {
             this.edit = true;
         }
-        if (this.chosen) {console.log(this.chosen.getText()) ;}
         return <div>
             {!this.edit && this.chosen ? 
             <div onClick = {() => !this.edit && this.choices ? this.setState({edit: !this.state.edit}) : null}>
@@ -438,13 +530,41 @@ export class ChoiceComponent extends React.Component {
     }
 }
 
+export class FactionComponent extends UIBase {
+    constructor(props) {
+        super(props);
+        this.addVariables([props.faction.leader.legitimacy]);
+    }
+    childRender() {
+        this.faction = this.props.faction;
+        let privileges = this.faction.privileges;
+        return <div>
+            <div onClick = {() => !this.state.editName ? this.setState({editName: !this.state.editName}) : null}>
+                {this.state.editName ? 
+                    <TextField id="outlined-basic" label="Name" variant="outlined" defaultValue={this.faction.name} 
+                        onChange={(e) => {this.faction.name = e.target.value}} onKeyUp={(event) => event.key==="Enter" ? this.setState({editName: false}) : null}/>
+                    : <CustomTooltip items={this.faction.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+                        <span>Faction: {titleCase(this.faction.name)}<br /><br /></span>
+                    </CustomTooltip>}
+            </div>
+            {privileges.map((privilege, i) => {
+                return <span key={`privilege_${privilege.name}`}>{titleCase(privilege.name)}: {privilege.num ? 
+                    <CustomTooltip items={privilege.traits[privilege.num - 1].getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+                        <span>{titleCase(privilege.traits[privilege.num - 1].name)} ({privilege.num}/{privilege.traits.length})</span>
+                    </CustomTooltip>
+                    : <span>None ({privilege.num}/{privilege.traits.length})</span>} 
+                <br /> </span>
+            })}
+        </div>
+    }
+}
+
 export class CharacterComponent extends UIBase {
     constructor(props) {
         super(props);
         this.addVariables([props.character.legitimacy]);
     }
     handleTraitChange(newTrait, oldTrait) {
-        console.log(oldTrait);
         if (oldTrait) {
             this.character.removeTrait(oldTrait);
         }
@@ -463,9 +583,6 @@ export class CharacterComponent extends UIBase {
                         onChange={(e) => {this.character.name = e.target.value}} onKeyUp={(event) => event.key==="Enter" ? this.setState({editName: false}) : null}/>
                     : this.character.name}<br />
             </div>
-            <p>
-            Faction: {this.character.faction ? titleCase(this.character.faction.name) : "None"}
-            </p>
             <ChoiceComponent key={`culture`} chosen={this.character.culture} choices={Object.values(Cultures).map(choice => new choice())} groupName={"Culture"} handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)}/>
             Cultural Traits:
             <ul>{this.character.culture.lastTraits ? this.character.culture.lastTraits.map((trait, i) => 
@@ -475,14 +592,17 @@ export class CharacterComponent extends UIBase {
                 <ChoiceComponent key={`trait_group_${key}_${i}`} chosen={traitGroup.trait} choices={traitGroup.choices.map(choice => new choice())} groupName={traitGroup.name} handleChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/>)
             }
             <br />
-            Skills <br />
+            <b>Skills</b> <br />
             <VariableComponent showOwner={false} variable={this.character.diplomacy} /><br />
             <VariableComponent showOwner={false} variable={this.character.strategy} /><br />
             <VariableComponent showOwner={false} variable={this.character.administration} /><br />
             <br />
-            Attributes <br />
+            <b>Attributes</b> <br />
             <VariableComponent showOwner={false} variable={this.character.legitimacy} /><br />
             <VariableComponent showOwner={false} variable={this.character.administrativeEfficiency} /><br />
+            <br />
+            <b>Faction</b> <br />
+            <FactionComponent faction={this.character.faction} /><br />
         </div>
     }
 }
@@ -491,4 +611,8 @@ export class CharacterComponent extends UIBase {
 // - use linear modifier thing for admin efficency
 // - Faction:
 //     - Do faction name and privileges
+//     - Need to write the function for updating privileges
+//     - Need to make the faction UI (probably it's own component) for changing privileges
+//     - How to handle invalid states? How to handle legitimacy change?
+// - Link events in with character stats
 // - (later?) Religion

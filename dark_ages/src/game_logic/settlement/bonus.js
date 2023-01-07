@@ -85,6 +85,12 @@ export class HealthBonus extends SimpleSettlementModifier {
     }
 };
 
+export class HappinessBonus extends SimpleSettlementModifier {
+    constructor(props) {
+        super({...props, variableAccessor: "happiness", variableHumanReadable: "happiness"});
+    }
+};
+
 export class SpecificBuildingProductivityBonus extends SettlementBonus {
     constructor(props) {
         super(props);
