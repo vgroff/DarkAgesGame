@@ -298,10 +298,15 @@ export class Settlement {
         }
         this.leader = leader;
         this.leader.addSettlement(this);
+        this.support = new Variable({startingValue: -1, name: "popular support", modifiers: [
+            new VariableModifier({variable: this.happiness, type: addition}),
+            new VariableModifier({variable: this.leader.legitimacy, type: addition})
+        ]})
     }
-    removeLeader() {
+    removeLeader() { // This should never really get called other than by setLeader I guess?
         this.leader = null;
         this.leader.removeSettlement(this);
+        this.support = new Variable({startingValue: 0, name: "popular support"})
     }
     populateBuildings() {
         this.adjustJobs();
@@ -535,6 +540,7 @@ export class SettlementComponent extends UIBase {
             <TrendingVariableComponent showOwner={false} variable={this.settlement.happiness} /><br />
             <TrendingVariableComponent showOwner={false} variable={this.settlement.health} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.generalProductivity} /><br />
+            <VariableComponent showOwner={false} variable={this.settlement.support} /><br />
             <a href={this.settlement.logHref}>{Variable.logging ? 'Calculation Log' : 'logging is off'}</a><br />
             <FormControlLabel control={<Checkbox onChange={(e, value) => {
                 this.settlement.autoManageUnemployed = value;

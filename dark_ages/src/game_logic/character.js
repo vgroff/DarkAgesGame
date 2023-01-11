@@ -16,6 +16,7 @@ export class Faction {
             throw Error("faction should be created by it's leader");
         }
         this.members = [this.leader];
+        this.tentativelyChanged = false;
         this.numPrivilegesAllowed = 4;
         this.privileges = [
             {
@@ -57,7 +58,27 @@ export class Faction {
                     new GeneralProductivityBonus({amount: 0.98, type:multiplication}),
                 ]})]
             }
-        ]
+        ];
+    }
+    changePrivilegeTentatively(privilegeIndex, change) {
+        let numExistingPrivileges = this.getNumPrivileges();
+        if (numExistingPrivileges + change > this.numPrivilegesAllowed) {
+            console.log("too many privileges already");
+            return;
+        }
+        if (!this.tentativelyChanged) {
+            this.oldPrivilegeNums = this.privileges.map(privilege => privilege.num);
+            this.tentativelyChanged = true;
+        } else {
+            // Check if equal to oldPrivilegeNums and if so set tentativelyChanged to false
+        }
+        this.privileges[privilegeIndex].num += change;
+        this.updatePrivileges();
+    }
+    confirmPrivilegeChanges() {
+        // Reduce leader legitimacy
+        // Need a temporary character modifier for this
+        // this.tentativelyChanged = false;
     }
     getNumPrivileges() {
         return this.privileges.reduce((prev, curr) => prev + curr.num, 0);
@@ -500,14 +521,15 @@ export class ChoiceComponent extends React.Component {
         this.chosen = this.props.chosen;
         this.groupName = this.props.groupName;
         this.choices = this.props.choices;
-        this.editable = this.props.edit;
+        this.editable = this.props.editable !== undefined ? this.props.editable : false;
         this.edit = this.state.edit && this.editable;
         if (!this.chosen && this.choices) {
             this.edit = true;
         }
+        console.log(this.edit);
         return <div>
             {!this.edit && this.chosen ? 
-            <div onClick = {() => !this.edit && this.choices ? this.setState({edit: !this.state.edit}) : null}>
+            <div onClick = {() => !this.edit && this.choices ? this.setState({edit: !this.edit}) : null}>
                 <CustomTooltip items={this.chosen.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
                     <span>{this.groupName ? `${titleCase(this.groupName)}: ` : null}{titleCase(this.chosen.name)}</span>
                 </CustomTooltip>
@@ -583,13 +605,13 @@ export class CharacterComponent extends UIBase {
                         onChange={(e) => {this.character.name = e.target.value}} onKeyUp={(event) => event.key==="Enter" ? this.setState({editName: false}) : null}/>
                     : this.character.name}<br />
             </div>
-            <ChoiceComponent key={`culture`} chosen={this.character.culture} choices={Object.values(Cultures).map(choice => new choice())} groupName={"Culture"} handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)}/>
+            <ChoiceComponent key={`culture`} editable={true} chosen={this.character.culture} choices={Object.values(Cultures).map(choice => new choice())} groupName={"Culture"} handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)}/>
             Cultural Traits:
             <ul>{this.character.culture.lastTraits ? this.character.culture.lastTraits.map((trait, i) => 
                 <li key={`cultural_trait_${trait.name}_${i}`}><ChoiceComponent chosen={trait} /></li>)
              : null}</ul>            
             {Object.entries(this.character.traitGroups).map(([key, traitGroup], i) => 
-                <ChoiceComponent key={`trait_group_${key}_${i}`} chosen={traitGroup.trait} choices={traitGroup.choices.map(choice => new choice())} groupName={traitGroup.name} handleChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/>)
+                <ChoiceComponent key={`trait_group_${key}_${i}`} editable={true} chosen={traitGroup.trait} choices={traitGroup.choices.map(choice => new choice())} groupName={traitGroup.name} handleChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/>)
             }
             <br />
             <b>Skills</b> <br />
@@ -611,8 +633,12 @@ export class CharacterComponent extends UIBase {
 // - use linear modifier thing for admin efficency
 // - Faction:
 //     - Do faction name and privileges
-//     - Need to write the function for updating privileges
 //     - Need to make the faction UI (probably it's own component) for changing privileges
 //     - How to handle invalid states? How to handle legitimacy change?
-// - Link events in with character stats
+//            - Finish changePrivilegeTentatively and confirmPrivilegeChange (commented) - need temporary legitimacy effect
+//            - Link it into the UI with +- buttons for changing tentatively and a confirm button which shows the effects of confirming (legitimacy drops temporarily)
+//            - Force-stop the timer while tentatively changing
+// - Make diplomacy affect support
+// - Link events in with character stats. Make events have temporary effects to support, or more rarely, to legitimacy
+// - Add in revolutions by trending on negative support?
 // - (later?) Religion
