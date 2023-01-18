@@ -301,7 +301,12 @@ export class Settlement {
         this.support = new Variable({startingValue: -1, name: "popular support", modifiers: [
             new VariableModifier({variable: this.happiness, type: addition}),
             new VariableModifier({variable: this.leader.legitimacy, type: addition})
-        ]})
+        ]});
+        let zero = new Variable({startingValue: 0});
+        this.rebellionSupport = new Variable({startingValue: 0, name: "rebellion support", min: zero, modifiers: [
+            new VariableModifier({variable: this.support, type: addition}),
+            new VariableModifier({startingValue: -1, type: multiplication})
+        ]});
     }
     removeLeader() { // This should never really get called other than by setLeader I guess?
         this.leader = null;

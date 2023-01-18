@@ -1,8 +1,10 @@
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
 import React from "react";
 import { getProbabilities } from "./rolling";
-import { AdministrationBonus, Bonus, CharacterBonus, HealthBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, StrategyBonus, HappinessBonus } from "./settlement/bonus";
+import { daysInYear } from "./seasons";
+import { AdministrationBonus, Bonus, CharacterBonus, HealthBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, StrategyBonus, HappinessBonus, TemporaryLegitimacyBonus } from "./settlement/bonus";
 import { Apothecary, Church, HuntingCabin, Library, LumberjacksHut } from "./settlement/building";
 import UIBase from "./UIBase";
 import { addition, multiplication, Variable, VariableComponent, VariableModifier } from "./UIUtils";
@@ -69,16 +71,24 @@ export class Faction {
         if (!this.tentativelyChanged) {
             this.oldPrivilegeNums = this.privileges.map(privilege => privilege.num);
             this.tentativelyChanged = true;
-        } else {
-            // Check if equal to oldPrivilegeNums and if so set tentativelyChanged to false
         }
         this.privileges[privilegeIndex].num += change;
+        if (this.tentativelyChanged) {
+            // Check if equal to oldPrivilegeNums and if so set tentativelyChanged to false
+            this.privileges.filter((privilege, i) => privilege.num !== this.oldPrivilegeNums[i]);
+            if (this.privileges.length === 0) {
+                this.tentativelyChanged = false;
+            }
+        }
         this.updatePrivileges();
     }
     confirmPrivilegeChanges() {
-        // Reduce leader legitimacy
-        // Need a temporary character modifier for this
-        // this.tentativelyChanged = false;
+        if (!this.tentativelyChanged) { 
+            return;
+        }
+        let legitimacyMalus = new TemporaryLegitimacyBonus({amount: -0.05, duration:daysInYear*5, timer: this.timer, type: addition});
+        legitimacyMalus.activate(this.leader);
+        this.tentativelyChanged = false;
     }
     getNumPrivileges() {
         return this.privileges.reduce((prev, curr) => prev + curr.num, 0);
@@ -560,6 +570,8 @@ export class FactionComponent extends UIBase {
     childRender() {
         this.faction = this.props.faction;
         let privileges = this.faction.privileges;
+        let hasMaxPrivileges = this.faction.getNumPrivileges() >= this.faction.numPrivilegesAllowed;
+        let hasMinPrivileges = this.faction.getNumPrivileges() <= 0;
         return <div>
             <div onClick = {() => !this.state.editName ? this.setState({editName: !this.state.editName}) : null}>
                 {this.state.editName ? 
@@ -575,8 +587,13 @@ export class FactionComponent extends UIBase {
                         <span>{titleCase(privilege.traits[privilege.num - 1].name)} ({privilege.num}/{privilege.traits.length})</span>
                     </CustomTooltip>
                     : <span>None ({privilege.num}/{privilege.traits.length})</span>} 
+                <Button variant={!hasMaxPrivileges ? "outlined" : "disabled"} onClick={(e) => this.faction.changePrivilegeTentatively(i, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
+                <Button variant={!hasMinPrivileges && this.faction.privileges[i].num ? "outlined" : "disabled"} onClick={(e) => this.faction.changePrivilegeTentatively(i, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>    
                 <br /> </span>
             })}
+            <Button variant={this.faction.tentativelyChanged ? "outlined" : "disabled"} onClick={(e) => this.faction.confirmPrivilegeChanges()}>
+                Confirm Privilege Changes
+            </Button>
         </div>
     }
 }
@@ -635,10 +652,9 @@ export class CharacterComponent extends UIBase {
 //     - Do faction name and privileges
 //     - Need to make the faction UI (probably it's own component) for changing privileges
 //     - How to handle invalid states? How to handle legitimacy change?
-//            - Finish changePrivilegeTentatively and confirmPrivilegeChange (commented) - need temporary legitimacy effect
-//            - Link it into the UI with +- buttons for changing tentatively and a confirm button which shows the effects of confirming (legitimacy drops temporarily)
+//            - Finish the confirm button which shows the effects of confirming (legitimacy drops temporarily)
 //            - Force-stop the timer while tentatively changing
-// - Make diplomacy affect support
+// - Make diplomacy affect support (only a little?)
 // - Link events in with character stats. Make events have temporary effects to support, or more rarely, to legitimacy
 // - Add in revolutions by trending on negative support?
 // - (later?) Religion

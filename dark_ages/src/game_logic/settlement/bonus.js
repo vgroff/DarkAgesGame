@@ -414,6 +414,7 @@ export class LegitimacyBonus extends SimpleCharacterModifier {
         super({...props, variableAccessor: "legitimacy", variableHumanReadable: "legitimacy"});
     }
 };
+
 export class StrategyBonus extends SimpleCharacterModifier {
     constructor(props) {
         super({...props, variableAccessor: "strategy", variableHumanReadable: "strategy"});
@@ -432,3 +433,75 @@ export class AdministrationBonus extends SimpleCharacterModifier {
     }
 };
 
+export class TemporaryCharacterBonus extends CharacterBonus {
+    constructor(props) {
+        props.name = props.name || `temporary ${props.variable} bonus`;
+        super(props);
+        this.amount = props.amount;
+        this.variableAccessor = props.variableAccessor;
+        this.type = props.type || addition; // Not sure this works properly besides addition
+        this.duration = props.duration;
+        this.timer = props.timer;
+        if (!this.variableAccessor || !this.timer || !this.duration || !this.amount) {
+            throw Error("missing props")
+        }
+    }
+    activate(character) {
+        // current change is startingValue amount*(1 - diff/duration) - this is if we interpolate between 0 and amount for the sake of addition,
+        // but what if we interpolate between amount and 1 for the sake of multiplication?
+        // durationFactor is diff/duration i.e. goes from 0 to 1
+        this.durationFactor = new Variable({name: "duration factor", startingValue: -1*this.timer.currentValue, max: new Variable({startingValue: 1}), 
+            modifiers: [
+                new VariableModifier({variable: this.timer, type: addition}),
+                new VariableModifier({startingValue: this.duration, type: division})
+            ]
+        });
+        if (this.type === addition || this.type === subtraction) {
+            this.modifier = new VariableModifier({startingValue: 1, name: this.name, type: this.type, modifiers: [
+                new VariableModifier({variable: this.durationFactor, type: subtraction}),
+                new VariableModifier({startingValue: this.amount, type: multiplication})
+            ]});
+        } else if (this.type === multiplication) {
+            // It should go from amount to 1 so it should be amount + durationFactor*(1-amount) = amount + durationFactor - durationFactor * amount
+            this.modifier = new VariableModifier({startingValue: this.amount, name: this.name, type: this.type, modifiers: [
+                new VariableModifier({variable: this.durationFactor, type: addition}),
+                new VariableModifier({type: subtraction, variable: new Variable({startingValue: 1, modifiers: [
+                    new VariableModifier({variable: this.durationFactor, type: multiplication}),
+                    new VariableModifier({startingValue: this.amount, type: multiplication}),
+                ]})})
+            ]});
+        } else {
+            throw Error("need to implement the behaviour in question")
+        }
+        character[this.variableAccessor].addModifier(this.modifier);
+        this.variableName = character[this.variableAccessor].name;
+        this.timer.subscribe(() => {
+            if (this.durationFactor.currentValue >= 1) {
+                character[this.variableAccessor].removeModifier(this.modifier);
+                return false; // return false to unsub
+            }
+        })
+    }
+    deactivate(character) {
+        // This effect is deactivated separately
+    }
+    getEffectText() {
+        let name = this.variableAccessor;
+        if (this.variableName && this.variableName !== unnamedVariableName) {
+            name = this.variableName;
+        }
+        let numberText;
+        if (this.type === multiplication) {
+            numberText = percentagize(this.amount) + '%';
+        } else if (this.type === addition) {
+            numberText = roundNumber(this.amount, 2);
+        }
+        return `${titleCase(name)} changed by ${numberText} for up to ${this.duration} days`;
+    }
+};
+
+export class TemporaryLegitimacyBonus extends TemporaryCharacterBonus {
+    constructor(props) {
+        super({...props, variableAccessor: "legitimacy", variableHumanReadable: "legitimacy"});
+    }
+};
