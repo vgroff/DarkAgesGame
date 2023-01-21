@@ -14,6 +14,7 @@ export class Faction {
     constructor(props) {
         this.name = props.name || "Unnamed Faction";
         this.leader = props.leader;
+        this.gameClock = props.gameClock;
         if (!this.leader) {
             throw Error("faction should be created by it's leader");
         }
@@ -47,7 +48,7 @@ export class Faction {
                 name: "citizen privileges",
                 num: 0,
                 traits: [new Trait({name: "sunday afternoons off", effects: [
-                    new HappinessBonus({amount: 1.05, type:addition}),
+                    new HappinessBonus({amount: 1.075, type:multiplication}),
                     new GeneralProductivityBonus({amount: 0.98, type:multiplication}),
                 ]})]
             },
@@ -61,16 +62,17 @@ export class Faction {
                 ]})]
             }
         ];
+        this.timerMessage = "Need to confirm changes to faction privileges";
     }
     changePrivilegeTentatively(privilegeIndex, change) {
         let numExistingPrivileges = this.getNumPrivileges();
         if (numExistingPrivileges + change > this.numPrivilegesAllowed) {
-            console.log("too many privileges already");
             return;
         }
         if (!this.tentativelyChanged) {
             this.oldPrivilegeNums = this.privileges.map(privilege => privilege.num);
             this.tentativelyChanged = true;
+            this.gameClock.forceStopTimer(this.timerMessage)
         }
         this.privileges[privilegeIndex].num += change;
         if (this.tentativelyChanged) {
@@ -78,6 +80,7 @@ export class Faction {
             this.privileges.filter((privilege, i) => privilege.num !== this.oldPrivilegeNums[i]);
             if (this.privileges.length === 0) {
                 this.tentativelyChanged = false;
+                this.gameClock.unforceStopTimer(this.timerMessage)
             }
         }
         this.updatePrivileges();
@@ -86,9 +89,10 @@ export class Faction {
         if (!this.tentativelyChanged) { 
             return;
         }
-        let legitimacyMalus = new TemporaryLegitimacyBonus({amount: -0.05, duration:daysInYear*5, timer: this.timer, type: addition});
+        let legitimacyMalus = new TemporaryLegitimacyBonus({name: "Changed privileges recently", amount: -0.05, duration:daysInYear*5, timer: this.gameClock, type: addition});
         legitimacyMalus.activate(this.leader);
         this.tentativelyChanged = false;
+        this.gameClock.unforceStopTimer(this.timerMessage)
     }
     getNumPrivileges() {
         return this.privileges.reduce((prev, curr) => prev + curr.num, 0);
@@ -391,7 +395,7 @@ export const FameTraits = [JoustingChampion, Orator, Officer, PoliticalVeteran, 
 export class Character {
     constructor(props) {
         this.name = props.name || "Unnamed Character";
-        this.faction = props.faction || null;
+        this.gameClock = props.gameClock;
         this.traitGroups = {
             childhoodTrait: {trait: props.childhoodTrait, choices:ChildhoodTraits, name: "childhood trait"},
             abilityTrait: {trait: props.abilityTrait, choices:AbilityTraits, name: "ability trait"},
@@ -399,7 +403,7 @@ export class Character {
             fameTrait: {trait: props.fameTrait, choices:FameTraits, name: "fame trait"},
             trinketTrait: {trait: props.trinketTrait, choices:TrinketTraits, name: "trinket trait"}
         }
-        this.legitimacy = new Variable({name:`legitimacy`, startingValue:0.2});
+        this.legitimacy = new Variable({name:`legitimacy`, startingValue:0.1});
         this.diplomacy = new Variable({name:`diplomacy`, startingValue:props.diplomacy});
         this.strategy = new Variable({name:`strategy`, startingValue:props.strategy});
         this.administration = new Variable({name:`administration`, startingValue:props.administration});
@@ -414,7 +418,12 @@ export class Character {
         this.characterEffects = [
             new GeneralProductivityBonus({name: "Leader administration", amount: this.administrativeEfficiency, type:multiplication})
         ];
-        this.setFaction(new Faction({leader: this, name: props.factionName}));
+        this.faction = props.faction || null;
+        if (props.faction) {
+            this.setFaction(props.faction)
+        } else {
+            this.setFaction(new Faction({leader: this, name: props.factionName, gameClock: this.gameClock}));
+        }
         this.changeCulture(props.culture);
         if (!this.culture) {
             throw Error("everyone needs a culture")
@@ -426,8 +435,7 @@ export class Character {
         }
         this.faction = faction;
         this.faction.joinFaction(this);
-        this.factionTraits = this.faction.getTraits(); // intentional that we generate new traits each time
-        this.factionTraits.forEach(trait => this.addTrait(trait));
+        this.updateFactionTraits();
     }
     updateFactionTraits() {
         if (this.factionTraits) {
@@ -536,7 +544,6 @@ export class ChoiceComponent extends React.Component {
         if (!this.chosen && this.choices) {
             this.edit = true;
         }
-        console.log(this.edit);
         return <div>
             {!this.edit && this.chosen ? 
             <div onClick = {() => !this.edit && this.choices ? this.setState({edit: !this.edit}) : null}>
@@ -647,14 +654,5 @@ export class CharacterComponent extends UIBase {
 }
 
 // Notes
-// - use linear modifier thing for admin efficency
-// - Faction:
-//     - Do faction name and privileges
-//     - Need to make the faction UI (probably it's own component) for changing privileges
-//     - How to handle invalid states? How to handle legitimacy change?
-//            - Finish the confirm button which shows the effects of confirming (legitimacy drops temporarily)
-//            - Force-stop the timer while tentatively changing
-// - Make diplomacy affect support (only a little?)
 // - Link events in with character stats. Make events have temporary effects to support, or more rarely, to legitimacy
 // - Add in revolutions by trending on negative support?
-// - (later?) Religion

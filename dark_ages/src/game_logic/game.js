@@ -18,7 +18,7 @@ class Game {
             return {day, season, year, text: `Day ${day}, ${titleCase(season)}, Year ${year}`}
         }});
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
-        this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic()});
+        this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic(), gameClock: this.gameClock});
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt}),
             // new Settlement({name: 'Village 2', gameClock: this.gameClock, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt})

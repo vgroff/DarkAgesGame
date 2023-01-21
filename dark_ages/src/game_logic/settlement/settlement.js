@@ -298,9 +298,15 @@ export class Settlement {
         }
         this.leader = leader;
         this.leader.addSettlement(this);
+        let diplomacySupport = new Variable({name: "Leader Diplomacy effect", startingValue:0, modifiers: [
+            new VariableModifier({variable: this.leader.diplomacy, type: scaledAddition, 
+                priority: addition, offset:0,  bias: 0.0, scale: 0.1
+            })
+        ]})
         this.support = new Variable({startingValue: -1, name: "popular support", modifiers: [
             new VariableModifier({variable: this.happiness, type: addition}),
-            new VariableModifier({variable: this.leader.legitimacy, type: addition})
+            new VariableModifier({variable: this.leader.legitimacy, type: addition}),
+            new VariableModifier({variable: diplomacySupport, type: addition})
         ]});
         let zero = new Variable({startingValue: 0});
         this.rebellionSupport = new Variable({startingValue: 0, name: "rebellion support", min: zero, modifiers: [
