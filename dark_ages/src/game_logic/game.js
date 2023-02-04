@@ -61,13 +61,14 @@ class Game {
 export default Game;
 
 // Stuff for now:
-// - use linear modifier thing for admin efficency and possibly elsewhere in events and stuff
 // - Consider making population a different kind of cumulator variable that doesn't change throughout the day, only on day start
-// - Move to the character+culture+faction+legitimacy stuff
-//          - Build faction privilege system + maybe add one or two faction features
-//          - Link events in with character stats
-// - UIBase doesn't currently work correctly since e.g. the props.character in the CharacterComponent can change, but the subscriptions won'
-//        - Instead, they need to be given a callback that gets the appropriate variables and passes them on so that it can re-run during component didUpdate(), including clearing the old ones
+//      - Potentially take inspiration from TrendingVariable too, by overriding recalculate() to make sure that you control currentValue
+//      - Maybe appropriate for other cumulators?
+// - Move to the character
+//        - Add in rebellions => settlement generates itself a new leader, show a message in a separate message tab?
+//        - Link events in with character stats - use scaledAdditions and similar
+// - UIBase doesn't currently work correctly since e.g. the props.character in the CharacterComponent can change, but the subscriptions won't
+//        - Instead, they need to be given a callback that gets the name of the variables and get them correctly from props (use propsDidChange()?) so that it can re-run during component didUpdate(), including clearing the old ones
 // - court intrigue events and nomad events for growth
 // - auto-sell excess goods to the market - important! else they get wasted?
 

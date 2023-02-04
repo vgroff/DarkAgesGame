@@ -1,4 +1,4 @@
-import {VariableModifier, multiplication, subtraction, division, makeTextFile, greaterThan, lesserThan,  exponentiation, max, priority, roundTo, scaledAddition, UnaryModifier, scaledMultiplication, invLogit, min, Variable, castInt, addition, TrendingVariable, TrendingVariableComponent, VariableComponent} from '../UIUtils.js';
+import {VariableModifier, multiplication, subtraction, division, makeTextFile, greaterThan, lesserThan,  exponentiation, max, priority, roundTo, scaledAddition, UnaryModifier, scaledMultiplication, invLogit, min, Variable, castInt, addition, TrendingVariable, TrendingVariableComponent, VariableComponent, CumulatorComponent} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
 import Checkbox from '@mui/material/Checkbox';
 import {FormControlLabel} from '@mui/material';
@@ -308,11 +308,15 @@ export class Settlement {
             new VariableModifier({variable: this.leader.legitimacy, type: addition}),
             new VariableModifier({variable: diplomacySupport, type: addition})
         ]});
-        let zero = new Variable({startingValue: 0});
-        this.rebellionSupport = new Variable({startingValue: 0, name: "rebellion support", min: zero, modifiers: [
+        this.rebellionSupport = new Variable({startingValue: 0, name: "rebellion support", modifiers: [
             new VariableModifier({variable: this.support, type: addition}),
             new VariableModifier({startingValue: -1, type: multiplication})
         ]});
+        let zero = new Variable({startingValue: 0});
+        this.totalRebellionSupport = new Cumulator({startingValue: 0, name: "total rebellion support", 
+            min: zero, modifiers: [
+            new VariableModifier({variable: this.rebellionSupport, type: addition})
+        ], timer: this.gameClock, visualAlerts:(variable) => variable.currentValue > 0 ? ['Try to improve happiness or legitimacy'] : null});
     }
     removeLeader() { // This should never really get called other than by setLeader I guess?
         this.leader = null;
@@ -375,10 +379,8 @@ export class Settlement {
                     let alertsBefore = priority.building.alerts.length;
                     this.addWorkersToBuilding(priority.building, direction);
                     let alertsAfter = priority.building.alerts.length;
-                    // console.log(`adding ${direction} to ${priority.building.name} alerts ${alertsAfter}, ${alertsBefore}`);
                     if  (alertsBefore < alertsAfter) {
                         this.addWorkersToBuilding(priority.building, -direction);
-                        // console.log(`removing from ${priority.building.name} alerts ${alertsAfter}, ${alertsBefore}`);
                     } else if (this.unemployed.currentValue !== unemployed) {
                         allJobsFilled = false;
                         break;
@@ -552,6 +554,9 @@ export class SettlementComponent extends UIBase {
             <TrendingVariableComponent showOwner={false} variable={this.settlement.health} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.generalProductivity} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.support} /><br />
+            {this.settlement.totalRebellionSupport.currentValue > 0 ?
+                <span><CumulatorComponent showOwner={false} variable={this.settlement.totalRebellionSupport} /><br /></span> : null
+            }
             <a href={this.settlement.logHref}>{Variable.logging ? 'Calculation Log' : 'logging is off'}</a><br />
             <FormControlLabel control={<Checkbox onChange={(e, value) => {
                 this.settlement.autoManageUnemployed = value;

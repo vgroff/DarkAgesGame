@@ -654,5 +654,5 @@ export class CharacterComponent extends UIBase {
 }
 
 // Notes
+// - Add in rebellions - new leader auto-generated for settlement. User should get a message saying that a rebellion occured, and if they have no other settlements, they lose the game
 // - Link events in with character stats. Make events have temporary effects to support, or more rarely, to legitimacy
-// - Add in revolutions by trending on negative support?
