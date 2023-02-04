@@ -17,6 +17,7 @@ import { winter, summer, seasonToTempFactor  } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
 import { CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack } from '../events.js';
 import { DefaultBuildings } from './default_buildings.js';
+import { Character, copyCulture, Cultures } from '../character.js';
 
 
 export class Settlement {
@@ -24,6 +25,10 @@ export class Settlement {
         this.name = props.name;
         this.autoManageUnemployed = false;
         this.gameClock = props.gameClock;
+        this.handleRebellion = props.handleRebellion;
+        if (!this.handleRebellion || !this.gameClock) {
+            throw Error("Settlement needs gameClock and handleRebellion");
+        }
         this.populationSizeDecline = new Variable({owner:this, name:"population decline", startingValue: 0.00005,
             displayRound: 5,
             modifiers: []
@@ -317,6 +322,18 @@ export class Settlement {
             min: zero, modifiers: [
             new VariableModifier({variable: this.rebellionSupport, type: addition})
         ], timer: this.gameClock, visualAlerts:(variable) => variable.currentValue > 0 ? ['Try to improve happiness or legitimacy'] : null});
+        this.totalRebellionSupport.subscribe(() => {
+            if (this.totalRebellionSupport.valueAtTurnStart >= 1) {
+                this.rebel();
+            }
+        });
+    }
+    rebel() {
+        let newLeader = new Character({name:"player", culture: copyCulture(this.settlement.leader), gameClock: this.gameClock});
+        if (this.settlement.leader.isPlayerCharacter) {
+            this.handleRebellion();
+        }
+        this.setLeader(newLeader);
     }
     removeLeader() { // This should never really get called other than by setLeader I guess?
         this.leader = null;

@@ -164,7 +164,7 @@ export class Celtic extends Culture {
 
 export class Roman extends Culture {
     constructor(props) {
-        super({...props, name: "celtic"})
+        super({...props, name: "roman"})
     }  
     getTraits() {
         this.lastTraits = [
@@ -187,6 +187,11 @@ export const Cultures = {
     Celtic: Celtic,
     Roman: Roman
 };
+
+export function copyCulture(character) {
+    let culture = Cultures.filter(culture => culture instanceof character.culture.constructor)[0];
+    return new culture();
+}
 
 export class Trait {
     constructor(props) {
@@ -395,6 +400,7 @@ export const FameTraits = [JoustingChampion, Orator, Officer, PoliticalVeteran, 
 export class Character {
     constructor(props) {
         this.name = props.name || "Unnamed Character";
+        this.isPlayer = props.isPlayer || false;
         this.gameClock = props.gameClock;
         this.traitGroups = {
             childhoodTrait: {trait: props.childhoodTrait, choices:ChildhoodTraits, name: "childhood trait"},

@@ -17,10 +17,11 @@ class Game {
             let season = seasons[parseInt((day-1)*4/daysInYear)]
             return {day, season, year, text: `Day ${day}, ${titleCase(season)}, Year ${year}`}
         }});
+        this.gameMessages = [];
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
-        this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic(), gameClock: this.gameClock});
+        this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic(), isPlayer: true, gameClock: this.gameClock});
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt, handleRebellion: this.handleRebellion.bind(this)}),
             // new Settlement({name: 'Village 2', gameClock: this.gameClock, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt})
         ];
         this.totalMarketIncome = new SumAggModifier(
@@ -55,6 +56,12 @@ class Game {
                 event.fire();
             }
         });
+    }
+    handleRebellion(settlement) {
+        this.gameMessages.push(`${settlement.name} has rebelled! You have lost control of this settlement.`);
+        if (this.playerCharacter.settlements.length === 0) {
+            this.gameMessages.push(`You have lost control of all your settlements! \n Game over.`);
+        }
     }
 }
 
