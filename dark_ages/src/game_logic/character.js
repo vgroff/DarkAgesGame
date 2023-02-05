@@ -189,7 +189,7 @@ export const Cultures = {
 };
 
 export function copyCulture(character) {
-    let culture = Cultures.filter(culture => culture instanceof character.culture.constructor)[0];
+    let culture = Object.values(Cultures).filter(culture => character.culture instanceof culture)[0];
     return new culture();
 }
 
@@ -467,7 +467,7 @@ export class Character {
         });
     }
     removeSettlement(settlement) {
-        const index = this.traits.indexOf(settlement);
+        const index = this.settlements.indexOf(settlement);
         if (index > -1) { // only splice array when item is found
             this.settlements.splice(index, 1); // 2nd parameter means remove one item only
         }
@@ -661,4 +661,5 @@ export class CharacterComponent extends UIBase {
 
 // Notes
 // - Add in rebellions - new leader auto-generated for settlement. User should get a message saying that a rebellion occured, and if they have no other settlements, they lose the game
+//           - Mostly done, just need to add in the message for the user - use modal thing?
 // - Link events in with character stats. Make events have temporary effects to support, or more rarely, to legitimacy

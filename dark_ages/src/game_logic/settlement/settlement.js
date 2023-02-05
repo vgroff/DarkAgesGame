@@ -323,21 +323,23 @@ export class Settlement {
             new VariableModifier({variable: this.rebellionSupport, type: addition})
         ], timer: this.gameClock, visualAlerts:(variable) => variable.currentValue > 0 ? ['Try to improve happiness or legitimacy'] : null});
         this.totalRebellionSupport.subscribe(() => {
+            console.log(this.totalRebellionSupport.valueAtTurnStart);
             if (this.totalRebellionSupport.valueAtTurnStart >= 1) {
                 this.rebel();
             }
         });
     }
     rebel() {
-        let newLeader = new Character({name:"player", culture: copyCulture(this.settlement.leader), gameClock: this.gameClock});
-        if (this.settlement.leader.isPlayerCharacter) {
+        console.log("rebelliong triggered");
+        let newLeader = new Character({name:"player", culture: copyCulture(this.leader), gameClock: this.gameClock});
+        if (this.leader.isPlayerCharacter) {
             this.handleRebellion();
         }
         this.setLeader(newLeader);
     }
     removeLeader() { // This should never really get called other than by setLeader I guess?
-        this.leader = null;
         this.leader.removeSettlement(this);
+        this.leader = null;
         this.support = new Variable({startingValue: 0, name: "popular support"})
     }
     populateBuildings() {
