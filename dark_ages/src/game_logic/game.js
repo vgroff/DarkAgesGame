@@ -58,6 +58,7 @@ class Game {
         });
     }
     handleRebellion(settlement) {
+        console.log("handleRebellion")
         this.gameMessages.push(`${settlement.name} has rebelled! You have lost control of this settlement.`);
         if (this.playerCharacter.settlements.length === 0) {
             this.gameMessages.push(`You have lost control of all your settlements! \n Game over.`);
@@ -68,6 +69,7 @@ class Game {
 export default Game;
 
 // Stuff for now:
+// - Rebellions are currently implemented, but need a way to close the modal.
 // - Consider making population a different kind of cumulator variable that doesn't change throughout the day, only on day start
 //      - Potentially take inspiration from TrendingVariable too, by overriding recalculate() to make sure that you control currentValue
 //      - Maybe appropriate for other cumulators?

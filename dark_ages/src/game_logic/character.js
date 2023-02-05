@@ -425,12 +425,12 @@ export class Character {
             new GeneralProductivityBonus({name: "Leader administration", amount: this.administrativeEfficiency, type:multiplication})
         ];
         this.faction = props.faction || null;
+        this.changeCulture(props.culture);
         if (props.faction) {
             this.setFaction(props.faction)
         } else {
             this.setFaction(new Faction({leader: this, name: props.factionName, gameClock: this.gameClock}));
         }
-        this.changeCulture(props.culture);
         if (!this.culture) {
             throw Error("everyone needs a culture")
         }

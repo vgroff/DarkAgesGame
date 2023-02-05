@@ -21,7 +21,7 @@ class GameUI extends UIBase {
     }
     childRender() {
         return <Grid container spacing={2}>
-            {this.game.gameMessages.length ? <GameMessage gameMessage={this.game.gameMessages[0]} timer={this.gameClock}/> : null}
+            {this.game.gameMessages.length > 0? <GameMessage gameMessage={this.game.gameMessages[0]} timer={this.gameClock}/> : null}
             <Grid item xs={2}>
                 <SidePanel setSelected={(selected) => this.setSelected(selected)} game={this.game} internalTimer={this.props.internalTimer}/>
             </Grid>
