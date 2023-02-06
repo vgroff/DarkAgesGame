@@ -8,7 +8,7 @@ import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
 import { CustomTooltip, percentagize, randomRange, roundNumber, titleCase } from "./utils";
 import {Box, Button, Modal, Typography} from "@mui/material";
-import { Variable, multiplication, VariableModifier } from "./UIUtils";
+import { Variable, multiplication, VariableModifier, addition } from "./UIUtils";
 import { toHaveDisplayValue } from "@testing-library/jest-dom/dist/matchers";
 
 const forceLastCheckedDebug = true; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
@@ -613,7 +613,9 @@ export class WolfAttack extends RegularSettlementEvent {
                 })
             ]}),
             new ProbabilisticEventChoice({name: "Hunt the wolves down", effects: [],
-                successChance: new Variable({startingValue: 0.65}), successEffects: [
+                successChance: new Variable({startingValue: 0.2, modifiers:[
+                    new VariableModifier({variable: this.settlements[0].leader.strategy, type: addition})
+                ]}), successEffects: [
                     // Need to fill this out
                     new TemporaryEventDisabled({
                         amount: 4*this.checkEveryAvg

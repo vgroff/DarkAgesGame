@@ -61,25 +61,30 @@ class Game {
         console.log("handleRebellion")
         this.gameMessages.push(`${settlement.name} has rebelled! You have lost control of this settlement.`);
         if (this.playerCharacter.settlements.length === 0) {
+            console.log("game over");
             this.gameMessages.push(`You have lost control of all your settlements! \n Game over.`);
         }
+    }
+    messageRead() {
+        this.gameMessages.shift();
     }
 }
 
 export default Game;
 
 // Stuff for now:
-// - Rebellions are currently implemented, but need a way to close the modal.
+// - Move to the character
+//        - Link events in with character stats - use scaledAdditions and similar -
+//        - Only make player character editable, and only on the first day?
+// - court intrigue events and nomad events for growth
+// - Keep a permanent log of game messages somewhere?
 // - Consider making population a different kind of cumulator variable that doesn't change throughout the day, only on day start
 //      - Potentially take inspiration from TrendingVariable too, by overriding recalculate() to make sure that you control currentValue
 //      - Maybe appropriate for other cumulators?
-// - Move to the character
-//        - Add in rebellions => settlement generates itself a new leader, show a message in a separate message tab?
-//        - Link events in with character stats - use scaledAdditions and similar
+// - auto-sell excess goods to the market - important! else they get wasted? 
+//        - Should be easy to do this by keeping track of excess within the cumulator variable and then just picking them up at the end of the day
 // - UIBase doesn't currently work correctly since e.g. the props.character in the CharacterComponent can change, but the subscriptions won't
 //        - Instead, they need to be given a callback that gets the name of the variables and get them correctly from props (use propsDidChange()?) so that it can re-run during component didUpdate(), including clearing the old ones
-// - court intrigue events and nomad events for growth
-// - auto-sell excess goods to the market - important! else they get wasted?
 
 // - Big-time Optimisation: Force happiness, health to 3 dp? Also building productivity? 
 //          - add new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200}) to building productivtity

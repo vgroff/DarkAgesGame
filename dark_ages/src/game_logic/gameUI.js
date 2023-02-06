@@ -21,7 +21,7 @@ class GameUI extends UIBase {
     }
     childRender() {
         return <Grid container spacing={2}>
-            {this.game.gameMessages.length > 0? <GameMessage gameMessage={this.game.gameMessages[0]} timer={this.gameClock}/> : null}
+            {this.game.gameMessages.length > 0? <GameMessage gameMessage={this.game.gameMessages[0]} timer={this.gameClock} readGameMessage={() => this.game.messageRead()}/> : null}
             <Grid item xs={2}>
                 <SidePanel setSelected={(selected) => this.setSelected(selected)} game={this.game} internalTimer={this.props.internalTimer}/>
             </Grid>
@@ -30,7 +30,7 @@ class GameUI extends UIBase {
                     <HUD gameClock={this.gameClock} treasury={this.game.treasury} harvestEvent={this.game.harvestEvent}/>
                 </div>
                 <div>
-                    <MainUI selected={this.state.selected || this.game.playerCharacter} gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game}/>
+                    <MainUI selected={this.state.selected || this.game.playerCharacter} setSelected={(selected) => this.setSelected(selected)} gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game}/>
                 </div>
             </Grid>
             <Grid item xs={2}>
@@ -50,7 +50,7 @@ export class GameMessage extends UIBase {
         this.props.timer.stopTimer();
         return <div>
             <Modal
-            open={true}
+            open = {true}
             aria-labelledby="modal-modal-title"
             aria-describedby="modal-modal-description"
             >
@@ -69,7 +69,8 @@ export class GameMessage extends UIBase {
                 Game Message
                 </Typography>
                 <div>
-                    {this.gameMessage}
+                    <span>{this.gameMessage}</span><br />
+                    <Button variant='outlined' onClick={() => this.props.readGameMessage()}>Close</Button>
                 </div>
             </Box>
         </Modal></div>

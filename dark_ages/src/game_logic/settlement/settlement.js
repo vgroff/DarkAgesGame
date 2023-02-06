@@ -332,14 +332,13 @@ export class Settlement {
         if (this.rebellionOngoing) {
             return;
         }
-        console.log("rebelliong triggered");
         this.rebellionOngoing = true;
-        let newLeader = new Character({name:"player", culture: copyCulture(this.leader), gameClock: this.gameClock});
-        if (this.leader.isPlayer) {
+        let newLeader = new Character({name:"random npc", culture: copyCulture(this.leader), gameClock: this.gameClock});
+        let oldLeader = this.leader;
+        this.setLeader(newLeader);
+        if (oldLeader.isPlayer) {
             this.handleRebellion(this);
         }
-        this.setLeader(newLeader);
-        console.log("rebelliong over");
         this.rebellionOngoing = false;
     }
     removeLeader() { // This should never really get called other than by setLeader I guess?
@@ -567,6 +566,7 @@ export class SettlementComponent extends UIBase {
         <Grid item xs={12}>
             <h4>Information</h4>
             <span>{this.settlement.name}</span><br />
+            <span onClick={() => this.props.setSelected(this.settlement.leader)} >Leader: {this.settlement.leader.name}</span><br />
             <TerrainComponent terrain={this.settlement.terrain} prefix={true} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeExternal} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.populationSizeChange} /><br /> 
@@ -582,12 +582,12 @@ export class SettlementComponent extends UIBase {
                 <span><CumulatorComponent showOwner={false} variable={this.settlement.totalRebellionSupport} /><br /></span> : null
             }
             <a href={this.settlement.logHref}>{Variable.logging ? 'Calculation Log' : 'logging is off'}</a><br />
-            <FormControlLabel control={<Checkbox onChange={(e, value) => {
+            {this.settlement.leader.isPlayer ? <FormControlLabel control={<Checkbox onChange={(e, value) => {
                 this.settlement.autoManageUnemployed = value;
                 if (this.settlement.autoManageUnemployed) {
                     this.settlement.adjustJobs();
                 }
-            }}/>} label="Auto-assign unemployed"  style={{maxHeight:'80%', minHeight:'80%'}}/>
+            }}/>} label="Auto-assign unemployed"  style={{maxHeight:'80%', minHeight:'80%'}}/> : null}
         </Grid>
         <Grid item xs={12}>
             {this.settlement.settlementEvents.filter(events => events.isActive()).length ? <h4>Active Events</h4> : null}
@@ -610,6 +610,7 @@ export class SettlementComponent extends UIBase {
                             addToBuildingSize={(e, direction) => {this.addToBuildingSize(e, building, direction)}}
                             canUpgrade={building.canUpgrade(this.settlement.resourceStorages)}
                             canDowngrade={building.canDowngrade(this.settlement.resourceStorages)}
+                            isPlayerOwned={this.settlement.leader.isPlayer}
                             upgradeBuilding={(e, direction) => {this.upgradeBuilding(e, building, direction)}}
                             upgradeText={building.getUpgradeText(this.settlement.resourceStorages, building)}
                         /> :  <BuildingComponent building={building} 
@@ -619,6 +620,7 @@ export class SettlementComponent extends UIBase {
                             addToBuildingSize={(e, direction) => {this.addToBuildingSize(e, building, direction)}}
                             canUpgrade={building.canUpgrade(this.settlement.resourceStorages)}
                             canDowngrade={building.canDowngrade(this.settlement.resourceStorages)}
+                            isPlayerOwned={this.settlement.leader.isPlayer}
                             upgradeBuilding={(e, direction) => {this.upgradeBuilding(e, building, direction)}}
                             upgradeText={building.getUpgradeText(this.settlement.resourceStorages, building)}
                         /> }
@@ -629,6 +631,7 @@ export class SettlementComponent extends UIBase {
                 <Grid item xs={12}><br/></Grid>
             </Grid>
         </Grid>
+        {this.settlement.leader.isPlayer ? <span>
         <Grid item xs={12}>
             <h4>Rationing</h4>
                 <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
@@ -687,7 +690,8 @@ export class SettlementComponent extends UIBase {
                         </Grid>
                     })}
                 </Grid>
-        </Grid>
+        </Grid></span>
+        : null }
     </Grid>
     }
 }

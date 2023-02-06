@@ -435,29 +435,33 @@ export class BuildingComponent extends UIBase {
                     <span style={extraStyle} onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.displayName)} {this.building.sizeJobsMultiplier ? <span>{this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span> : this.building.passiveProduction ? this.building.passiveProduction.currentValue : this.building.size.currentValue} </span>
                 </CustomTooltip>
             </Grid>
-            {this.props.addWorkers ? 
+            {this.props.addWorkers && this.props.isPlayerOwned ? 
             <Grid item xs={3} style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
                 <Button variant={this.props.canAddWorkers ? "outlined" : "disabled"} onClick={(e) => this.props.addWorkers(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
                 <Button variant={this.props.canRemoveWorkers ? "outlined" : "disabled"} onClick={(e) => this.props.addWorkers(e, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>
             </Grid> : null}
+            {this.props.isPlayerOwned ? 
             <CustomTooltip items={this.props.buildText} style={{textAlign: "left"}}>
             <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
                     <Button variant={this.props.canBuild ? "outlined" : "disabled"} onClick={(e) => this.props.addToBuildingSize(e, 1)} sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Build</Button>
             </Grid>
-            </CustomTooltip>
+            </CustomTooltip> : null}
+            {this.props.isPlayerOwned ? 
             <CustomTooltip items={["reduce size by 1"]} style={{textAlign: "left"}}>
             <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
                 <Button variant={this.props.canDemolish ? "outlined" : "disabled"} onClick={(e) => this.props.addToBuildingSize(e, -1)} sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Demolish</Button>
             </Grid>
-            </CustomTooltip>
+            </CustomTooltip>  : null}
+            {this.props.isPlayerOwned ? 
             <CustomTooltip items={this.props.upgradeText} style={{textAlign: "left"}}>
             <Grid item xs={6} style={{textAlign:"center",  padding: "2px",alignItems: "center", justifyContent: "center"}}>
                 <Button variant={this.props.canUpgrade ? "outlined" : "disabled"} onClick={(e) => this.props.upgradeBuilding(e, 1)} sx={{fontSize: 12, minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Upgrade</Button>
             </Grid>
-            </CustomTooltip>
+            </CustomTooltip>  : null}
+            {this.props.isPlayerOwned ? 
             <Grid item xs={6} style={{textAlign:"center",  padding: "2px",alignItems: "center", justifyContent: "center"}}>
                 <Button variant={this.props.canDowngrade ? "outlined" : "disabled"} onClick={(e) => this.props.upgradeBuilding(e, -1)}  sx={{fontSize: 12, minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Downgrade</Button>
-            </Grid>
+            </Grid>  : null}
         </Grid>
     }
 }
