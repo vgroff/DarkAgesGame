@@ -20,9 +20,10 @@ class Game {
         this.gameMessages = [];
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
         this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic(), isPlayer: true, gameClock: this.gameClock});
+        let char2 = new Character({name:"npc 2", culture: new Cultures.Celtic(), gameClock: this.gameClock, randomizeTraits: true});
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt, handleRebellion: this.handleRebellion.bind(this)}),
-            // new Settlement({name: 'Village 2', gameClock: this.gameClock, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt})
+            new Settlement({name: 'Village 2', gameClock: this.gameClock, leader: char2, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt, handleRebellion: () => {}})
         ];
         this.totalMarketIncome = new SumAggModifier(
             {
@@ -74,11 +75,8 @@ export default Game;
 
 // Stuff for now:
 // - Move to the character
-//        - Link events in with character stats - use scaledAdditions and similar 
-//               - Should have a default _eventShouldFire() with a probability set in the props if appropriate + eventEffect to modify this number
-//        - Have an event that only fires if support is negative, allowing you to negotiate for support somehow
-//        - Only make player character editable, and only on the first day?
-// - court intrigue events and nomad events for growth
+//        - Force stop timer until all player traits set on the first day?
+// - nomad events for growth
 // - Keep a permanent log of game messages somewhere?
 // - Consider making population a different kind of cumulator variable that doesn't change throughout the day, only on day start
 //      - Potentially take inspiration from TrendingVariable too, by overriding recalculate() to make sure that you control currentValue
@@ -101,6 +99,7 @@ export default Game;
 // - Tabluate stuff: production, distribution, trading, research etc...
 // - Move research into it's own tab - it should use the sum of the research from all settlements? since research isn't per-settlement
 // - Have warnings a la Paradox if you have homeless/unemployement/rebellions etc...
+// - Have back and forth arrows for navigating like a web browser
 // - Hide research and market behind having the library building and the market building
 // - Add descriptions to some variables (e.g. character/settlement ones)
 // Extra major improvment thoughts:
@@ -121,6 +120,8 @@ export default Game;
 //     - Make the wolf attack depended on how much weaponry you have available
 //     - Have a probabilistic outcome with the fire where you can organise the buildings better with high admin 
 //          - Add an event effect that increases the checkEvery by a set amount (permanently)
+//     - Should have a default _eventShouldFire() with a probability set in the props if appropriate
+//          - Have an event effect that changes the probability of the event firing and add it to existing events where appropriate
 //     - More basic events:
 //          - just do: blizzard, warm spell, game surplus, nomads
 //          - blizzard - increased coal demand and massively increase trade costs, 

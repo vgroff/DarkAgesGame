@@ -2,7 +2,7 @@ import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import React from "react";
-import { getProbabilities } from "./rolling";
+import { chooseRandomly, getProbabilities } from "./rolling";
 import { daysInYear } from "./seasons";
 import { AdministrationBonus, Bonus, CharacterBonus, HealthBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, StrategyBonus, HappinessBonus, TemporaryLegitimacyBonus } from "./settlement/bonus";
 import { Apothecary, Church, HuntingCabin, Library, LumberjacksHut } from "./settlement/building";
@@ -316,7 +316,7 @@ export class Careful extends Trait {
 
 export class Brave extends Trait {
     constructor() {
-        super({name: "strategic", effects: [
+        super({name: "brave", effects: [
             new StrategyBonus({amount: 2*TraitScaler, type: addition})
         ]})
     }
@@ -434,6 +434,17 @@ export class Character {
         if (!this.culture) {
             throw Error("everyone needs a culture")
         }
+        console.log("check")
+        if (props.randomizeTraits) {
+            console.log("check2")
+            this.randomizeTraits();
+        }
+    }
+    randomizeTraits() {
+        Object.keys(this.traitGroups).forEach(traitGroup => {
+            const trait = chooseRandomly(this.traitGroups[traitGroup].choices);
+            this.addTrait(new trait());
+        });
     }
     setFaction(faction) {
         if (this.faction) {
@@ -635,13 +646,16 @@ export class CharacterComponent extends UIBase {
                         onChange={(e) => {this.character.name = e.target.value}} onKeyUp={(event) => event.key==="Enter" ? this.setState({editName: false}) : null}/>
                     : this.character.name}<br />
             </div>
-            <ChoiceComponent key={`culture`} editable={true} chosen={this.character.culture} choices={Object.values(Cultures).map(choice => new choice())} groupName={"Culture"} handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)}/>
+            <ChoiceComponent key={`culture`} editable={this.character.isPlayer} chosen={this.character.culture} choices={Object.values(Cultures).map(choice => new choice())} groupName={"Culture"} handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)}/>
             Cultural Traits:
             <ul>{this.character.culture.lastTraits ? this.character.culture.lastTraits.map((trait, i) => 
                 <li key={`cultural_trait_${trait.name}_${i}`}><ChoiceComponent chosen={trait} /></li>)
              : null}</ul>            
             {Object.entries(this.character.traitGroups).map(([key, traitGroup], i) => 
-                <ChoiceComponent key={`trait_group_${key}_${i}`} editable={true} chosen={traitGroup.trait} choices={traitGroup.choices.map(choice => new choice())} groupName={traitGroup.name} handleChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/>)
+                (this.character.isPlayer || traitGroup.trait) ? 
+                <ChoiceComponent key={`trait_group_${key}_${i}`} editable={this.character.isPlayer} chosen={traitGroup.trait} 
+                    choices={traitGroup.choices.map(choice => new choice())} groupName={traitGroup.name} 
+                    handleChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/> : null)
             }
             <br />
             <b>Skills</b> <br />
@@ -660,6 +674,4 @@ export class CharacterComponent extends UIBase {
 }
 
 // Notes
-// - Add in rebellions - new leader auto-generated for settlement. User should get a message saying that a rebellion occured, and if they have no other settlements, they lose the game
-//           - Mostly done, just need to add in the message for the user - use modal thing?
 // - Link events in with character stats. Make events have temporary effects to support, or more rarely, to legitimacy

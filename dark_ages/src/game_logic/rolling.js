@@ -75,3 +75,7 @@ export function successToTruthy(successFailure) {
         throw Error("what")
     }
 }
+
+export function chooseRandomly(array) {
+    return array[Math.floor(Math.random()*array.length)];
+}
