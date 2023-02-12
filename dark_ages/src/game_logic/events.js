@@ -2,7 +2,7 @@ import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
 import { rollSuccess, successToNumber, successToTruthy, majorFailureText, majorSuccessText, successText, getProbabilities, defaultMajorModifier, failureText } from "./rolling";
 import { daysInYear } from "./seasons";
-import { ChangePopulationBonus, ChangePriceBonus, GeneralProductivityBonus, HealthBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryHappinessBonus, TemporaryHealthBonus } from "./settlement/bonus";
+import { ChangePopulationBonus, ChangePriceBonus, GeneralProductivityBonus, HealthBonus, LocalLegitimacyBonus, SettlementBonus, SpecificBuildingChangeSizeBonus, SpecificBuildingEfficiencyBonus, SpecificBuildingProductivityBonus, TemporaryGeneralProductivityBonus, TemporaryHappinessBonus, TemporaryHealthBonus, TemporaryLocalLegitimacyBonus } from "./settlement/bonus";
 import { Church, Farm, IronMine, LumberjacksHut } from "./settlement/building";
 import { Resources } from "./settlement/resource";
 import UIBase from "./UIBase";
@@ -26,7 +26,7 @@ class Event {
             throw Error()
         }
         if (forceLastCheckedDebug) {
-            this.lastChecked = Math.min(-1, -this.checkEvery + 1);
+            this.lastChecked = Math.min(-1, -this.checkEvery);
         } else {
             this.lastChecked = Math.min(-1, Math.round((-this.checkEvery + 1)*(0.5+0.5*Math.random())));
         }
@@ -324,7 +324,9 @@ class SettlementEvent extends Event {
         if (eventEffect instanceof EventEffect) {
             eventEffect.deactivate(this);
         } else if (eventEffect instanceof SettlementBonus) {
-            eventEffect.deactivate(eventEffect);
+            this.settlements.forEach( settlement => {
+                eventEffect.deactivate(settlement);
+            });
         } else {
             throw Error("what")
         }
@@ -489,7 +491,7 @@ export class Fire extends RegularSettlementEvent {
         super({
             name: "fire!",
             checkEveryAvg: daysInYear*3,
-            variance: 0.35, 
+            variance: 0.45, 
             eventDuration: 1,
             pause: true,
             ...props
@@ -653,6 +655,100 @@ export class WolfAttack extends RegularSettlementEvent {
             this.bonusFlavourText += "we got lucky, no one was hurt";
         }
 
+        return bonuses;
+    }
+}
+
+export class CourtIntrigue extends RegularSettlementEvent {
+    constructor(props) {
+        super({
+            name: "court intrigue",
+            checkEveryAvg: daysInYear*3.5,
+            variance: 0.35, 
+            eventDuration: 1,
+            forcePause: true,
+            ...props
+        });
+    }
+    eventShouldFire_() {
+        return successToTruthy(rollSuccess(0.35));
+    }
+    getEventChoices() {
+        return [
+            new EventChoice({name: "Do nothing", effects: [
+                new TemporaryGeneralProductivityBonus({
+                    name: "nobles acquired more power during court intrigue", timer: this.timer,
+                    amount: 0.98, duration: daysInYear*20, type:multiplication
+                })
+            ]}),
+            new ProbabilisticEventChoice({name: "Negotiate with them", effects: [],
+                successChance: new Variable({startingValue: 0.15, modifiers:[
+                    new VariableModifier({variable: this.settlements[0].leader.diplomacy, type: addition})
+                ]}), 
+                majorSuccessEffects: [
+                    new TemporaryLocalLegitimacyBonus({
+                        name: "consolidated power during court intrigue", timer: this.timer,
+                        amount: 0.1, duration:daysInYear*15
+                    })
+                ],
+                successEffects: [
+                    new TemporaryEventDisabled({
+                        amount: 2*this.checkEveryAvg
+                    }),
+                    new TemporaryLocalLegitimacyBonus({
+                        name: "negotiated with nobles during court intrigue", timer: this.timer,
+                        amount: 0.05, duration:daysInYear*15
+                    })
+                ], majorFailureEffects: [
+                    new TemporaryLocalLegitimacyBonus({
+                        name: "nobles acquire a lot more power during court intrigue", timer: this.timer,
+                        amount: -0.05, duration:daysInYear*15
+                    }),
+                    new TemporaryGeneralProductivityBonus({
+                        name: "nobles acquire a lot more power during court intrigue", timer: this.timer,
+                        amount: 0.96, duration: daysInYear*10, type:multiplication
+                    })
+                ]
+            }),
+            new ProbabilisticEventChoice({name: "Use the law to outmaneouver them", effects: [],
+                successChance: new Variable({startingValue: -0.1, modifiers:[
+                    new VariableModifier({variable: this.settlements[0].leader.administration, type: addition})
+                ]}), 
+                majorSuccessEffects: [
+                    new TemporaryEventDisabled({
+                        amount: 5*this.checkEveryAvg
+                    }),
+                    new TemporaryLocalLegitimacyBonus({
+                        name: "majorly outmaneouvered the nobles during court intrigue", timer: this.timer,
+                        amount: 0.1, duration:daysInYear*15
+                    })
+                ],
+                successEffects: [
+                    new TemporaryEventDisabled({
+                        amount: 3*this.checkEveryAvg
+                    }),
+                    new TemporaryLocalLegitimacyBonus({
+                        name: "outmaneouvered the nobles during court intrigue", timer: this.timer,
+                        amount: 0.05, duration:daysInYear*15
+                    })
+                ], majorFailureEffects: [
+                    new TemporaryLocalLegitimacyBonus({
+                        name: "outmaneouvered by the nobles during court intrigue", timer: this.timer,
+                        amount: -0.02, duration:daysInYear*15
+                    })
+                ]
+            })
+        ];
+    }
+    getBonuses() {
+        let bonuses = [];
+        this.bonusFlavourText = "Some nobles are plotting to acquire more power"
+        bonuses.push(
+            new TemporaryLocalLegitimacyBonus({
+                name: "plotting nobles", timer: this.timer,
+                amount: 0.95, duration:daysInYear*5, type:multiplication
+            })
+        );
         return bonuses;
     }
 }

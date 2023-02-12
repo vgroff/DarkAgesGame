@@ -25,6 +25,7 @@ export function rollSuccess(successChance, majorModifier=defaultMajorModifier) {
 }
 
 export function getProbabilities(successChance, majorModifier=defaultMajorModifier) {
+    successChance = Math.min(1, Math.max(0, successChance));
     return {
         successText: successChance * (1-majorModifier),
         majorSuccessText: successChance * majorModifier,

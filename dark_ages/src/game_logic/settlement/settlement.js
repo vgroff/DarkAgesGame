@@ -15,7 +15,7 @@ import { Market, MarketResourceComponent } from './market.js';
 import { titleCase } from '../utils.js';
 import { winter, summer, seasonToTempFactor  } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
-import { CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack } from '../events.js';
+import { CourtIntrigue, CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack } from '../events.js';
 import { DefaultBuildings } from './default_buildings.js';
 import { Character, copyCulture, Cultures } from '../character.js';
 
@@ -272,6 +272,7 @@ export class Settlement {
             // new Fire({settlements: [this], timer: this.gameClock}),
             // new Pestilence({settlements: [this], timer: this.gameClock}),
             // new WolfAttack({settlements:[this], timer: this.gameClock})
+            new CourtIntrigue({settlements: [this], timer: this.gameClock}),
         ];
         this.tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
 
@@ -302,15 +303,18 @@ export class Settlement {
             this.removeLeader()
         }
         this.leader = leader;
+        this.localLegitimacy = new Variable({name: "Local legitimacy", startingValue: 0, modifiers: [
+            new VariableModifier({variable: this.leader.legitimacy, type: addition})
+        ]});
         this.leader.addSettlement(this);
         let diplomacySupport = new Variable({name: "Leader Diplomacy effect", startingValue:0, modifiers: [
             new VariableModifier({variable: this.leader.diplomacy, type: scaledAddition, 
                 priority: addition, offset:0,  bias: 0.0, scale: 0.1
             })
-        ]})
+        ]});
         this.support = new Variable({startingValue: -1, name: "popular support", modifiers: [
             new VariableModifier({variable: this.happiness, type: addition}),
-            new VariableModifier({variable: this.leader.legitimacy, type: addition}),
+            new VariableModifier({variable: this.localLegitimacy, type: addition}),
             new VariableModifier({variable: diplomacySupport, type: addition})
         ]});
         this.rebellionSupport = new Variable({startingValue: 0, name: "rebellion support", modifiers: [
@@ -577,6 +581,7 @@ export class SettlementComponent extends UIBase {
             <TrendingVariableComponent showOwner={false} variable={this.settlement.happiness} /><br />
             <TrendingVariableComponent showOwner={false} variable={this.settlement.health} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.generalProductivity} /><br />
+            <VariableComponent showOwner={false} variable={this.settlement.localLegitimacy} /><br />
             <VariableComponent showOwner={false} variable={this.settlement.support} /><br />
             {this.settlement.totalRebellionSupport.currentValue > 0 ?
                 <span><CumulatorComponent showOwner={false} variable={this.settlement.totalRebellionSupport} /><br /></span> : null

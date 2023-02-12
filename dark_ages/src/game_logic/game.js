@@ -74,7 +74,9 @@ export default Game;
 
 // Stuff for now:
 // - Move to the character
-//        - Link events in with character stats - use scaledAdditions and similar -
+//        - Link events in with character stats - use scaledAdditions and similar 
+//               - Should have a default _eventShouldFire() with a probability set in the props if appropriate + eventEffect to modify this number
+//        - Have an event that only fires if support is negative, allowing you to negotiate for support somehow
 //        - Only make player character editable, and only on the first day?
 // - court intrigue events and nomad events for growth
 // - Keep a permanent log of game messages somewhere?
@@ -117,6 +119,8 @@ export default Game;
 // - Tavern/entertainment should improve trade modifier?
 // - Events Notes:
 //     - Make the wolf attack depended on how much weaponry you have available
+//     - Have a probabilistic outcome with the fire where you can organise the buildings better with high admin 
+//          - Add an event effect that increases the checkEvery by a set amount (permanently)
 //     - More basic events:
 //          - just do: blizzard, warm spell, game surplus, nomads
 //          - blizzard - increased coal demand and massively increase trade costs, 

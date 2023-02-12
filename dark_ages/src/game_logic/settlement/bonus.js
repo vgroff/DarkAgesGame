@@ -91,6 +91,12 @@ export class HappinessBonus extends SimpleSettlementModifier {
     }
 };
 
+export class LocalLegitimacyBonus extends SimpleSettlementModifier {
+    constructor(props) {
+        super({...props, variableAccessor: "localLegitimacy", variableHumanReadable: "local legitimacy"});
+    }
+};
+
 export class SpecificBuildingProductivityBonus extends SettlementBonus {
     constructor(props) {
         super(props);
@@ -270,6 +276,7 @@ export class TemporaryModifierBonus extends SettlementBonus {
         super(props);
         this.amount = props.amount;
         this.variableAccessor = props.variableAccessor;
+        this.variableHumanReadable = props.variableHumanReadable || null;
         this.type = props.type || addition; // Not sure this works properly besides addition
         this.duration = props.duration;
         this.timer = props.timer;
@@ -314,11 +321,11 @@ export class TemporaryModifierBonus extends SettlementBonus {
         })
     }
     deactivate(settlement) {
-        // This effect is deactivated separately
+        // This effect is deactivated separately by the timer callback
     }
     getEffectText() {
-        let name = this.variableAccessor;
-        if (this.variableName && this.variableName !== unnamedVariableName) {
+        let name = this.variableHumanReadable || this.variableAccessor;
+        if (!this.variableHumanReadable && this.variableName && this.variableName !== unnamedVariableName) {
             name = this.variableName;
         }
         let numberText;
@@ -342,6 +349,19 @@ export class TemporaryHealthBonus extends TemporaryModifierBonus {
         super({...props, variableAccessor: 'health'})
     }
 }
+
+export class TemporaryLocalLegitimacyBonus extends TemporaryModifierBonus {
+    constructor(props) {
+        super({...props, variableAccessor: 'localLegitimacy', variableHumanReadable: "local legitimacy"})
+    }
+}
+
+export class TemporaryGeneralProductivityBonus extends TemporaryModifierBonus {
+    constructor(props) {
+        super({...props, variableAccessor: "generalProductivity", variableHumanReadable: "productivity"});
+    }
+};
+
 
 export class ChangePopulationBonus extends SettlementBonus {
     constructor(props) {
