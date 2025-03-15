@@ -9,7 +9,7 @@ export function titleCase(str) {
 
 export function roundNumber(number, dp = 3) {
     if (number === undefined) {
-        debugger;
+        // debugger;
     }
     return parseFloat(number.toFixed(dp));
 }

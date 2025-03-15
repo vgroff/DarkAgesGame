@@ -1,4 +1,4 @@
-import {Settlement, } from "./settlement/settlement";
+import {Settlement} from "./settlement/settlement";
 import {ListAggModifier, Variable, VariableModifier, Cumulator, addition} from './UIUtils';
 import { titleCase } from "./utils";
 import {Timer} from './timer'
@@ -11,7 +11,7 @@ import { Celtic, Character, Cultures } from "./character";
 
 class Game {
     constructor(gameClock) {
-        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 800, timeTranslator:(value) => {
+        this.gameClock = gameClock || new Timer({name: 'Game timer', meaning: "Current day", every: 800, timeTranslator:(value) => {
             let year = parseInt(value/daysInYear) + 1;
             let day = value - (year - 1)*daysInYear + 1;
             let season = seasons[parseInt((day-1)*4/daysInYear)]
@@ -51,13 +51,22 @@ class Game {
         this.harvestEvent = new HarvestEvent({settlements: this.settlements, timer: this.gameClock});
         this.globalEvents = [
             this.harvestEvent
-        ]
-        this.globalEvents.forEach(event => {
-            if (event.eventShouldFire()) {
-                event.fire();
-            }
-        });
+        ];
+        
+        // Initialize events
+        this.initEvents();
     }
+
+    initEvents() {
+        if (this.globalEvents) {
+            this.globalEvents.forEach(event => {
+                if (event && event.eventShouldFire && event.eventShouldFire()) {
+                    event.fire();
+                }
+            });
+        }
+    }
+
     init() {
         // Store current UI state before initializing
         const uiState = {
@@ -68,38 +77,66 @@ class Game {
         };
         
         // Pause all timers during initialization
-        this.gameClock.stopTimer();
+        if (this.gameClock) {
+            this.gameClock.stopTimer();
+        }
         
         // Initialize all game objects first
-        this.bankrupt.init();
-        this.playerCharacter.init();
-        this.settlements.forEach(s => s.init());
-        this.treasury.init();
+        if (this.bankrupt) {
+            this.bankrupt.init();
+        }
+        
+        // Initialize all settlements
+        if (this.settlements) {
+            this.settlements.forEach(s => {
+                if (s && s.init) {
+                    s.init();
+                }
+            });
+        }
+        
+        // Initialize treasury
+        if (this.treasury) {
+            this.treasury.init();
+        }
         
         // Initialize and sync all events
-        this.globalEvents.forEach(event => {
-            event.init();
-            
-            // Ensure event timing is preserved
-            if (event.isActive()) {
-                const remaining = event.daysLeft();
-                event.eventDuration.setNewBaseValue(remaining, 'restore event duration');
-            }
-        });
+        if (this.globalEvents) {
+            this.globalEvents.forEach(event => {
+                if (event && event.init) {
+                    event.init();
+                }
+                
+                // Ensure event timing is preserved
+                if (event && event.isActive && event.isActive() && event.daysLeft) {
+                    const remaining = event.daysLeft();
+                    if (event.eventDuration) {
+                        event.eventDuration.setNewBaseValue(remaining, 'restore event duration');
+                    }
+                }
+            });
+        }
         
         // Restore timer subscriptions
-        this.gameClock.subscribe(() => {
-            this.triggerChecks();
-        });
+        if (this.gameClock) {
+            this.gameClock.subscribe(() => {
+                this.triggerChecks();
+            });
+        }
         
         // Restore treasury subscriptions
-        this.treasury.subscribe(() => {
-            if (this.treasury.baseValue < 0 && this.bankrupt.currentValue === 0) {
-                this.bankrupt.setNewBaseValue(1, 'user bankrupt');
-            } else if (this.treasury.baseValue > 0 && this.bankrupt.currentValue !== 0){
-                this.bankrupt.setNewBaseValue(0, 'user liquid');
-            }
-        });
+        if (this.treasury) {
+            this.treasury.subscribe(() => {
+                if (this.treasury.baseValue < 0 && this.bankrupt.currentValue === 0) {
+                    this.bankrupt.setNewBaseValue(1, 'user bankrupt');
+                } else if (this.treasury.baseValue > 0 && this.bankrupt.currentValue !== 0){
+                    this.bankrupt.setNewBaseValue(0, 'user liquid');
+                }
+            });
+        }
+        
+        // Initialize events after everything else is ready
+        this.initEvents();
         
         // Restore UI state
         this.selectedSettlement = uiState.selectedSettlement;
@@ -108,8 +145,11 @@ class Game {
         this.scrollPositions = uiState.scrollPositions;
         
         // Resume timer
-        this.gameClock.startTimer();
+        if (this.gameClock) {
+            this.gameClock.startTimer();
+        }
     }
+
     handleRebellion(settlement) {
         console.log("handleRebellion")
         this.gameMessages.push(`${settlement.name} has rebelled! You have lost control of this settlement.`);
@@ -118,8 +158,19 @@ class Game {
             this.gameMessages.push(`You have lost control of all your settlements! \n Game over.`);
         }
     }
+
     messageRead() {
         this.gameMessages.shift();
+    }
+
+    triggerChecks() {
+        if (this.globalEvents) {
+            this.globalEvents.forEach(event => {
+                if (event && event.eventShouldFire && event.eventShouldFire()) {
+                    event.fire();
+                }
+            });
+        }
     }
 }
 

@@ -3,25 +3,165 @@ import Game from './game';
 import { Settlement } from './settlement/settlement';
 import { Character } from './character';
 import { Timer } from './timer';
+import { 
+    Storage, 
+    Farm, 
+    LumberjacksHut, 
+    Brewery, 
+    CharcoalKiln, 
+    Quarry, 
+    Housing, 
+    ResourceBuilding, 
+    Building,
+    Stonecutters, 
+    HuntingCabin, 
+    Apothecary, 
+    ConstructionSite, 
+    Library, 
+    Roads, 
+    IronMine, 
+    Toolmaker, 
+    Church, 
+    Tavern, 
+    CoalMine, 
+    Bowyer, 
+    WeaponMaker 
+} from './settlement/building';
+import { 
+    Farmlands, 
+    Marshlands, 
+    NoTerrain, 
+    Mountains, 
+    Woodlands 
+} from './settlement/terrain';
+import { 
+    CourtIntrigue, 
+    CropBlight, 
+    Fire, 
+    HarvestEvent, 
+    LocalMiracle, 
+    MineShaftCollapse, 
+    Pestilence, 
+    WolfAttack 
+} from './events';
+import { 
+    Bonus,
+    SettlementBonus,
+    GeneralProductivityBonus,
+    HealthBonus,
+    LocalLegitimacyBonus,
+    SpecificBuildingProductivityBonus,
+    SpecificBuildingEfficiencyBonus,
+    SpecificBuildingMaxSizeBonus,
+    UnlockBuildingBonus,
+    UnlockBuildingUpgradeBonus,
+    ChangePriceBonus,
+    AddNewBuildingBonus,
+    TemporaryModifierBonus,
+    TemporaryHappinessBonus,
+    TemporaryHealthBonus,
+    TemporaryLocalLegitimacyBonus,
+    TemporaryGeneralProductivityBonus,
+    CharacterBonus,
+    LegitimacyBonus,
+    StrategyBonus,
+    DiplomacyBonus,
+    AdministrationBonus,
+    TemporaryCharacterBonus,
+    TemporaryLegitimacyBonus
+} from './settlement/bonus';
+import { Market } from './settlement/market';
+import { Trait, Faction, Celtic, Roman } from './character';
+import { SumAggModifier } from './variable/sumAgg';
+import {VariableModifier} from './variable/modifier';
+import { Cumulator } from './variable/cumulator';
 
-// Map of class names to constructor functions
 const CLASS_MAP = {
-    Game,
-    Settlement,
-    Character,
-    Variable,
-    Timer,
+    Game: { constructor: Game, hasInit: true },
+    Settlement: { constructor: Settlement, hasInit: true },
+    Character: { constructor: Character, hasInit: false },
+    Variable: { constructor: Variable, hasInit: true },
+    Timer: { constructor: Timer, hasInit: true },
+    Market: { constructor: Market, hasInit: false },
+    Trait: { constructor: Trait, hasInit: false },
+    Faction: { constructor: Faction, hasInit: false },
+    Celtic: { constructor: Celtic, hasInit: false },
+    Roman: { constructor: Roman, hasInit: false },
+    VariableModifier: { constructor: VariableModifier, hasInit: false },
+    Cumulator: { constructor: Cumulator, hasInit: true },
+    SumAggModifier: { constructor: SumAggModifier, hasInit: true },
+
+    Building: { constructor: Building, hasInit: false },
+    ResourceBuilding: { constructor: ResourceBuilding, hasInit: false },
+    Storage: { constructor: Storage, hasInit: false },
+    Farm: { constructor: Farm, hasInit: false },
+    LumberjacksHut: { constructor: LumberjacksHut, hasInit: false },
+    Brewery: { constructor: Brewery, hasInit: false },
+    CharcoalKiln: { constructor: CharcoalKiln, hasInit: false },
+    Quarry: { constructor: Quarry, hasInit: false },
+    Housing: { constructor: Housing, hasInit: false },
+    Stonecutters: { constructor: Stonecutters, hasInit: false },
+    HuntingCabin: { constructor: HuntingCabin, hasInit: false },
+    Apothecary: { constructor: Apothecary, hasInit: false },
+    ConstructionSite: { constructor: ConstructionSite, hasInit: false },
+    Library: { constructor: Library, hasInit: false },
+    Roads: { constructor: Roads, hasInit: false },
+    IronMine: { constructor: IronMine, hasInit: false },
+    Toolmaker: { constructor: Toolmaker, hasInit: false },
+    Church: { constructor: Church, hasInit: false },
+    Tavern: { constructor: Tavern, hasInit: false },
+    CoalMine: { constructor: CoalMine, hasInit: false },
+    Bowyer: { constructor: Bowyer, hasInit: false },
+    WeaponMaker: { constructor: WeaponMaker, hasInit: false },
+
+    Farmlands: { constructor: Farmlands, hasInit: false },
+    Marshlands: { constructor: Marshlands, hasInit: false },
+    NoTerrain: { constructor: NoTerrain, hasInit: false },
+    Mountains: { constructor: Mountains, hasInit: false },
+    Woodlands: { constructor: Woodlands, hasInit: false },
+
+    CourtIntrigue: { constructor: CourtIntrigue, hasInit: true },
+    CropBlight: { constructor: CropBlight, hasInit: true },
+    Fire: { constructor: Fire, hasInit: true },
+    HarvestEvent: { constructor: HarvestEvent, hasInit: true },
+    LocalMiracle: { constructor: LocalMiracle, hasInit: true },
+    MineShaftCollapse: { constructor: MineShaftCollapse, hasInit: true },
+    Pestilence: { constructor: Pestilence, hasInit: true },
+    WolfAttack: { constructor: WolfAttack, hasInit: true },
+
+    Bonus: { constructor: Bonus, hasInit: false },
+    SettlementBonus: { constructor: SettlementBonus, hasInit: false },
+    GeneralProductivityBonus: { constructor: GeneralProductivityBonus, hasInit: false },
+    HealthBonus: { constructor: HealthBonus, hasInit: false },
+    LocalLegitimacyBonus: { constructor: LocalLegitimacyBonus, hasInit: false },
+    SpecificBuildingProductivityBonus: { constructor: SpecificBuildingProductivityBonus, hasInit: false },
+    SpecificBuildingEfficiencyBonus: { constructor: SpecificBuildingEfficiencyBonus, hasInit: false },
+    SpecificBuildingMaxSizeBonus: { constructor: SpecificBuildingMaxSizeBonus, hasInit: false },
+    UnlockBuildingBonus: { constructor: UnlockBuildingBonus, hasInit: false },
+    UnlockBuildingUpgradeBonus: { constructor: UnlockBuildingUpgradeBonus, hasInit: false },
+    ChangePriceBonus: { constructor: ChangePriceBonus, hasInit: false },
+    AddNewBuildingBonus: { constructor: AddNewBuildingBonus, hasInit: false },
+    TemporaryModifierBonus: { constructor: TemporaryModifierBonus, hasInit: false },
+    TemporaryHappinessBonus: { constructor: TemporaryHappinessBonus, hasInit: false },
+    TemporaryHealthBonus: { constructor: TemporaryHealthBonus, hasInit: false },
+    TemporaryLocalLegitimacyBonus: { constructor: TemporaryLocalLegitimacyBonus, hasInit: false },
+    TemporaryGeneralProductivityBonus: { constructor: TemporaryGeneralProductivityBonus, hasInit: false },
+    CharacterBonus: { constructor: CharacterBonus, hasInit: false },
+    LegitimacyBonus: { constructor: LegitimacyBonus, hasInit: false },
+    StrategyBonus: { constructor: StrategyBonus, hasInit: false },
+    DiplomacyBonus: { constructor: DiplomacyBonus, hasInit: false },
+    AdministrationBonus: { constructor: AdministrationBonus, hasInit: false },
+    TemporaryCharacterBonus: { constructor: TemporaryCharacterBonus, hasInit: false },
+    TemporaryLegitimacyBonus: { constructor: TemporaryLegitimacyBonus, hasInit: false }
 };
 
-// Properties that should not be serialized
 const EXCLUDED_PROPS = new Set([
     'component',
     'react',
     '_reactInternals',
-    'logHref',  // This is regenerated on load
+    'logHref'
 ]);
 
-// Properties that need special handling for serialization
 const SPECIAL_PROPS = new Set([
     'subscriptions',
     'subscribed',
@@ -51,36 +191,29 @@ export function loadGame(gameState) {
 }
 
 function serializeObject(obj, seen = new WeakMap()) {
-    // Handle null/undefined
     if (obj === null || obj === undefined) {
         return obj;
     }
 
-    // Handle primitive types
     if (typeof obj !== 'object') {
         return obj;
     }
 
-    // Handle circular references
     if (seen.has(obj)) {
         return { $ref: seen.get(obj) };
     }
 
-    // Generate unique ID for this object
     const id = seen.size;
     seen.set(obj, id);
 
-    // Handle arrays
     if (Array.isArray(obj)) {
         return obj.map(item => serializeObject(item, seen));
     }
 
-    // Handle Date objects
     if (obj instanceof Date) {
         return { $type: 'Date', $value: obj.toISOString() };
     }
 
-    // Handle Set objects
     if (obj instanceof Set) {
         return { 
             $type: 'Set', 
@@ -88,7 +221,6 @@ function serializeObject(obj, seen = new WeakMap()) {
         };
     }
 
-    // Handle Map objects
     if (obj instanceof Map) {
         return { 
             $type: 'Map', 
@@ -99,7 +231,6 @@ function serializeObject(obj, seen = new WeakMap()) {
         };
     }
 
-    // Handle Variable objects specially
     if (obj instanceof Variable) {
         const serialized = {
             $type: obj.constructor.name,
@@ -117,7 +248,6 @@ function serializeObject(obj, seen = new WeakMap()) {
                 abridgedExplanations: serializeObject(obj.abridgedExplanations, seen),
                 baseValueExplanations: serializeObject(obj.baseValueExplanations, seen),
                 visualAlerts: obj.visualAlerts,
-                // Save subscription priorities for reconstruction
                 subscriptionPriorities: obj.subscriptions?.map(sub => ({
                     priority: sub.priority,
                     reason: sub.reason
@@ -127,21 +257,17 @@ function serializeObject(obj, seen = new WeakMap()) {
         return serialized;
     }
 
-    // Create serializable version
     const serialized = {
         $type: obj.constructor.name,
         $id: id,
         $data: {}
     };
 
-    // Serialize each property
     for (const [key, value] of Object.entries(obj)) {
-        // Skip excluded properties and functions
         if (EXCLUDED_PROPS.has(key) || typeof value === 'function') {
             continue;
         }
 
-        // Handle special properties
         if (SPECIAL_PROPS.has(key)) {
             if (key === 'subscriptions' && Array.isArray(value)) {
                 serialized.$data[key + '_info'] = value.map(sub => ({
@@ -163,17 +289,14 @@ function serializeObject(obj, seen = new WeakMap()) {
 }
 
 function deserializeObject(serialized, seen = new Map()) {
-    // Handle null/undefined
     if (serialized === null || serialized === undefined) {
         return serialized;
     }
 
-    // Handle primitive types
     if (typeof serialized !== 'object') {
         return serialized;
     }
 
-    // Handle circular references
     if (serialized.$ref !== undefined) {
         const cached = seen.get(serialized.$ref);
         if (!cached) {
@@ -182,12 +305,10 @@ function deserializeObject(serialized, seen = new Map()) {
         return cached;
     }
 
-    // Handle arrays
     if (Array.isArray(serialized)) {
         return serialized.map(item => deserializeObject(item, seen));
     }
 
-    // Handle special types
     if (serialized.$type === 'Date') {
         return new Date(serialized.$value);
     }
@@ -205,23 +326,46 @@ function deserializeObject(serialized, seen = new Map()) {
         );
     }
 
-    // If not a serialized object with type info, return as-is
-    if (!serialized.$type) {
-        return serialized;
+    if (serialized.$type === 'Variable') {
+        const instance = Object.create(Variable.prototype);
+        seen.set(serialized.$id, instance);
+
+        instance._savedSubscriptionPriorities = serialized.$data.subscriptionPriorities;
+        instance.modifiers = [];
+        instance._subscriptionSources = new WeakMap();
+
+        for (const [key, value] of Object.entries(serialized.$data)) {
+            try {
+                if (key === 'modifiers' && Array.isArray(value)) {
+                    instance[key] = value.map(m => deserializeObject(m, seen)).filter(Boolean);
+                } else {
+                    instance[key] = deserializeObject(value, seen);
+                }
+            } catch (error) {
+                console.warn(`Failed to deserialize property ${key}:`, error);
+            }
+        }
+
+        if (instance.init) {
+            try {
+                instance.init();
+            } catch (error) {
+                console.error(`Failed to initialize ${serialized.$type}:`, error);
+            }
+        }
+
+        return instance;
     }
 
-    // Get constructor
-    const constructor = CLASS_MAP[serialized.$type];
-    if (!constructor) {
+    const classInfo = CLASS_MAP[serialized.$type];
+    if (!classInfo) {
         console.warn(`Unknown class type: ${serialized.$type}, returning raw data`);
         return serialized.$data;
     }
 
-    // Create instance
-    const instance = Object.create(constructor.prototype);
+    const instance = Object.create(classInfo.constructor.prototype);
     seen.set(serialized.$id, instance);
 
-    // Deserialize properties
     for (const [key, value] of Object.entries(serialized.$data)) {
         try {
             instance[key] = deserializeObject(value, seen);
@@ -230,15 +374,12 @@ function deserializeObject(serialized, seen = new Map()) {
         }
     }
 
-    // Special handling for Variable objects
-    if (instance instanceof Variable && serialized.$data.subscriptionPriorities) {
-        // Store subscription priorities for init() to use
-        instance._savedSubscriptionPriorities = serialized.$data.subscriptionPriorities;
-    }
-
-    // Initialize runtime state
-    if (instance.init) {
-        instance.init();
+    if (classInfo.hasInit && instance.init) {
+        try {
+            instance.init();
+        } catch (error) {
+            console.error(`Failed to initialize ${serialized.$type}:`, error);
+        }
     }
 
     return instance;

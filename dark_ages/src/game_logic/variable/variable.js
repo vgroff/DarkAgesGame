@@ -157,6 +157,11 @@ export class Variable {
             }
 
             try {
+                // Make sure modifier is initialized
+                if (modifier.init) {
+                    modifier.init();
+                }
+
                 const callback = modifier.subscribe((indent) => {
                     try {
                         self.recalculate(`modifier ${modifier.name} changed`, indent);
@@ -166,10 +171,12 @@ export class Variable {
                     }
                 }, 10);
                 
-                this._addSubscriptionSource(modifier, callback);
-                this.modifierCallbacks.push(callback);
+                if (callback) {
+                    this._addSubscriptionSource(modifier, callback);
+                    this.modifierCallbacks.push(callback);
+                }
             } catch(error) {
-                console.error('Failed to subscribe to modifier:', error);
+                console.warn('Failed to subscribe to modifier:', error);
             }
         }
     }
@@ -283,52 +290,79 @@ export class Variable {
         }
         this._initializing = true;
         
-        // Clear any stale subscriptions first
-        this.clearSubscriptions();
-        this.modifierCallbacks = [];
-        
-        // Initialize min/max first if they exist
-        if (this.min && this.min.init) {
-            this.min.init();
-        }
-        if (this.max && this.max.init) {
-            this.max.init();
-        }
-        
-        // Sort modifiers by priority before subscribing
-        this.modifiers.sort((a, b) => a.priority() - b.priority());
-        
-        // Initialize modifiers in priority order
-        for (const modifier of this.modifiers) {
-            if (modifier.init) {
-                modifier.init();
+        try {
+            // Clear any stale subscriptions first
+            this.clearSubscriptions();
+            this.modifierCallbacks = [];
+            
+            // Initialize min/max first if they exist
+            if (this.min && this.min.init) {
+                this.min.init();
             }
+            if (this.max && this.max.init) {
+                this.max.init();
+            }
+            
+            // Track subscription sources for cleanup
+            if (!this._subscriptionSources) {
+                this._subscriptionSources = new WeakMap();
+            }
+            
+            // Initialize modifiers first
+            if (this.modifiers) {
+                // Sort modifiers by priority
+                this.modifiers.sort((a, b) => {
+                    if (!a || !b) return 0;
+                    return (a.priority?.() || 0) - (b.priority?.() || 0);
+                });
+                
+                // Initialize each modifier
+                for (const modifier of this.modifiers) {
+                    if (modifier && modifier.init) {
+                        modifier.init();
+                    }
+                }
+            }
+            
+            // Now restore subscriptions in correct order
+            if (this.modifiers) {
+                this.subscribeToModifiers();
+            }
+            
+            // Restore min/max subscriptions
+            if (this.max) {
+                this._addSubscriptionSource(this.max, 
+                    this.max.subscribe((indent) => this.recalculate('max changed', indent), 'using as a max', 1)
+                );
+            }
+            if (this.min) {
+                this._addSubscriptionSource(this.min,
+                    this.min.subscribe((indent) => this.recalculate('min changed', indent), 'using as a min', 1)
+                );
+            }
+            
+            // Restore saved subscription priorities
+            if (this._savedSubscriptionPriorities) {
+                for (const subInfo of this._savedSubscriptionPriorities) {
+                    this.subscribe(() => {}, subInfo.priority, subInfo.reason);
+                }
+                delete this._savedSubscriptionPriorities;
+            }
+            
+            // Recalculate after all subscriptions are restored
+            this.recalculate('init after load', 0);
+        } catch (error) {
+            console.error('Error during Variable initialization:', error);
+        } finally {
+            this._initializing = false;
         }
-        
-        // Track subscription sources for cleanup
-        this._subscriptionSources = new WeakMap();
-        
-        // Now restore subscriptions in correct order
-        this.subscribeToModifiers();
-        
-        if (this.max) {
-            this._addSubscriptionSource(this.max, 
-                this.max.subscribe((indent) => this.recalculate('max changed', indent), 'using as a max', 1)
-            );
-        }
-        if (this.min) {
-            this._addSubscriptionSource(this.min,
-                this.min.subscribe((indent) => this.recalculate('min changed', indent), 'using as a min', 1)
-            );
-        }
-        
-        // Recalculate after all subscriptions are restored
-        this.recalculate('init after load', 0);
-        
-        this._initializing = false;
     }
 
     _addSubscriptionSource(source, subscription) {
+        if (!source || !subscription) {
+            return;
+        }
+
         if (!this._subscriptionSources) {
             this._subscriptionSources = new WeakMap();
         }
@@ -336,7 +370,7 @@ export class Variable {
     }
 
     _removeSubscriptionSource(source) {
-        if (!this._subscriptionSources) {
+        if (!this._subscriptionSources || !source) {
             return;
         }
         
