@@ -3,53 +3,41 @@ import {Timer} from './game_logic/timer.js'
 import GameUI from './game_logic/gameUI.js'
 import React from 'react';
 import { saveGame, loadGame } from './game_logic/save_load';
+import Game from './game_logic/game';
 
-class App extends React.Component {
-    constructor(props) {
-        super(props);
-        this.timer = new Timer({name: 'Internal timer', every: 500});
-        this.timer.startTimer();
-        this.state = {
-            ready: false,
-            uiState: {
-                openPanels: new Set(),
-                selectedTabs: new Map(),
-                scrollPositions: new Map()
-            }
-        };
-    }
+function App() {
+    const [timer] = React.useState(() => {
+        const timer = new Timer({name: 'Internal timer', every: 500});
+        timer.startTimer();
+        return timer;
+    });
+    const [game, setGame] = React.useState(null);
+    const [ready, setReady] = React.useState(false);
+    const [uiState, setUiState] = React.useState({
+        openPanels: new Set(),
+        selectedTabs: new Map(),
+        scrollPositions: new Map()
+    });
+    const fileInputRef = React.useRef(null);
 
-    stateSetter = () => {
-        this.setState({
-            timer: this.timer,
-            ready: true
-        });
-    }
-
-    componentDidMount() {
-        this.timer.startTimer();
-        this.callback = this.timer.subscribe(this.stateSetter, 'main loop timer');
-    }
-
-    componentWillUnmount() {
-        if (this.callback) {
-            this.timer.unsubscribe(this.callback);
+    React.useEffect(() => {
+        if (!game) {
+            setGame(new Game());
         }
-        this.timer.stopTimer();
-    }
+        setReady(true);
+    }, [game]);
 
-    handleSave = () => {
-        // Capture current UI state
-        const currentUiState = {
-            openPanels: Array.from(this.state.uiState.openPanels),
-            selectedTabs: Object.fromEntries(this.state.uiState.selectedTabs),
-            scrollPositions: Object.fromEntries(this.state.uiState.scrollPositions)
-        };
-        
+    const handleSave = () => {
+        // Save game state and UI state together
         const saveData = {
-            gameState: saveGame(this.game),
-            uiState: currentUiState,
-            timestamp: Date.now()
+            version: '1.0',
+            timestamp: Date.now(),
+            gameState: saveGame(game),
+            uiState: {
+                openPanels: Array.from(uiState.openPanels),
+                selectedTabs: Object.fromEntries(uiState.selectedTabs),
+                scrollPositions: Object.fromEntries(uiState.scrollPositions)
+            }
         };
         
         // Create and trigger download
@@ -62,10 +50,19 @@ class App extends React.Component {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
     
-    handleLoad = (event) => {
-        const file = event.target.files[0];
+    const handleLoad = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+
         const reader = new FileReader();
         
         reader.onload = (e) => {
@@ -73,86 +70,88 @@ class App extends React.Component {
                 const saveData = JSON.parse(e.target.result);
                 
                 // Pause game during load
-                this.game.gameClock.stopTimer();
+                if (game) {
+                    game.gameClock.stopTimer();
+                }
                 
                 // Load game state
                 const loadedGame = loadGame(saveData.gameState);
                 
                 // Restore UI state
                 if (saveData.uiState) {
-                    this.setState({
-                        uiState: {
-                            openPanels: new Set(saveData.uiState.openPanels),
-                            selectedTabs: new Map(Object.entries(saveData.uiState.selectedTabs)),
-                            scrollPositions: new Map(Object.entries(saveData.uiState.scrollPositions))
-                        }
+                    setUiState({
+                        openPanels: new Set(saveData.uiState.openPanels),
+                        selectedTabs: new Map(Object.entries(saveData.uiState.selectedTabs)),
+                        scrollPositions: new Map(Object.entries(saveData.uiState.scrollPositions))
                     });
                 }
                 
                 // Initialize game with restored state
                 loadedGame.init();
-                
-                this.game = loadedGame;
+                setGame(loadedGame);
                 
             } catch (error) {
                 console.error('Failed to load save file:', error);
-                alert('Failed to load save file');
+                alert('Failed to load save file: ' + error.message);
             }
         };
         
         reader.readAsText(file);
+
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
     
-    handleScroll = (id, position) => {
-        this.setState(prevState => ({
-            uiState: {
-                ...prevState.uiState,
-                scrollPositions: new Map(prevState.uiState.scrollPositions).set(id, position)
-            }
+    const handleScroll = (id, position) => {
+        setUiState(prevState => ({
+            ...prevState,
+            scrollPositions: new Map(prevState.scrollPositions).set(id, position)
         }));
     };
     
-    togglePanel = (panelId) => {
-        this.setState(prevState => {
-            const newOpenPanels = new Set(prevState.uiState.openPanels);
+    const togglePanel = (panelId) => {
+        setUiState(prevState => {
+            const newOpenPanels = new Set(prevState.openPanels);
             if (newOpenPanels.has(panelId)) {
                 newOpenPanels.delete(panelId);
             } else {
                 newOpenPanels.add(panelId);
             }
             return {
-                uiState: {
-                    ...prevState.uiState,
-                    openPanels: newOpenPanels
-                }
+                ...prevState,
+                openPanels: newOpenPanels
             };
         });
     };
 
-    render() {
-        if (this.state.ready) {
-            return (
-                <div>
-                    <GameUI 
-                        internalTimer={this.state.timer}
-                        uiState={this.state.uiState}
-                        onScroll={this.handleScroll}
-                        onPanelToggle={this.togglePanel}
-                    />
-                    <div>
-                        <button onClick={this.handleSave}>Save Game</button>
-                        <input type="file" onChange={this.handleLoad} accept=".json" />
-                    </div>
-                </div>
-            );
-        } else {
-            return (
-                <div>
-                    Not ready
-                </div> 
-            );
-        }
+    if (!ready || !game) {
+        return <div>Not ready</div>;
     }
+
+    return (
+        <div>
+            <GameUI 
+                internalTimer={timer}
+                game={game}
+                uiState={uiState}
+                onScroll={handleScroll}
+                onPanelToggle={togglePanel}
+            />
+            <div style={{ margin: '10px' }}>
+                <button onClick={handleSave} style={{ marginRight: '10px' }}>
+                    Save Game
+                </button>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleLoad}
+                    accept=".json"
+                />
+            </div>
+        </div>
+    );
 }
 
 export default App;
