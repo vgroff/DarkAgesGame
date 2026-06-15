@@ -38,6 +38,7 @@ dark_ages/
     game_logic/
       config.js                   # Global UI config (buttonVariant)
       game.js                     # Game class: top-level orchestrator
+      diplomacy.js                # TradeAgreement class + npcWillAcceptTrade() (§5)
       timer.js                    # Timer extends Variable; drives all ticks
       seasons.js                  # Season constants + daysInYear (= 12!)
       rolling.js                  # Dice-roll helpers (success/failure/major)
@@ -195,10 +196,10 @@ There are two timers:
 - `config.js` holds global UI constants (currently just `buttonVariant: "outlined"`)
 
 ## Current Development Focus
-- Improving UI/UX to make game more playable
-- Balancing resource production and trading
-- Expanding events and faction systems (most settlement events are commented out)
-- Adding more cultural traits and faction mechanics
+- Playtesting and balance tuning (all MVP features implemented)
+- All settlement events are now active (previously commented out)
+- Military system, battle system, and diplomacy are implemented
+- Warning banner, game over, NPC AI all in place
 
 ## Developer Notes & Planned Work
 
@@ -336,7 +337,24 @@ There are two timers:
 ### Minor
 *(all minor bugs fixed — see below)*
 
-### Fixed (this session)
+### Fixed (this session) — MVP implementation
+- **`events.js` all settlement events uncommented + 8 new events added**: WarmSpell, MerchantBoom, HuntingGameSurplus, DryHuntingLands, Blizzard, RatsInStorage, NomadsArrive, BanditRaid. WarmSpell/Blizzard use `fire_()`/`end_()` overrides to directly manipulate `popDemands.coal.idealAmount` and `tradeFactor`.
+- **`game.js` game over**: `isGameOver = true` + `gameClock.forceStopTimer("game over")` in `handleRebellion`. `warningsShown = new Set()` for first-time warning tracking.
+- **`game.js` NPC AI**: happiness floor 0.35, health floor 0.6, productivity buffer ×1.15 (priority 198), productivity floor 0.8 (priority 199). NPC auto-research subscription fires yearly.
+- **`gameUI.js` warning banner**: `WarningBanner` component checks all player settlements. Warnings: homeless (orange), unemployed (yellow), rebellion >30% (red), food shortage (red), bankrupt (red). Game Over modal overlay.
+- **`events.js` Pestilence severity**: severity 1–3 roll scales health damage and duration. `bonusFlavourText` set per severity.
+- **`resource.js` military units**: 10 unit resources (stoneSpears through longbowmen). `UNIT_ATTACK_VALUES`, `UNIT_WEAPON_COSTS`, `MELEE_UNIT_NAMES`, `BOW_UNIT_NAMES` exported. `ironWeaponry.startingAmount = 5`.
+- **`settlement.js` armyStrength**: `this.armyStrength` Variable with strategy invLogit modifier. `armSoldiers()` and `disarmSoldiers()` methods. `_unitModifiers` dict tracks modifier references for disarming.
+- **`settlement.js` Military tab**: 4th tab in `SettlementComponent`. Shows army strength, weapon stockpiles, unit conversion (+1/+5/-1 buttons).
+- **`events.js` battle system**: `BattleArmy`, `buildPlayerArmy()`, `buildBanditArmy()`, `resolveSkirmishRound()`, `resolveMeleeRound()`, `applyBattleAftermath()`. `BattleUI` React component. `BanditRaid` event with full multi-stage battle.
+- **`diplomacy.js` (new file)**: `TradeAgreement` class + `npcWillAcceptTrade()`. Kept separate from `game.js` to avoid circular imports with `settlement.js`.
+- **`game.js` tradeAgreements**: `this.tradeAgreements = []` array (max 2 active). Re-exports `TradeAgreement`/`npcWillAcceptTrade` from `diplomacy.js`.
+- **`settlement.js` diplomacy UI**: `renderDiplomacySection()` shown in NPC settlement Production tab. Trade proposal modal with resource/amount selectors and NPC acceptance preview.
+- **`settlement.js` rebellion visualAlerts**: threshold changed from `> 0` to `> 0.3`, shows percentage.
+- **`hud.js` treasury countdown**: "Bankrupt in ~N days" shown when `expectedChange < 0 && baseValue > 0`. Color-coded by urgency.
+- **`mainUI.js`**: passes `game` prop to `SettlementComponent` for diplomacy UI access.
+
+### Fixed (previous session)
 - **`character.js` faction research system**: `Faction` now has a `researchTree` (one `createResearchTree()` call per faction). `getTotalResearch()` sums research storage across all member settlements. `canResearch(research)` checks sequential unlock and pooled cost. `activateResearch(research)` drains cost proportionally from all settlements, marks faction item researched, and applies bonuses to all member settlements' internal trees by name lookup.
 - **`character.js` `FactionResearchComponent`**: New `UIBase` component subscribing to `internalTimer`. Renders pooled research total and all research categories with sequential unlock. Used in the top-level Research panel in `GameUI`.
 - **`gameUI.js` top-level Research panel**: "Research" button in nav bar toggles `showResearch` state. When active, renders `FactionResearchComponent` instead of `MainUI`. Back/forward buttons disabled while Research panel is open. Clicking any item in `SidePanel` closes the Research panel.

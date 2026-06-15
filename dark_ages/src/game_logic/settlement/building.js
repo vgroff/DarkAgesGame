@@ -1,16 +1,14 @@
-import {VariableModifier, Variable, addition, subtraction, min, max, minBase, multiplication, division, roundTo } from '../UIUtils.js';
+import {VariableModifier, Variable, addition, subtraction, min, multiplication, division, roundTo } from '../UIUtils.js';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Resources} from './resource.js'
-import Box from '@mui/material/Box';
 import Grid from  '@mui/material/Grid';
 import Button from '@mui/material/Button';
 import {Logger} from '../logger.js';
 
 const outputResourceChange = "new output resource";
 const inputResourceChange = "new input resource";
-const newBuildInputs = "new build inputs";
 export class Building {
     constructor(props) {
         this.name = props.name;

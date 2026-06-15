@@ -1,5 +1,5 @@
 import { Variable, VariableComponent, VariableModifier, addition, division, invLogit, roundTo, multiplication, exponentiation } from "../UIUtils";
-import { Resource, Resources } from "./resource";
+import { Resources } from "./resource";
 import UIBase from '../UIBase';
 import Button from '@mui/material/Button';
 import { priority } from "../variable/modifier";

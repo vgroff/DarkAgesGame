@@ -78,7 +78,6 @@ export class LoggerComponent extends UIBase {
         this.logger.unsubscribe(this.sub);
     }
     renderObject(obj) {
-        let self = this;
         if (!obj) {
             return '';
         }

@@ -49,6 +49,18 @@ class HUD extends UIBase {
         </Grid>
         <Grid item xs={6} style={{"textAlign": "center", margin: "auto"}}>
             <CumulatorComponent variable={this.props.treasury} timer={this.props.gameClock}/>
+            {/* §7.4 Treasury countdown: show days until bankruptcy when declining */}
+            {(() => {
+                const treasury = this.props.treasury;
+                if (treasury.expectedChange < 0 && treasury.baseValue > 0) {
+                    const daysLeft = Math.floor(treasury.baseValue / Math.abs(treasury.expectedChange));
+                    const color = daysLeft < 10 ? 'red' : daysLeft < 30 ? 'orange' : '#b8a000';
+                    return <span style={{ fontSize: '0.75rem', color, fontWeight: 'bold' }}>
+                        Bankrupt in ~{daysLeft} day{daysLeft !== 1 ? 's' : ''}
+                    </span>;
+                }
+                return null;
+            })()}
         </Grid>
     </Grid>
     }

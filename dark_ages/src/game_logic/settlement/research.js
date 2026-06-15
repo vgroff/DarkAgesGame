@@ -1,9 +1,7 @@
 import React from "react";
-import UIBase from "../UIBase";
-import { VariableModifier, multiplication } from "../UIUtils";
 import { Apothecary, Brewery, Farm, LumberjacksHut, Quarry, Stonecutters, Roads, CharcoalKiln, IronMine, BogIronPit, Toolmaker, Housing, Church, Tavern, CoalMine, CoalPit, WeaponMaker } from "./building";
 import {Grid, Button} from '@mui/material';
-import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
+import { titleCase, CustomTooltip } from '../utils.js';
 import { GeneralProductivityBonus, SpecificBuildingProductivityBonus, SpecificBuildingEfficiencyBonus, UnlockBuildingBonus, UnlockBuildingUpgradeBonus, SpecificBuildingMaxSizeBonus } from "./bonus";
 
 

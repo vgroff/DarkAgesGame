@@ -137,6 +137,13 @@ Loop: repeatedly assigns/removes 1 worker to highest-priority building until une
 `localPriceModifiers` dict: maps resource name → Variable with price multipliers.
 `recalculatePrices()` recomputes `idealPrices` and calls `market.setNewIdealPrices()`.
 
+### Army Strength & Military System
+- `this.armyStrength` — `Variable` summing all armed unit attack values, modified by leader strategy via invLogit (bias=0.8, scale=0.45, speed=3, priority exponentiation+1)
+- `this.armyStrengthStrategyModifier` — the strategy `VariableModifier` stored for reference
+- `this._unitModifiers` — dict mapping unit resource name → array of `{ modifier, count }` entries for disarming
+- `armSoldiers(unitResource, count)` — converts weapons → armed soldiers, adds attack modifier to `armyStrength`
+- `disarmSoldiers(unitResource, count)` — reverses conversion, returns weapons, removes/shrinks modifier
+
 ### Coal Demand Adjustment
 
 `adjustCoalDemand()` is called on construction and every tick:
@@ -344,6 +351,17 @@ Adds/removes a `VariableModifier` to `supply.variable`.
 ### `removeDemand(idealDesiredProp)`
 
 Finds demand by `idealDesiredProp` reference, removes the modifier from `demand.variable`, unsubscribes callbacks.
+
+### Military Unit Resources
+10 unit resources added (§4.1): `stoneSpears`, `stoneSwords`, `ironSpears`, `ironSwords`, `steelSpears`, `steelShortSwords`, `steelLongSwords`, `shortbowmen`, `warbowmen`, `longbowmen`. All have `cumulates: true`.
+
+Exported constants:
+- `UNIT_ATTACK_VALUES` — `{ 'stone spears': 0.6, ... }` attack value per unit
+- `UNIT_WEAPON_COSTS` — `{ 'stone spears': { resourceName: 'stoneWeaponry', amount: 1 }, ... }` weapon cost per unit
+- `MELEE_UNIT_NAMES` — array of melee unit resource names
+- `BOW_UNIT_NAMES` — array of bow unit resource names
+
+`ironWeaponry.startingAmount = 5` (player starts with 5 iron weapons).
 
 ### `Resources` Constants
 

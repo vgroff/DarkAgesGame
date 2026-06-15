@@ -253,7 +253,7 @@ export class VariableModifier extends AbstractModifier {
         } else if (this.type in priority) {
             return priority[this.type];
         } else {
-            throw Error("what");
+            throw Error(`VariableModifier type "${this.type}" (modifier: "${this.name}") is not in the priority map — you probably need to set customPriority explicitly.`);
         }
     }
     resubscribeToVariable(indent = 0) {

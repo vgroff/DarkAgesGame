@@ -3,8 +3,6 @@ import { titleCase, CustomTooltip } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Logger} from '../logger.js';
-import { Apothecary, Bowyer, Brewery, CharcoalKiln, CoalMine, Farm, IronMine, LumberjacksHut, Quarry, Stonecutters, Toolmaker, WeaponMaker } from './building.js';
-import { Timer } from '../timer.js';
 
 export class Resource {
     constructor(props) {
@@ -192,6 +190,56 @@ export const Resources = {
     steelTools: new Resource({name: "steel tools", storageMultiplier: 200, productionRatio: 20.0, startingAmount: 0, description: "improves productivity"}),
     stoneWeaponry: new Resource({name: "stone weaponry", storageMultiplier: 50, productionRatio: 1.0, startingAmount: 0, description: "for fighting"}),
     bows: new Resource({name: "bows", storageMultiplier: 50, productionRatio: 1.0, startingAmount: 0, description: "for fighting"}),
-    ironWeaponry: new Resource({name: "iron weaponry", storageMultiplier: 50, productionRatio: 1.0, startingAmount: 0, description: "for fighting"}),
+    ironWeaponry: new Resource({name: "iron weaponry", storageMultiplier: 50, productionRatio: 1.0, startingAmount: 5, description: "for fighting"}),
     steelWeaponry: new Resource({name: "steel weaponry", storageMultiplier: 50, productionRatio: 1.0, startingAmount: 0, description: "for fighting"}),
+    // §4.1 Military unit resources — armed soldiers (weapons converted to soldiers)
+    // storageMultiplier: null so they are excluded from the market (no idealPrice)
+    stoneSpears:      new Resource({ name: "stone spears",       storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with stone spears (1 stone weapon each). Attack: 0.6" }),
+    stoneSwords:      new Resource({ name: "stone swords",       storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with stone swords (2 stone weapons each). Attack: 0.9" }),
+    ironSpears:       new Resource({ name: "iron spears",        storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with iron spears (1 iron weapon each). Attack: 1.2" }),
+    ironSwords:       new Resource({ name: "iron swords",        storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with iron swords (2 iron weapons each). Attack: 1.8" }),
+    steelSpears:      new Resource({ name: "steel spears",       storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with steel spears (1 steel weapon each). Attack: 2.0" }),
+    steelShortSwords: new Resource({ name: "steel short swords", storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with short swords (4 steel weapons each). Attack: 4.0" }),
+    steelLongSwords:  new Resource({ name: "steel long swords",  storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with long swords (10 steel weapons each). Attack: 10.0" }),
+    shortbowmen:      new Resource({ name: "shortbowmen",        storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with shortbows (1 bow each). Attack: 1.2" }),
+    warbowmen:        new Resource({ name: "warbowmen",          storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with warbows (3 bows each). Attack: 2.5" }),
+    longbowmen:       new Resource({ name: "longbowmen",         storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with longbows (5 bows each). Attack: 4.0" }),
 };
+
+/**
+ * §4.1 Attack values per unit type (used in army strength calculation).
+ */
+export const UNIT_ATTACK_VALUES = {
+    'stone spears':       0.6,
+    'stone swords':       0.9,
+    'iron spears':        1.2,
+    'iron swords':        1.8,
+    'steel spears':       2.0,
+    'steel short swords': 4.0,
+    'steel long swords':  10.0,
+    'shortbowmen':        1.2,
+    'warbowmen':          2.5,
+    'longbowmen':         4.0,
+};
+
+/**
+ * §4.1 Weapon costs per unit type: { resource: Resources.xxx, amount: N }
+ * Resolved lazily (after Resources is defined) to avoid circular reference.
+ */
+export const UNIT_WEAPON_COSTS = {
+    'stone spears':       { resourceName: 'stoneWeaponry', amount: 1 },
+    'stone swords':       { resourceName: 'stoneWeaponry', amount: 2 },
+    'iron spears':        { resourceName: 'ironWeaponry',  amount: 1 },
+    'iron swords':        { resourceName: 'ironWeaponry',  amount: 2 },
+    'steel spears':       { resourceName: 'steelWeaponry', amount: 1 },
+    'steel short swords': { resourceName: 'steelWeaponry', amount: 4 },
+    'steel long swords':  { resourceName: 'steelWeaponry', amount: 10 },
+    'shortbowmen':        { resourceName: 'bows',          amount: 1 },
+    'warbowmen':          { resourceName: 'bows',          amount: 3 },
+    'longbowmen':         { resourceName: 'bows',          amount: 5 },
+};
+
+/** All melee unit resource names (for army building). */
+export const MELEE_UNIT_NAMES = ['stone spears','stone swords','iron spears','iron swords','steel spears','steel short swords','steel long swords'];
+/** All bow unit resource names (for army building). */
+export const BOW_UNIT_NAMES = ['shortbowmen','warbowmen','longbowmen'];

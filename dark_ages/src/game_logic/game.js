@@ -1,13 +1,14 @@
 import {Settlement} from "./settlement/settlement";
-import {ListAggModifier, Variable, VariableModifier, Cumulator, addition} from './UIUtils';
+import {Variable, VariableModifier, Cumulator, addition, multiplication, max} from './UIUtils';
 import { titleCase } from "./utils";
 import {Timer} from './timer'
 import { SumAggModifier } from "./variable/sumAgg";
-import { integerPropType } from "@mui/utils";
 import {daysInYear, seasons} from './seasons'
-import { Farmlands, Marshlands, NoTerrain } from "./settlement/terrain";
+import { Farmlands, Marshlands } from "./settlement/terrain";
 import { HarvestEvent } from "./events";
-import { Celtic, Character, Cultures } from "./character";
+import { Character, Cultures } from "./character";
+import { TradeAgreement, npcWillAcceptTrade } from "./diplomacy";
+export { TradeAgreement, npcWillAcceptTrade };
 
 class Game {
     constructor(gameClock) {
@@ -19,12 +20,14 @@ class Game {
         }});
         this.gameMessages = [];
         this.messageLog = []; // Permanent log — messages are never removed from here
+        this.warningsShown = new Set(); // Tracks which first-time warnings have been shown
+        this.isGameOver = false;
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
         this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic(), isPlayer: true, gameClock: this.gameClock});
-        let char2 = new Character({name:"npc 2", culture: new Cultures.Celtic(), gameClock: this.gameClock, randomizeTraits: true});
+        this.npcCharacter = new Character({name:"npc 2", culture: new Cultures.Celtic(), gameClock: this.gameClock, randomizeTraits: true});
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt, handleRebellion: this.handleRebellion.bind(this), addToTreasury: this.addToTreasury.bind(this)}),
-            new Settlement({name: 'Village 2', gameClock: this.gameClock, leader: char2, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt, handleRebellion: () => {}})
+            new Settlement({name: 'Village 2', gameClock: this.gameClock, leader: this.npcCharacter, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt, handleRebellion: () => {}})
         ];
         this.totalMarketIncome = new SumAggModifier(
             {
@@ -48,6 +51,47 @@ class Game {
                 this.bankrupt.setNewBaseValue(0, 'user liquid');
             }
         });
+
+        // §1 NPC AI: prevent death spiral and offset lack of management
+        const npcSettlement = this.settlements[1];
+        const npcHappinessFloor = new Variable({ name: "NPC happiness floor", startingValue: 0.35 });
+        const npcHealthFloor    = new Variable({ name: "NPC health floor",    startingValue: 0.6  });
+        npcSettlement.happiness.addModifier(
+            new VariableModifier({ variable: npcHappinessFloor, type: max, name: "NPC AI floor", customPriority: 6 })
+        );
+        npcSettlement.health.addModifier(
+            new VariableModifier({ variable: npcHealthFloor, type: max, name: "NPC AI floor", customPriority: 6 })
+        );
+        npcSettlement.generalProductivity.addModifier(
+            new VariableModifier({
+                name: "NPC AI productivity buffer",
+                startingValue: 1.15,
+                type: multiplication,
+                customPriority: 198
+            })
+        );
+        npcSettlement.generalProductivity.addModifier(
+            new VariableModifier({
+                name: "NPC AI productivity floor",
+                startingValue: 0.8,
+                type: max,
+                customPriority: 199
+            })
+        );
+
+        // §1.1 NPC auto-research: buy cheapest available item each year
+        this.gameClock.subscribe(() => {
+            if (this.gameClock.currentValue % daysInYear !== 0) return;
+            const npcFaction = this.npcCharacter.faction;
+            if (!npcFaction) return;
+            const allItems = Object.values(npcFaction.researchTree).flat();
+            const available = allItems.filter(item => npcFaction.canResearch(item));
+            if (available.length === 0) return;
+            available.sort((a, b) => a.researchCost - b.researchCost);
+            npcFaction.activateResearch(available[0]);
+        });
+
+        this.tradeAgreements = []; // §5 active TradeAgreement instances (max 2)
 
         this.harvestEvent = new HarvestEvent({settlements: this.settlements, timer: this.gameClock});
         this.globalEvents = [
@@ -166,6 +210,8 @@ class Game {
         if (this.playerCharacter.settlements.length === 0) {
             console.log("game over");
             this.addGameMessage(`You have lost control of all your settlements! Game over.`);
+            this.gameClock.forceStopTimer("game over");
+            this.isGameOver = true;
         }
     }
 

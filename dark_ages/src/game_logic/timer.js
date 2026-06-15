@@ -48,7 +48,6 @@ export class Timer extends Variable {
     }
     startTimer() {
         if (!this.started && !this.isForceStopped()) {
-            let self = this;
             this.intervalID = setInterval(() => {
                 this.forceTick();
             }, this.every);

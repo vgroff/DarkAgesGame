@@ -1325,18 +1325,70 @@ if (treasury.expectedChange < 0 && treasury.baseValue > 0) {
 
 | # | Task | Est. time | Status |
 |---|------|-----------|--------|
-| 1 | §0.1 Uncomment events | 10 min | `[APPROVED]` |
-| 2 | §0.2 Game over hard stop | 30 min | `[APPROVED]` |
-| 3 | §1 NPC AI (floor + buffer + auto-research) | 1–2 hrs | `[APPROVED]` |
-| 4 | §2 Warning banner | 2–3 hrs | `[APPROVED]` |
-| 5 | §3.2 Pestilence severity | 30 min | `[APPROVED]` |
-| 6 | §3.3 New events (Warm Spell, Merchant Boom, Hunting, Blizzard, Rats) | 3–4 hrs | `[APPROVED]` |
-| 7 | §4.1–4.3 Military resources + army strength + tab | 3–4 hrs | `[APPROVED]` |
-| 8 | §4.5 Battle system | 1–2 days | `[APPROVED]` |
-| 9 | §4.6 Bandit Raid event | 3–4 hrs | `[APPROVED]` |
-| 10 | §3.3 Nomads event | 2–3 hrs | `[APPROVED]` |
-| 11 | §5 Trade deal diplomacy | 3–4 hrs | `[APPROVED]` |
-| 12 | §7 UX polish (warnings, clickable events, treasury countdown) | 2–3 hrs | `[APPROVED]` |
+| 1 | §0.1 Uncomment events | 10 min | `[DONE]` |
+| 2 | §0.2 Game over hard stop | 30 min | `[DONE]` |
+| 3 | §1 NPC AI (floor + buffer + auto-research) | 1–2 hrs | `[DONE]` |
+| 4 | §2 Warning banner | 2–3 hrs | `[DONE]` |
+| 5 | §3.2 Pestilence severity | 30 min | `[DONE]` |
+| 6 | §3.3 New events (Warm Spell, Merchant Boom, Hunting, Blizzard, Rats) | 3–4 hrs | `[DONE]` |
+| 7 | §4.1–4.3 Military resources + army strength + tab | 3–4 hrs | `[DONE]` |
+| 8 | §4.5 Battle system | 1–2 days | `[DONE]` |
+| 9 | §4.6 Bandit Raid event | 3–4 hrs | `[DONE]` |
+| 10 | §3.3 Nomads event | 2–3 hrs | `[DONE]` |
+| 11 | §5 Trade deal diplomacy | 3–4 hrs | `[DONE]` |
+| 12 | §7 UX polish (warnings, clickable events, treasury countdown) | 2–3 hrs | `[DONE]` |
 | 13 | Playtest + balance tuning | ongoing | — |
 
 **Total estimated time to showable state**: ~4–6 days of focused work.
+
+---
+
+## Implementation Notes (added by AI assistant)
+
+### §0.1 — Events uncommented
+All 7 original settlement events uncommented in `settlement.js`. Added 8 new events: WarmSpell, MerchantBoom, HuntingGameSurplus, DryHuntingLands, Blizzard, RatsInStorage, NomadsArrive, BanditRaid.
+
+### §0.2 — Game over
+`game.isGameOver = true` + `gameClock.forceStopTimer("game over")` in `handleRebellion`. Game Over modal overlay in `GameUI.childRender()`.
+
+### §1 — NPC AI
+NPC happiness floor 0.35, health floor 0.6, productivity buffer ×1.15 (priority 198), productivity floor 0.8 (priority 199). All added after settlements constructed in `game.js`.
+
+### §1.1 — NPC auto-research
+`this.npcCharacter` stored on game instance. Yearly `gameClock` subscription picks cheapest available research item.
+
+### §2 — Warning banner
+`WarningBanner` React component in `gameUI.js`. Checks all player settlements each render. `game.warningsShown` Set tracks first-time pop-ups. Warnings: homeless (orange), unemployed (yellow), rebellion >30% (red), food shortage (red), bankrupt (red).
+
+### §3.2 — Pestilence severity
+`getBonuses()` rolls severity 1–3, scales health damage and duration. `bonusFlavourText` set based on severity.
+
+### §3.3 — New events
+All implemented in `events.js`. WarmSpell and Blizzard use `fire_()`/`end_()` overrides to directly manipulate `popDemands.coal.idealAmount` and `tradeFactor`. RatsInStorage uses `fire_()` override for `oneOffDemand`. NomadsArrive "Rob them" gated behind `settlement.armyStrength >= nomadGroupSize * 1.5`.
+
+### §4.1 — Military resources
+10 unit resources added to `Resources` in `resource.js`. `UNIT_ATTACK_VALUES`, `UNIT_WEAPON_COSTS`, `MELEE_UNIT_NAMES`, `BOW_UNIT_NAMES` exported. `ironWeaponry.startingAmount = 5`.
+
+### §4.2 — Army strength
+`this.armyStrength` Variable added to Settlement constructor after `setLeader()`. Strategy modifier uses invLogit (bias=0.8, scale=0.45, speed=3). `armSoldiers()` and `disarmSoldiers()` methods added to Settlement class.
+
+### §4.3 — Military tab
+4th tab added to `SettlementComponent`. Shows army strength, weapon stockpiles, unit conversion buttons (+1/+5/-1). Active bandit raid indicator.
+
+### §4.4+4.5 — Battle system
+`BattleArmy` class, `buildPlayerArmy()`, `buildBanditArmy()`, `resolveSkirmishRound()`, `resolveMeleeRound()`, `applyBattleAftermath()` in `events.js`. `BattleUI` React component shows battle state and choices.
+
+### §4.6 — BanditRaid event
+Full multi-stage battle system. Choices: Pay tribute / Fight / Do nothing. `advanceBattle(choice)` drives battle phases. `_applyRaid()` handles raid aftermath.
+
+### §5 — Diplomacy
+`TradeAgreement` and `npcWillAcceptTrade` in new `diplomacy.js` file (avoids circular imports). `game.tradeAgreements` array (max 2). `renderDiplomacySection()` in `SettlementComponent` shown on NPC settlement Production tab. Trade proposal modal with resource/amount selectors and NPC acceptance preview.
+
+### §7.1 — Rebellion warning
+`totalRebellionSupport.visualAlerts` threshold changed from `> 0` to `> 0.3`. Shows percentage.
+
+### §7.2 — Clickable events
+Already implemented: `renderHeader()` renders `<EventComponent>` for each active event; clicking the event name opens the modal.
+
+### §7.4 — Treasury countdown
+Added to `hud.js` below treasury display. Shows "Bankrupt in ~N days" when `expectedChange < 0 && baseValue > 0`. Color: red (<10 days), orange (<30 days), yellow otherwise.

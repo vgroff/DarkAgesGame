@@ -1,9 +1,8 @@
 import React from "react";
 import { Logger } from "../logger";
-import UIBase from "../UIBase";
 import { CustomTooltip, titleCase } from "../utils";
 import { AddNewBuildingBonus, SpecificBuildingMaxSizeBonus, SpecificBuildingProductivityBonus } from "./bonus";
-import { Apothecary, BogIronPit, CoalMine, CoalPit, ConstructionSite, Farm, HuntingCabin, IronMine, LumberjacksHut, PeatBog, ResourceBuilding } from "./building";
+import { Apothecary, BogIronPit, CoalMine, CoalPit, ConstructionSite, Farm, HuntingCabin, IronMine, LumberjacksHut, PeatBog } from "./building";
 
 
 class Terrain {

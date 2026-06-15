@@ -1,23 +1,23 @@
-import {VariableModifier, multiplication, subtraction, division, makeTextFile, greaterThan, lesserThan,  exponentiation, max, priority, roundTo, scaledAddition, UnaryModifier, scaledMultiplication, invLogit, min, Variable, castInt, addition, TrendingVariable, TrendingVariableComponent, VariableComponent, CumulatorComponent} from '../UIUtils.js';
+import {VariableModifier, multiplication, subtraction, division, makeTextFile, priority, roundTo, scaledAddition, UnaryModifier, scaledMultiplication, invLogit, min, Variable, castInt, addition, TrendingVariable, TrendingVariableComponent, VariableComponent, CumulatorComponent, Cumulator} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
 import Checkbox from '@mui/material/Checkbox';
-import {FormControlLabel, Tab, Tabs} from '@mui/material';
+import {FormControlLabel, Tab, Tabs, Modal, Box, Typography} from '@mui/material';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Storage, Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, BuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine, Toolmaker, Church, Tavern, CoalMine, Bowyer, WeaponMaker} from './building.js'
-import { Resources, ResourceStorage, ResourceStorageComponent } from './resource.js';
-import { Cumulator } from '../UIUtils.js';
+import { Resources, ResourceStorage, ResourceStorageComponent, UNIT_ATTACK_VALUES, UNIT_WEAPON_COSTS } from './resource.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
 import { getBasePopDemands, RationingComponent, applyRationingModifiers } from './rationing.js';
 import { createResearchTree } from './research.js';
-import { AddNewBuildingBonus, GeneralProductivityBonus, SettlementBonus } from './bonus.js';
+import { AddNewBuildingBonus, SettlementBonus } from './bonus.js';
 import { Market, MarketResourceComponent } from './market.js';
-import { titleCase, CustomTooltip } from '../utils.js';
-import { winter, summer, seasonToTempFactor  } from '../seasons.js';
+import { CustomTooltip } from '../utils.js';
+import { seasonToTempFactor } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
-import { CourtIntrigue, CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack } from '../events.js';
+import { CourtIntrigue, CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack, WarmSpell, MerchantBoom, HuntingGameSurplus, DryHuntingLands, Blizzard, RatsInStorage, NomadsArrive, BanditRaid } from '../events.js';
 import { getDefaultBuildings } from './default_buildings.js';
-import { Character, copyCulture, Cultures } from '../character.js';
+import { Character, copyCulture } from '../character.js';
+import { TradeAgreement, npcWillAcceptTrade } from '../diplomacy.js';
 
 
 export class Settlement {
@@ -156,7 +156,7 @@ export class Settlement {
         this.rationsAchieved = [];
         this.idealRations = [];
         this.totalHousedInternal = new Variable({name: "Total housed", modifiers: []});
-        for (const [key, demand] of Object.entries(this.popDemands)) {
+        for (const [, demand] of Object.entries(this.popDemands)) {
             let desiredRationProp = new Variable({name: `${demand.resource.name} ration (% of ideal)`, startingValue: 1, max: one, min: zero});
             let desiredRation = new Variable({name: `${demand.resource.name} ration`, startingValue: 0, min: zero, modifiers: [
                     new VariableModifier({variable: desiredRationProp, type: addition}),
@@ -251,13 +251,21 @@ export class Settlement {
         this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor, bankrupt: props.bankrupt});
 
         this.settlementEvents = [
-            // new CropBlight({settlements: [this], timer: this.gameClock}),
-            // new LocalMiracle({settlements: [this], timer: this.gameClock}),
-            // new MineShaftCollapse({settlements: [this], timer: this.gameClock}),
-            // new Fire({settlements: [this], timer: this.gameClock}),
-            // new Pestilence({settlements: [this], timer: this.gameClock}),
-            // new WolfAttack({settlements:[this], timer: this.gameClock})
+            new CropBlight({settlements: [this], timer: this.gameClock}),
+            new LocalMiracle({settlements: [this], timer: this.gameClock}),
+            new MineShaftCollapse({settlements: [this], timer: this.gameClock}),
+            new Fire({settlements: [this], timer: this.gameClock}),
+            new Pestilence({settlements: [this], timer: this.gameClock}),
+            new WolfAttack({settlements:[this], timer: this.gameClock}),
             new CourtIntrigue({settlements: [this], timer: this.gameClock}),
+            new WarmSpell({settlements: [this], timer: this.gameClock}),
+            new MerchantBoom({settlements: [this], timer: this.gameClock}),
+            new HuntingGameSurplus({settlements: [this], timer: this.gameClock}),
+            new DryHuntingLands({settlements: [this], timer: this.gameClock}),
+            new Blizzard({settlements: [this], timer: this.gameClock}),
+            new RatsInStorage({settlements: [this], timer: this.gameClock}),
+            new NomadsArrive({settlements: [this], timer: this.gameClock, addToTreasury: this.addToTreasury}),
+            new BanditRaid({settlements: [this], timer: this.gameClock, addToTreasury: this.addToTreasury}),
         ];
         this.tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
 
@@ -266,6 +274,27 @@ export class Settlement {
         } else {
             this.setLeader(props.leader);
         }
+
+        // §4.2 Army strength: sum of (unit count × attack value), modified by leader strategy
+        this.armyStrength = new Variable({ name: "Army strength", owner: this, startingValue: 0 });
+        this.armyStrengthStrategyModifier = new VariableModifier({
+            name: "strategy army modifier",
+            type: multiplication,
+            startingValue: 0,
+            modifiers: [
+                new VariableModifier({ variable: this.leader.strategy, type: addition }),
+                new VariableModifier({
+                    type: invLogit,
+                    invLogitSpeed: 3,
+                    bias: 0.8,
+                    scale: 0.45,
+                    startingValue: 0.5,
+                    customPriority: priority.exponentiation + 1
+                })
+            ]
+        });
+        this.armyStrength.addModifier(this.armyStrengthStrategyModifier);
+        this._unitModifiers = {};
 
         this.adjustCoalDemand();
         this.gameClock.subscribe(() => {
@@ -310,10 +339,12 @@ export class Settlement {
             new VariableModifier({startingValue: -1, type: multiplication})
         ]});
         let zero = new Variable({startingValue: 0});
-        this.totalRebellionSupport = new Cumulator({startingValue: 0, name: "total rebellion support", 
+        this.totalRebellionSupport = new Cumulator({startingValue: 0, name: "total rebellion support",
             min: zero, modifiers: [
             new VariableModifier({variable: this.rebellionSupport, type: addition})
-        ], timer: this.gameClock, visualAlerts:(variable) => variable.currentValue > 0 ? ['Try to improve happiness or legitimacy'] : null});
+        ], timer: this.gameClock, visualAlerts:(variable) => variable.currentValue > 0.3
+            ? [`Rebellion risk: ${Math.round(variable.currentValue * 100)}% — improve happiness or legitimacy`]
+            : null});
         this.totalRebellionSupport.subscribe(() => {
             if (this.totalRebellionSupport.valueAtTurnStart >= 1) {
                 this.rebel();
@@ -534,6 +565,78 @@ export class Settlement {
         }
         return null;
     }
+
+    /**
+     * §4.2 Arm soldiers: convert weapons → armed unit resource, add attack modifier to armyStrength.
+     * @param {Resource} unitResource - the unit type (e.g. Resources.ironSpears)
+     * @param {number} count - number of soldiers to arm
+     * @returns {boolean} true if successful
+     */
+    armSoldiers(unitResource, count) {
+        const weaponCostEntry = UNIT_WEAPON_COSTS[unitResource.name];
+        if (!weaponCostEntry) return false;
+        const weaponResource = Resources[weaponCostEntry.resourceName];
+        const weaponStorage = this.resourceStorages.find(rs => rs.resource === weaponResource);
+        if (!weaponStorage || weaponStorage.amount.baseValue < weaponCostEntry.amount * count) return false;
+        weaponStorage.oneOffDemand(weaponCostEntry.amount * count, `arm ${unitResource.name}`);
+        const unitStorage = this.resourceStorages.find(rs => rs.resource === unitResource);
+        if (!unitStorage) return false;
+        unitStorage.amount.setNewBaseValue(unitStorage.amount.baseValue + count, `arm ${unitResource.name}`);
+        // Add attack modifier to armyStrength
+        const attackValue = UNIT_ATTACK_VALUES[unitResource.name];
+        const modifier = new VariableModifier({
+            name: `${unitResource.name} attack`,
+            startingValue: attackValue * count,
+            type: addition
+        });
+        this.armyStrength.addModifier(modifier);
+        // Store modifier reference for disarming
+        if (!this._unitModifiers[unitResource.name]) this._unitModifiers[unitResource.name] = [];
+        this._unitModifiers[unitResource.name].push({ modifier, count });
+        return true;
+    }
+
+    /**
+     * §4.2 Disarm soldiers: remove armed unit resource, return weapons to storage, remove attack modifier.
+     * @param {Resource} unitResource - the unit type
+     * @param {number} count - number of soldiers to disarm
+     * @returns {boolean} true if successful
+     */
+    disarmSoldiers(unitResource, count) {
+        const unitStorage = this.resourceStorages.find(rs => rs.resource === unitResource);
+        if (!unitStorage || unitStorage.amount.baseValue < count) return false;
+        unitStorage.amount.setNewBaseValue(unitStorage.amount.baseValue - count, `disarm ${unitResource.name}`);
+        // Return weapons to storage
+        const weaponCostEntry = UNIT_WEAPON_COSTS[unitResource.name];
+        if (weaponCostEntry) {
+            const weaponResource = Resources[weaponCostEntry.resourceName];
+            const weaponStorage = this.resourceStorages.find(rs => rs.resource === weaponResource);
+            if (weaponStorage) {
+                weaponStorage.amount.setNewBaseValue(
+                    weaponStorage.amount.baseValue + weaponCostEntry.amount * count,
+                    `disarm ${unitResource.name}`
+                );
+            }
+        }
+        // Remove attack modifier (remove oldest matching modifier entries first)
+        const modifierList = this._unitModifiers[unitResource.name] || [];
+        let remaining = count;
+        while (remaining > 0 && modifierList.length > 0) {
+            const entry = modifierList[modifierList.length - 1];
+            if (entry.count <= remaining) {
+                this.armyStrength.removeModifier(entry.modifier);
+                remaining -= entry.count;
+                modifierList.pop();
+            } else {
+                // Partial disarm: shrink the modifier's internal Variable
+                const attackValue = UNIT_ATTACK_VALUES[unitResource.name];
+                entry.modifier.variable.setNewBaseValue(attackValue * (entry.count - remaining), `partial disarm ${unitResource.name}`);
+                entry.count -= remaining;
+                remaining = 0;
+            }
+        }
+        return true;
+    }
 }
 
 export class SettlementComponent extends UIBase {
@@ -625,6 +728,8 @@ export class SettlementComponent extends UIBase {
                     if (s.autoManageUnemployed) s.adjustJobs();
                 }}/>} label="Auto-assign unemployed" style={{maxHeight:'80%', minHeight:'80%'}}/> : null}
             </Grid>
+            {/* §5 Diplomacy section — shown on NPC settlement view when game prop is available */}
+            {!isPlayer && this.props.game && this.renderDiplomacySection()}
             <Grid item xs={12} style={{border:"1px solid grey", padding:"5px", textAlign:"center"}}>
                 <Grid container spacing={3} justifyContent="center" alignItems="center" style={{textAlign:"center"}}>
                     {s.getBuildings().filter(b => b.unlocked).map((building, i) =>
@@ -715,11 +820,256 @@ export class SettlementComponent extends UIBase {
             )}
         </Grid>;
     }
+    /**
+     * §5 Diplomacy section — shown in NPC settlement Production tab.
+     * Allows player to propose resource trade deals with the NPC settlement.
+     * Max 2 active agreements simultaneously.
+     */
+    renderDiplomacySection() {
+        const game = this.props.game;
+        const npcSettlement = this.settlement;
+        const playerSettlement = game.settlements.find(s => s.leader.isPlayer);
+        if (!playerSettlement) return null;
+
+        const activeAgreements = (game.tradeAgreements || []).filter(a => a.active);
+        const atCap = activeAgreements.length >= 2;
+
+        // Build list of tradeable resources (player produces them)
+        const playerResources = playerSettlement.resourceBuildings
+            .filter(b => b.unlocked && b.size.currentValue > 0)
+            .map(b => b.outputResource);
+        const npcResources = npcSettlement.resourceBuildings
+            .filter(b => b.unlocked && b.size.currentValue > 0)
+            .map(b => b.outputResource);
+
+        const tradeModalOpen = this.state.tradeModalOpen || false;
+        const tradeOffer = this.state.tradeOffer || { offerResource: null, offerAmount: 5, requestResource: null, requestAmount: 5 };
+
+        const willAccept = tradeOffer.offerResource && tradeOffer.requestResource
+            ? npcWillAcceptTrade(npcSettlement, tradeOffer.offerResource, tradeOffer.requestResource)
+            : null;
+
+        const proposeTrade = () => {
+            if (!tradeOffer.offerResource || !tradeOffer.requestResource) return;
+            if (!willAccept) return;
+            const agreement = new TradeAgreement({
+                fromSettlement: playerSettlement,
+                toSettlement: npcSettlement,
+                fromResource: tradeOffer.offerResource,
+                fromAmount: tradeOffer.offerAmount,
+                toResource: tradeOffer.requestResource,
+                toAmount: tradeOffer.requestAmount,
+                gameClock: game.gameClock,
+                onCancel: (a) => {
+                    game.addGameMessage(`Trade agreement cancelled: could not fulfil ${tradeOffer.offerResource.name} delivery.`);
+                    game.tradeAgreements = game.tradeAgreements.filter(x => x !== a);
+                }
+            });
+            game.tradeAgreements.push(agreement);
+            this.setState({ tradeModalOpen: false });
+        };
+
+        return <Grid item xs={12} style={{ borderTop: '1px solid #ccc', paddingTop: '8px', marginTop: '8px' }}>
+            <span style={{ fontWeight: 'bold', color: '#555' }}>Diplomacy</span><br />
+            {activeAgreements.length === 0
+                ? <span style={{ color: '#888', fontSize: '0.8rem' }}>No active trade agreements.</span>
+                : activeAgreements.map((a, i) => (
+                    <div key={i} style={{ fontSize: '0.8rem', marginBottom: '2px' }}>
+                        📦 {a.fromAmount} {a.fromResource.name}/yr → {a.toAmount} {a.toResource.name}/yr
+                        <button style={{ marginLeft: '6px', fontSize: '0.7rem' }} onClick={() => { a.cancel(); this.forceUpdate(); }}>Cancel</button>
+                    </div>
+                ))
+            }
+            <br />
+            <button
+                disabled={atCap}
+                style={{ fontSize: '0.75rem', padding: '2px 8px', cursor: atCap ? 'not-allowed' : 'pointer', opacity: atCap ? 0.5 : 1 }}
+                onClick={() => this.setState({ tradeModalOpen: true })}
+            >
+                {atCap ? 'Trade cap reached (2/2)' : 'Propose Trade'}
+            </button>
+
+            {/* Trade proposal modal */}
+            <Modal open={tradeModalOpen} onClose={() => this.setState({ tradeModalOpen: false })}>
+                <Box sx={{
+                    position: 'absolute', top: '50%', left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: 480, bgcolor: 'background.paper',
+                    border: '2px solid #000', boxShadow: 24, p: 3
+                }}>
+                    <Typography variant="h6" sx={{ mb: 1 }}>Propose Trade with {npcSettlement.name}</Typography>
+                    <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
+                        The NPC will accept if they produce your offered resource at least 1.2× more efficiently than what you request.
+                    </Typography>
+
+                    <div style={{ marginBottom: '8px' }}>
+                        <span style={{ fontWeight: 'bold' }}>You offer:</span><br />
+                        <select
+                            value={tradeOffer.offerResource ? tradeOffer.offerResource.name : ''}
+                            onChange={e => {
+                                const res = playerResources.find(r => r.name === e.target.value);
+                                this.setState({ tradeOffer: { ...tradeOffer, offerResource: res } });
+                            }}
+                            style={{ marginRight: '8px' }}
+                        >
+                            <option value="">-- select resource --</option>
+                            {playerResources.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
+                        </select>
+                        <input
+                            type="number" min="1" max="100"
+                            value={tradeOffer.offerAmount}
+                            onChange={e => this.setState({ tradeOffer: { ...tradeOffer, offerAmount: parseInt(e.target.value) || 1 } })}
+                            style={{ width: '60px' }}
+                        /> /yr
+                    </div>
+
+                    <div style={{ marginBottom: '12px' }}>
+                        <span style={{ fontWeight: 'bold' }}>You request:</span><br />
+                        <select
+                            value={tradeOffer.requestResource ? tradeOffer.requestResource.name : ''}
+                            onChange={e => {
+                                const res = npcResources.find(r => r.name === e.target.value);
+                                this.setState({ tradeOffer: { ...tradeOffer, requestResource: res } });
+                            }}
+                            style={{ marginRight: '8px' }}
+                        >
+                            <option value="">-- select resource --</option>
+                            {npcResources.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
+                        </select>
+                        <input
+                            type="number" min="1" max="100"
+                            value={tradeOffer.requestAmount}
+                            onChange={e => this.setState({ tradeOffer: { ...tradeOffer, requestAmount: parseInt(e.target.value) || 1 } })}
+                            style={{ width: '60px' }}
+                        /> /yr
+                    </div>
+
+                    {willAccept !== null && (
+                        <Typography sx={{ mb: 1, color: willAccept ? 'green' : 'red', fontWeight: 'bold' }}>
+                            {willAccept ? '✓ The NPC will accept this deal.' : '✗ The NPC will not accept this deal.'}
+                        </Typography>
+                    )}
+
+                    <button
+                        disabled={!willAccept}
+                        style={{ marginRight: '8px', padding: '4px 12px', cursor: willAccept ? 'pointer' : 'not-allowed', opacity: willAccept ? 1 : 0.5 }}
+                        onClick={proposeTrade}
+                    >Confirm</button>
+                    <button style={{ padding: '4px 12px' }} onClick={() => this.setState({ tradeModalOpen: false })}>Cancel</button>
+                </Box>
+            </Modal>
+        </Grid>;
+    }
+
+    /** Tab 3 — Military: weapon stockpiles, unit conversion, army strength */
+    renderMilitaryTab() {
+        const s = this.settlement;
+        const isPlayer = s.leader.isPlayer;
+
+        // Weapon stockpile resources
+        const weaponResources = [
+            Resources.stoneWeaponry,
+            Resources.ironWeaponry,
+            Resources.steelWeaponry,
+            Resources.bows,
+        ];
+
+        // All unit types grouped by weapon source
+        const unitGroups = [
+            { label: 'Stone weapon soldiers', units: [Resources.stoneSpears, Resources.stoneSwords] },
+            { label: 'Iron weapon soldiers',  units: [Resources.ironSpears,  Resources.ironSwords]  },
+            { label: 'Steel weapon soldiers', units: [Resources.steelSpears, Resources.steelShortSwords, Resources.steelLongSwords] },
+            { label: 'Bow soldiers',          units: [Resources.shortbowmen, Resources.warbowmen, Resources.longbowmen] },
+        ];
+
+        const getStorage = (resource) => s.resourceStorages.find(rs => rs.resource === resource);
+
+        return <Grid container justifyContent="center" alignItems="flex-start" spacing={1} style={{ padding: '4px' }}>
+            {/* Army strength */}
+            <Grid item xs={12}>
+                <span style={{ fontWeight: 'bold', color: '#555' }}>Army</span><br />
+                <VariableComponent showOwner={false} variable={s.armyStrength} />
+            </Grid>
+
+            {/* Weapon stockpiles */}
+            <Grid item xs={12}>
+                <span style={{ fontWeight: 'bold', color: '#555' }}>Weapon stockpiles</span>
+            </Grid>
+            {weaponResources.map(wr => {
+                const storage = getStorage(wr);
+                if (!storage) return null;
+                return <Grid item xs={3} key={wr.name} style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#555' }}>{wr.name}</span><br />
+                    <span style={{ fontWeight: 'bold' }}>{Math.floor(storage.amount.currentValue)}</span>
+                </Grid>;
+            })}
+
+            {/* Unit conversion */}
+            {isPlayer && <Grid item xs={12}>
+                <span style={{ fontWeight: 'bold', color: '#555' }}>Soldiers</span>
+            </Grid>}
+            {isPlayer && unitGroups.map(group => {
+                const anyUnit = group.units.some(u => {
+                    const weaponCost = UNIT_WEAPON_COSTS[u.name];
+                    if (!weaponCost) return false;
+                    const weaponStorage = getStorage(Resources[weaponCost.resourceName]);
+                    return weaponStorage && weaponStorage.amount.currentValue >= weaponCost.amount;
+                });
+                const anyArmed = group.units.some(u => {
+                    const st = getStorage(u);
+                    return st && st.amount.currentValue > 0;
+                });
+                if (!anyUnit && !anyArmed) return null;
+                return <Grid item xs={12} key={group.label}>
+                    <span style={{ fontSize: '0.75rem', color: '#888' }}>{group.label}</span>
+                    <Grid container spacing={1}>
+                        {group.units.map(unitResource => {
+                            const unitStorage = getStorage(unitResource);
+                            if (!unitStorage) return null;
+                            const weaponCost = UNIT_WEAPON_COSTS[unitResource.name];
+                            const weaponStorage = weaponCost ? getStorage(Resources[weaponCost.resourceName]) : null;
+                            const canArm = weaponStorage && weaponStorage.amount.currentValue >= weaponCost.amount;
+                            const armed = Math.floor(unitStorage.amount.currentValue);
+                            const attackVal = UNIT_ATTACK_VALUES[unitResource.name];
+                            return <Grid item xs={4} key={unitResource.name} style={{ textAlign: 'center', fontSize: '0.75rem' }}>
+                                <span style={{ color: '#333' }}>{unitResource.name}</span><br />
+                                <span style={{ color: '#888' }}>atk {attackVal} · cost {weaponCost ? weaponCost.amount : '?'}</span><br />
+                                <span style={{ fontWeight: 'bold' }}>{armed} armed</span><br />
+                                <button
+                                    disabled={!canArm}
+                                    style={{ fontSize: '0.7rem', padding: '1px 6px', marginRight: '2px', cursor: canArm ? 'pointer' : 'not-allowed', opacity: canArm ? 1 : 0.4 }}
+                                    onClick={() => { s.armSoldiers(unitResource, 1); this.forceUpdate(); }}
+                                >+1</button>
+                                <button
+                                    disabled={!canArm}
+                                    style={{ fontSize: '0.7rem', padding: '1px 6px', marginRight: '2px', cursor: canArm ? 'pointer' : 'not-allowed', opacity: canArm ? 1 : 0.4 }}
+                                    onClick={() => { s.armSoldiers(unitResource, 5); this.forceUpdate(); }}
+                                >+5</button>
+                                <button
+                                    disabled={armed <= 0}
+                                    style={{ fontSize: '0.7rem', padding: '1px 6px', cursor: armed > 0 ? 'pointer' : 'not-allowed', opacity: armed > 0 ? 1 : 0.4 }}
+                                    onClick={() => { s.disarmSoldiers(unitResource, 1); this.forceUpdate(); }}
+                                >-1</button>
+                            </Grid>;
+                        })}
+                    </Grid>
+                </Grid>;
+            })}
+
+            {/* Active bandit threat */}
+            {s.settlementEvents.filter(ev => ev.name === 'bandit raid' && ev.isActive()).length > 0 && (
+                <Grid item xs={12}>
+                    <span style={{ color: 'red', fontWeight: 'bold' }}>⚔ Bandit raid in progress!</span>
+                </Grid>
+            )}
+        </Grid>;
+    }
+
     childRender() {
         this.settlement = this.props.settlement;
         const isPlayer = this.settlement.leader.isPlayer;
-        // Clamp tab to valid range (Research tab removed — only 3 tabs now)
-        const tab = Math.min(this.state.tab || 0, 2);
+        // Clamp tab to valid range (4 tabs: Production, Distribution, Trading, Military)
+        const tab = Math.min(this.state.tab || 0, 3);
         return <Grid container justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
             {this.renderHeader()}
             <Grid item xs={12}>
@@ -733,12 +1083,14 @@ export class SettlementComponent extends UIBase {
                     <Tab label="Production" sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
                     <Tab label="Distribution" disabled={!isPlayer} sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
                     <Tab label="Trading" disabled={!isPlayer} sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
+                    <Tab label="Military" sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
                 </Tabs>
             </Grid>
             <Grid item xs={12} style={{ paddingTop: '8px' }}>
                 {tab === 0 && this.renderProductionTab()}
                 {tab === 1 && this.renderDistributionTab()}
                 {tab === 2 && this.renderTradingTab()}
+                {tab === 3 && this.renderMilitaryTab()}
             </Grid>
         </Grid>;
     }

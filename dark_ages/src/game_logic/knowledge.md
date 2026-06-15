@@ -14,6 +14,9 @@ Core game systems and mechanics. All files in `src/game_logic/`.
 
 There are knowledge.md files like this one at most levels of the repo, read those if you are missing context for a task. Always update all relevant knowledge.md files as you make changes/add features/fix bugs etc...
 
+## File Index (updated for MVP)
+- `diplomacy.js` — `TradeAgreement` class + `npcWillAcceptTrade()` (§5). Kept separate from `game.js` to avoid circular imports.
+
 ## File Index
 
 | File | Purpose |
@@ -38,6 +41,12 @@ There are knowledge.md files like this one at most levels of the repo, read thos
 ---
 
 ## `game.js` — Game Class
+
+### Key Properties (MVP additions)
+- `this.npcCharacter` — NPC character stored on game instance (for auto-research subscription)
+- `this.warningsShown` — `Set` tracking which first-time warnings have been shown (keyed by `warningType_settlementName`)
+- `this.isGameOver` — boolean; set to `true` when player loses all settlements
+- `this.tradeAgreements` — array of active `TradeAgreement` instances (max 2)
 
 ### Construction
 1. Creates `gameClock` (`Timer`, 800ms per tick, `daysInYear=12`)
@@ -254,6 +263,26 @@ Both flags are now correctly set to `false`. Set them to `true` temporarily when
 
 ### `RegularSettlementEvent`
 Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * randomRange(1-variance, 1+variance)`
+
+### Concrete Events (all active as of MVP)
+- `CropBlight`, `LocalMiracle`, `MineShaftCollapse`, `Fire`, `Pestilence` (severity system), `WolfAttack`, `CourtIntrigue` — original events, now all uncommented
+- `WarmSpell` — happiness boost + coal demand reduction (fire_/end_ override)
+- `MerchantBoom` — tradeFactor boost via `SimpleSettlementModifier`
+- `HuntingGameSurplus` / `DryHuntingLands` — HuntingCabin productivity modifier
+- `Blizzard` — farm + general productivity penalty, coal demand increase, trade penalty (fire_/end_ override); only fires in winter
+- `RatsInStorage` — immediate food loss via `oneOffDemand` (fire_ override)
+- `NomadsArrive` — forcePause; choices: take in / send away / rob (if armyStrength sufficient)
+- `BanditRaid` — forcePause; choices: pay tribute / fight (multi-stage battle) / do nothing; banned for first 2 years
+
+### Battle System (§4.4+4.5)
+- `BattleArmy` — holds `bowStrength`, `meleeStrength`, `totalStrength`, `strategySkill` Variables + `bowCount`/`meleeCount` plain numbers
+- `buildPlayerArmy(settlement)` — builds player army from unit resource storages + mobilised civilians
+- `buildBanditArmy(settlement)` — builds bandit army scaled to player unit count / population
+- `resolveSkirmishRound(state)` — strategy check → ground advantage → bow casualties
+- `resolveMeleeRound(state, firstRoundPenalty)` — bow support + melee → casualties
+- `applyBattleAftermath(settlement, playerWon, playerFled, totalPlayerDead, timer)` — happiness/legitimacy/health bonuses/penalties
+- `BattleUI` — React component showing battle state and player choices (skirmish/clash/flee/manoeuvre)
+- `BanditRaid.advanceBattle(choice)` — drives battle phase transitions; stores state in `this._battleState`
 
 ### Concrete Events
 
