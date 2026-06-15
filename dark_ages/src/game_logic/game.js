@@ -100,6 +100,20 @@ class Game {
         
         // Initialize events
         this.initEvents();
+
+        // On the first tick (day 1), reset trending baselines for happiness and health on all
+        // settlements so the player's day-1 setup is treated as the "always was this way" baseline.
+        // Without this, TrendingVariable would animate from its initial value toward the real value.
+        const resetTrendsOnDayOne = () => {
+            if (this.gameClock.currentValue === 1) {
+                this.settlements.forEach(s => {
+                    s.happiness.forceResetTrend();
+                    s.health.forceResetTrend();
+                });
+                this.gameClock.unsubscribe(resetTrendsOnDayOne);
+            }
+        };
+        this.gameClock.subscribe(resetTrendsOnDayOne, 999, 'reset trends on day 1');
     }
 
     initEvents() {

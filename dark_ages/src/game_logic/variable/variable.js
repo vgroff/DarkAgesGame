@@ -479,6 +479,12 @@ export class VariableComponent extends React.Component {
             return <span style={{textAlign: "right", ...extraExtraStyle}} key={alert} >{titleCase(alert)}<br /></span>;
         }) : []);
         let preText = miscProps.preText || null;
+        // If a description prop is provided, prepend it to the tooltip so callers don't need
+        // a separate outer CustomTooltip wrapper (which would create two overlapping tooltips).
+        if (this.props.description) {
+            const descSpan = <span style={{textAlign: "right", fontStyle: "italic"}} key="desc">{this.props.description}<br /></span>;
+            abridgedExplanations = [descSpan, ...abridgedExplanations];
+        }
         if (!this.props.expanded) {
             return <HTMLTooltip title={abridgedExplanations} style={{textAlign: "right"}}>
                 <span style={{"textAlign": "center", ...this.props.style, ...extraStyle, ...extraExtraStyle}}>

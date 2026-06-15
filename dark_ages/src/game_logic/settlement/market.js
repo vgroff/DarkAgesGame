@@ -85,8 +85,10 @@ export class Market {
                 marketSellPrice,
                 marketBuyPrice,
                 buyProp,
+                buyAmount,
                 desiredSellProp,
                 actualSellProp,
+                actualSellAmount,
                 netIncome: new Variable({name: `net income from ${resource.name}`, startingValue: 0, modifiers: [
                     new VariableModifier({variable: marketSellIncome, type: addition}),
                     new VariableModifier({variable: marketBuyCosts, type: subtraction}),
@@ -118,14 +120,23 @@ export class MarketResourceComponent extends UIBase {
     }
     childRender() {
         this.marketResource = this.props.marketResource;
+        const mr = this.marketResource;
+        const selling = mr.desiredSellProp.currentValue > 0;
+        const buying = mr.buyProp.currentValue > 0;
         return <span style={{alignItems: "center", justifyContent: "center", fontSize: 14}}>
             <div>
-            <VariableComponent variable={this.marketResource.marketSellPrice} /><br/>
-            <VariableComponent variable={this.marketResource.marketBuyPrice} /><br/>
-            {this.marketResource.desiredSellProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.desiredSellProp}/><br/></span> : null}
-            {this.marketResource.desiredSellProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.actualSellProp} /><br/></span> : null}
-            {this.marketResource.buyProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.buyProp} showMax={true} /><br/></span> : null}
-            {this.marketResource.buyProp.currentValue > 0 || this.marketResource.desiredSellProp.currentValue > 0 ? <span><VariableComponent variable={this.marketResource.netIncome} /></span> : null}
+            <VariableComponent variable={mr.marketSellPrice} /><br/>
+            <VariableComponent variable={mr.marketBuyPrice} /><br/>
+            {selling && <span>
+                <VariableComponent variable={mr.desiredSellProp} description="Proportion of population output you want to sell each day." /><br/>
+                <VariableComponent variable={mr.actualSellProp} description="Actual proportion sold (may be less if storage is low)." /><br/>
+                <VariableComponent variable={mr.actualSellAmount} description="Actual units sold per day." /><br/>
+            </span>}
+            {buying && <span>
+                <VariableComponent variable={mr.buyProp} showMax={true} description="Proportion of population output you want to buy each day." /><br/>
+                <VariableComponent variable={mr.buyAmount} description="Units bought per day." /><br/>
+            </span>}
+            {(buying || selling) && <span><VariableComponent variable={mr.netIncome} description="Net gold income from this resource per day (sell income minus buy costs)." /></span>}
             </div>
             <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "120px", maxWidth: "120px"}}>Buy</Button>
             <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "120px", maxWidth: "120x"}}>Sell</Button>

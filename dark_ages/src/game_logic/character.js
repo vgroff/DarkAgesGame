@@ -257,6 +257,7 @@ export class Roman extends Culture {
     }  
     getTraits() {
         this.lastTraits = [
+            new Trait({name: "dying empire", effects: [new LegitimacyBonus({amount:0.95, type:multiplication})]}),
             new Trait({name: "obsolete military tactics", effects: [new StrategyBonus({amount:0.85, type:multiplication})]}),
             new Trait({name: "academic traditions", effects: [
                 new SpecificBuildingProductivityBonus({amount:1.2, building:Library.name, type:multiplication}),
@@ -777,6 +778,39 @@ export class FactionResearchComponent extends UIBase {
     }
 }
 
+/**
+ * Preset leader builds for fast playtesting.
+ * Each preset specifies one trait class per trait group (in order:
+ * childhoodTrait, abilityTrait, personalityTrait, fameTrait, trinketTrait).
+ */
+const LEADER_PRESETS = [
+    {
+        name: "The Druid",
+        description: "Celtic wise-man. Strong administration and diplomacy, modest productivity bonus from peasant roots. Slightly reduced legitimacy.",
+        traits: [PeasantUpbringing, Intelligent, Careful, PoliticalVeteran, Ledger]
+    },
+    {
+        name: "The Centurion",
+        description: "Roman military commander. Dominant strategy, some administrative discipline. Suited for defence and raids.",
+        traits: [MilitaryUpbringing, Strategic, Brave, Officer, Sword]
+    },
+    {
+        name: "The Merchant Prince",
+        description: "Trade-focused noble. High diplomacy and administration. Excels at market income and trade deals.",
+        traits: [MerchantUpbringing, SmoothTalker, Witty, SuccesfulMerchant, Regalia]
+    },
+    {
+        name: "The Chieftain",
+        description: "Noble warrior-diplomat. Balanced strategy and diplomacy with legitimacy bonus. Good all-rounder for early game.",
+        traits: [NobleUpbringing, Strategic, Witty, JoustingChampion, Regalia]
+    },
+    {
+        name: "The Scholar",
+        description: "Bookish administrator. Highest administration of any preset. Maximises settlement productivity and efficiency.",
+        traits: [MerchantUpbringing, Intelligent, Careful, PoliticalVeteran, Ledger]
+    },
+];
+
 export class CharacterComponent extends UIBase {
     constructor(props) {
         super(props);
@@ -794,10 +828,33 @@ export class CharacterComponent extends UIBase {
     handleCultureChange(newCulture, oldCulture) {
         this.character.changeCulture(newCulture);
     }
+    applyPreset(preset) {
+        const groupKeys = Object.keys(this.character.traitGroups);
+        preset.traits.forEach((TraitClass, i) => {
+            const groupKey = groupKeys[i];
+            const oldTrait = this.character.traitGroups[groupKey].trait;
+            this.handleTraitChange(new TraitClass(), oldTrait || null);
+        });
+        this.setState({}); // force re-render to show updated trait selections
+    }
     childRender() {
         this.character = this.props.character;
         return <div>
-            
+            {/* Quick presets — only shown for player character before traits are chosen */}
+            {this.character.isPlayer && <div style={{marginBottom: '8px', padding: '6px', border: '1px solid #ccc', borderRadius: '4px', background: '#f9f9f9'}}>
+                <b style={{fontSize: '12px'}}>Quick Presets:</b><br />
+                {LEADER_PRESETS.map(preset =>
+                    <CustomTooltip key={preset.name} items={[preset.description]} style={{textAlign: 'center'}}>
+                        <Button
+                            key={preset.name}
+                            variant="outlined"
+                            size="small"
+                            onClick={() => this.applyPreset(preset)}
+                            sx={{ mr: 0.5, mb: 0.5, fontSize: '11px', padding: '2px 6px', textTransform: 'none' }}
+                        >{preset.name}</Button>
+                    </CustomTooltip>
+                )}
+            </div>}
             <div onClick = {() => !this.state.editName ? this.setState({editName: !this.state.editName}) : null}>
                 {this.state.editName ?
                     <TextField id="outlined-basic" label="Name" variant="outlined" defaultValue={this.character.name}
@@ -817,13 +874,13 @@ export class CharacterComponent extends UIBase {
             }
             <br />
             <b>Skills</b> <br />
-            <CustomTooltip items={["Affects popular support in settlements and trade negotiations. Higher diplomacy reduces rebellion risk."]}><span><VariableComponent showOwner={false} variable={this.character.diplomacy} /></span></CustomTooltip><br />
-            <CustomTooltip items={["Military skill. Affects combat outcomes and raid defence (not yet fully implemented)."]}><span><VariableComponent showOwner={false} variable={this.character.strategy} /></span></CustomTooltip><br />
-            <CustomTooltip items={["Organisational skill. Directly multiplies settlement general productivity via administrative efficiency."]}><span><VariableComponent showOwner={false} variable={this.character.administration} /></span></CustomTooltip><br />
+            <VariableComponent showOwner={false} variable={this.character.diplomacy} description="Affects popular support in settlements and trade negotiations. Higher diplomacy reduces rebellion risk." /><br />
+            <VariableComponent showOwner={false} variable={this.character.strategy} description="Military skill. Affects combat outcomes and raid defence (not yet fully implemented)." /><br />
+            <VariableComponent showOwner={false} variable={this.character.administration} description="Organisational skill. Directly multiplies settlement general productivity via administrative efficiency." /><br />
             <br />
             <b>Attributes</b> <br />
-            <CustomTooltip items={["How much the population accepts this character as their ruler. Contributes to local legitimacy in all settlements."]}><span><VariableComponent showOwner={false} variable={this.character.legitimacy} /></span></CustomTooltip><br />
-            <CustomTooltip items={["Productivity multiplier applied to all settlements. Equals 0.9 + 0.3 × administration."]}><span><VariableComponent showOwner={false} variable={this.character.administrativeEfficiency} /></span></CustomTooltip><br />
+            <VariableComponent showOwner={false} variable={this.character.legitimacy} description="How much the population accepts this character as their ruler. Contributes to local legitimacy in all settlements." /><br />
+            <VariableComponent showOwner={false} variable={this.character.administrativeEfficiency} description="Productivity multiplier applied to all settlements. Equals 0.9 + 0.3 × administration." /><br />
             <br />
             <b>Faction</b> <br />
             <FactionComponent faction={this.character.faction} /><br />

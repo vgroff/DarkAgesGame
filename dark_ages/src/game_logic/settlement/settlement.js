@@ -11,7 +11,6 @@ import { getBasePopDemands, RationingComponent, applyRationingModifiers } from '
 import { createResearchTree } from './research.js';
 import { AddNewBuildingBonus, SettlementBonus } from './bonus.js';
 import { Market, MarketResourceComponent } from './market.js';
-import { CustomTooltip } from '../utils.js';
 import { seasonToTempFactor } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
 import { CourtIntrigue, CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack, WarmSpell, MerchantBoom, HuntingGameSurplus, DryHuntingLands, Blizzard, RatsInStorage, NomadsArrive, BanditRaid } from '../events.js';
@@ -250,7 +249,9 @@ export class Settlement {
         });
         this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor, bankrupt: props.bankrupt});
 
-        this.settlementEvents = [
+        // Only player settlements get events — NPC settlements have no events for now
+        // to avoid invisible forcePause events softlocking the game.
+        this.settlementEvents = props.leader?.isPlayer ? [
             new CropBlight({settlements: [this], timer: this.gameClock}),
             new LocalMiracle({settlements: [this], timer: this.gameClock}),
             new MineShaftCollapse({settlements: [this], timer: this.gameClock}),
@@ -266,7 +267,7 @@ export class Settlement {
             new RatsInStorage({settlements: [this], timer: this.gameClock}),
             new NomadsArrive({settlements: [this], timer: this.gameClock, addToTreasury: this.addToTreasury}),
             new BanditRaid({settlements: [this], timer: this.gameClock, addToTreasury: this.addToTreasury}),
-        ];
+        ] : [];
         this.tempFactor = seasonToTempFactor(this.gameClock.translatedTime.season);
 
         if (!props.leader) {
@@ -703,24 +704,36 @@ export class SettlementComponent extends UIBase {
         </Grid>;
     }
     /** Tab 0 — Production: key stats + buildings */
+    /** Compact stats bar shown at the top of every tab — always bolded, support first */
+    renderStatsBar() {
+        const s = this.settlement;
+        const statStyle = {fontWeight: 'bold'};
+        const sepStyle = {color: '#aaa', margin: '0 8px'};
+        return <Grid item xs={12} style={{borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '6px'}}>
+            <span style={statStyle}><VariableComponent showOwner={false} variable={s.support} description="Popular support = happiness + legitimacy + diplomacy effect − 1. Negative support accumulates rebellion pressure." /></span>
+            <span style={sepStyle}>|</span>
+            <span style={statStyle}><TrendingVariableComponent showOwner={false} variable={s.happiness} description="How content the population is. Affects productivity and rebellion risk." /></span>
+            <span style={sepStyle}>|</span>
+            <span style={statStyle}><TrendingVariableComponent showOwner={false} variable={s.health} description="Population health. Affects productivity and population growth." /></span>
+            <span style={sepStyle}>|</span>
+            <span style={statStyle}><VariableComponent showOwner={false} variable={s.generalProductivity} description="Multiplier applied to all building output." /></span>
+        </Grid>;
+    }
     renderProductionTab() {
         const s = this.settlement;
         const isPlayer = s.leader.isPlayer;
         return <Grid container justifyContent="center" alignItems="center" spacing={1}>
+            {this.renderStatsBar()}
             <Grid item xs={12}>
-                <CustomTooltip items={["Total number of people living in this settlement."]}><span><VariableComponent showOwner={false} variable={s.populationSizeExternal} /></span></CustomTooltip><br />
-                <CustomTooltip items={["Rate of population change per tick. Values above 1 mean growth; below 1 mean decline."]}><span><VariableComponent showOwner={false} variable={s.populationSizeChange} /></span></CustomTooltip><br />
-                <CustomTooltip items={["Total job slots available across all buildings."]}><span><VariableComponent showOwner={false} variable={s.totalJobs.variable} /></span></CustomTooltip><br />
-                <CustomTooltip items={["Number of job slots currently filled by workers."]}><span><VariableComponent showOwner={false} variable={s.jobsTaken.variable} /></span></CustomTooltip><br />
-                <CustomTooltip items={["People without a job. Negative means more jobs than workers."]}><span><VariableComponent showOwner={false} variable={s.unemployed} /></span></CustomTooltip><br />
-                <CustomTooltip items={["People without housing. Homelessness reduces happiness, health, and population growth."]}><span><VariableComponent showOwner={false} variable={s.homeless} /></span></CustomTooltip><br />
-                <CustomTooltip items={["How content the population is. Affects productivity and rebellion risk. Influenced by food, housing, entertainment, and health."]}><span><TrendingVariableComponent showOwner={false} variable={s.happiness} /></span></CustomTooltip><br />
-                <CustomTooltip items={["Population health. Affects productivity and population growth. Influenced by food, coal, medicine, and homelessness."]}><span><TrendingVariableComponent showOwner={false} variable={s.health} /></span></CustomTooltip><br />
-                <CustomTooltip items={["Multiplier applied to all building output. Affected by health, happiness, and leader administration."]}><span><VariableComponent showOwner={false} variable={s.generalProductivity} /></span></CustomTooltip><br />
-                <CustomTooltip items={["How much the population accepts the current leader. Contributes to popular support."]}><span><VariableComponent showOwner={false} variable={s.localLegitimacy} /></span></CustomTooltip><br />
-                <CustomTooltip items={["Popular support = happiness + legitimacy + diplomacy effect − 1. Negative support accumulates rebellion pressure."]}><span><VariableComponent showOwner={false} variable={s.support} /></span></CustomTooltip><br />
+                <VariableComponent showOwner={false} variable={s.populationSizeExternal} description="Total number of people living in this settlement." /><br />
+                <VariableComponent showOwner={false} variable={s.populationSizeChange} description="Rate of population change per tick. Values above 1 mean growth; below 1 mean decline." /><br />
+                <VariableComponent showOwner={false} variable={s.totalJobs.variable} description="Total job slots available across all buildings." /><br />
+                <VariableComponent showOwner={false} variable={s.jobsTaken.variable} description="Number of job slots currently filled by workers." /><br />
+                <VariableComponent showOwner={false} variable={s.unemployed} description="People without a job. Negative means more jobs than workers." /><br />
+                <VariableComponent showOwner={false} variable={s.homeless} description="People without housing. Homelessness reduces happiness, health, and population growth." /><br />
+                <VariableComponent showOwner={false} variable={s.localLegitimacy} description="How much the population accepts the current leader. Contributes to popular support." /><br />
                 {s.totalRebellionSupport.currentValue > 0
-                    ? <CustomTooltip items={["Accumulated rebellion pressure. When this reaches 1, the settlement rebels and the leader is replaced."]}><span><CumulatorComponent showOwner={false} variable={s.totalRebellionSupport} /><br /></span></CustomTooltip>
+                    ? <><CumulatorComponent showOwner={false} variable={s.totalRebellionSupport} description="Accumulated rebellion pressure. When this reaches 1, the settlement rebels and the leader is replaced." /><br /></>
                     : null}
                 <a href={s.logHref}>{Variable.logging ? 'Calculation Log' : 'logging is off'}</a><br />
                 {isPlayer ? <FormControlLabel control={<Checkbox onChange={(e, value) => {
@@ -765,49 +778,46 @@ export class SettlementComponent extends UIBase {
                     )}
                 </Grid>
             </Grid>
+            {/* Distribution section — merged below production */}
+            {isPlayer && <>
+                <Grid item xs={12} style={{borderTop: '1px solid #ccc', marginTop: '8px', paddingTop: '4px'}}>
+                    <span style={{fontWeight:'bold', color:'#555'}}>Rationing</span>
+                </Grid>
+                {s.rationsDemanded.filter((ration, i) =>
+                    s.resourceBuildings.find(b => b.outputResource === s.rationResources[i] && b.unlocked)
+                ).map((ration, i) =>
+                    <Grid item xs={4} key={s.rationResources[i].name} justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
+                        <RationingComponent
+                            demandedRation={ration}
+                            recievedRation={s.rationsAchieved[i]}
+                            idealRation={s.idealRations[i]}
+                            addRations={(e, direction) => this.addToRation(e, ration, direction)}
+                        />
+                    </Grid>
+                )}
+                <Grid item xs={12}><span style={{fontWeight:'bold', color:'#555'}}>Resources</span></Grid>
+                {s.resourceStorages.filter(rs =>
+                    rs.amount.currentValue !== 0 || s.resourceBuildings.find(b => b.outputResource === rs.resource && b.unlocked)
+                ).map((rs, i) =>
+                    <Grid item xs={4} key={rs.resource.name} justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
+                        <ResourceStorageComponent resourceStorage={rs} />
+                    </Grid>
+                )}
+            </>}
         </Grid>;
     }
-    /** Tab 1 — Distribution: rationing + resource storages */
-    renderDistributionTab() {
-        const s = this.settlement;
-        if (!s.leader.isPlayer) {
-            return <Grid item xs={12}><span style={{color:'#888'}}>Distribution is managed by the NPC leader.</span></Grid>;
-        }
-        return <Grid container justifyContent="center" alignItems="center" spacing={1}>
-            <Grid item xs={12}><span style={{fontWeight:'bold', color:'#555'}}>Rationing</span></Grid>
-            {s.rationsDemanded.filter((ration, i) =>
-                s.resourceBuildings.find(b => b.outputResource === s.rationResources[i] && b.unlocked)
-            ).map((ration, i) =>
-                <Grid item xs={4} key={s.rationResources[i].name} justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
-                    <RationingComponent
-                        demandedRation={ration}
-                        recievedRation={s.rationsAchieved[i]}
-                        idealRation={s.idealRations[i]}
-                        addRations={(e, direction) => this.addToRation(e, ration, direction)}
-                    />
-                </Grid>
-            )}
-            <Grid item xs={12}><span style={{fontWeight:'bold', color:'#555'}}>Resources</span></Grid>
-            {s.resourceStorages.filter(rs =>
-                rs.amount.currentValue !== 0 || s.resourceBuildings.find(b => b.outputResource === rs.resource && b.unlocked)
-            ).map((rs, i) =>
-                <Grid item xs={4} key={rs.resource.name} justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
-                    <ResourceStorageComponent resourceStorage={rs} />
-                </Grid>
-            )}
-        </Grid>;
-    }
-    /** Tab 2 — Trading: market. Only shown when Roads building has size > 0 (tradeFactor > 0). */
+    /** Tab 1 — Trading: market. Only shown when Roads building has size > 0 (tradeFactor > 0). */
     renderTradingTab() {
         const s = this.settlement;
         if (!s.leader.isPlayer) {
-            return <Grid item xs={12}><span style={{color:'#888'}}>Trading is managed by the NPC leader.</span></Grid>;
+            return <Grid container spacing={1}>{this.renderStatsBar()}<Grid item xs={12}><span style={{color:'#888'}}>Trading is managed by the NPC leader.</span></Grid></Grid>;
         }
         const roadsBuilding = s.getBuildingByName(Roads.name);
         if (!roadsBuilding || roadsBuilding.size.currentValue === 0) {
-            return <Grid item xs={12}><span style={{color:'#888'}}>Build Roads to unlock trading.</span></Grid>;
+            return <Grid container spacing={1}>{this.renderStatsBar()}<Grid item xs={12}><span style={{color:'#888'}}>Build Roads to unlock trading.</span></Grid></Grid>;
         }
         return <Grid container justifyContent="center" alignItems="center" spacing={1}>
+            {this.renderStatsBar()}
             {s.market.marketResources.filter(mr =>
                 s.resourceBuildings.find(b => b.outputResource === mr.resource && b.unlocked)
             ).map((mr, i) =>
@@ -961,7 +971,7 @@ export class SettlementComponent extends UIBase {
         </Grid>;
     }
 
-    /** Tab 3 — Military: weapon stockpiles, unit conversion, army strength */
+    /** Tab 2 — Military: weapon stockpiles, unit conversion, army strength */
     renderMilitaryTab() {
         const s = this.settlement;
         const isPlayer = s.leader.isPlayer;
@@ -985,6 +995,7 @@ export class SettlementComponent extends UIBase {
         const getStorage = (resource) => s.resourceStorages.find(rs => rs.resource === resource);
 
         return <Grid container justifyContent="center" alignItems="flex-start" spacing={1} style={{ padding: '4px' }}>
+            {this.renderStatsBar()}
             {/* Army strength */}
             <Grid item xs={12}>
                 <span style={{ fontWeight: 'bold', color: '#555' }}>Army</span><br />
@@ -1068,8 +1079,8 @@ export class SettlementComponent extends UIBase {
     childRender() {
         this.settlement = this.props.settlement;
         const isPlayer = this.settlement.leader.isPlayer;
-        // Clamp tab to valid range (4 tabs: Production, Distribution, Trading, Military)
-        const tab = Math.min(this.state.tab || 0, 3);
+        // Clamp tab to valid range (3 tabs: Production, Trading, Military)
+        const tab = Math.min(this.state.tab || 0, 2);
         return <Grid container justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
             {this.renderHeader()}
             <Grid item xs={12}>
@@ -1081,16 +1092,14 @@ export class SettlementComponent extends UIBase {
                     sx={{ borderBottom: '1px solid #ccc', minHeight: '36px' }}
                 >
                     <Tab label="Production" sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
-                    <Tab label="Distribution" disabled={!isPlayer} sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
                     <Tab label="Trading" disabled={!isPlayer} sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
                     <Tab label="Military" sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
                 </Tabs>
             </Grid>
             <Grid item xs={12} style={{ paddingTop: '8px' }}>
                 {tab === 0 && this.renderProductionTab()}
-                {tab === 1 && this.renderDistributionTab()}
-                {tab === 2 && this.renderTradingTab()}
-                {tab === 3 && this.renderMilitaryTab()}
+                {tab === 1 && this.renderTradingTab()}
+                {tab === 2 && this.renderMilitaryTab()}
             </Grid>
         </Grid>;
     }

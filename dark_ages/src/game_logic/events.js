@@ -1010,7 +1010,11 @@ export class RatsInStorage extends RegularSettlementEvent {
         this._foodLost = 0;
     }
     eventShouldFire_() { return successToTruthy(rollSuccess(0.2)); }
-    getEventChoices() { return []; }
+    getEventChoices() {
+        return [
+            new EventChoice({name: "Acknowledge", effects: []})
+        ];
+    }
     getBonuses() { return []; }
     fire_() {
         const settlement = this.settlements[0];

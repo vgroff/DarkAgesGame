@@ -330,6 +330,8 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 
 > These are intentions from `handwritten_notes.md`. Do not implement without confirmation.
 
+- **Gradual event effect fade-out** *(deferred — document only)*: Rather than cutting event bonuses off abruptly when an event ends, effects should decay smoothly. The desired curve is heavily skewed toward the original value — the effect should barely change for most of the duration, then drop off sharply near the end before being cut. Suggested approach: use a `TemporaryModifierBonus` subclass that applies a time-based multiplier to the bonus amount each tick, using a curve like `f(t) = (1 - t^k)` where `t` is proportion of duration elapsed and `k` is a large exponent (e.g. 4–6) so the value stays near 1 for most of the event and only falls meaningfully in the last ~20% of duration. The existing `TemporaryModifierBonus` class in `bonus.js` would need a `fadeOut: true` prop and access to the event's remaining duration. **Do not implement without confirmation.**
+
 - **Wolf attack**: should depend on how much weaponry the settlement has available (currently fires regardless of military strength)
 - **Fire event**: add a probabilistic outcome where high administration allows better building organisation. Also add an `EventEffect` that permanently increases `checkEvery` (fire prevention improves after a fire).
 - **Default `_eventShouldFire()` with probability prop**: add a probability prop to the base `RegularSettlementEvent` class so simple events don't need to override `eventShouldFire_()`. Also add an `EventEffect` that changes the firing probability.
