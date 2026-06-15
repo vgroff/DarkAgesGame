@@ -4,6 +4,10 @@ solutions I propose could be garbage. You should question these notes, basically
 
 Please incorporate the notes into the knowledge files where relevant, but please do not make any actual design decisions regarding the game design without asking me. Always ask for clarification where needed, lean towards asking if unsure whether you should ask, especially as you translate the following file into your own knowledge.md files. If you are just fixing a bug, then you may do that without confirmation, but if you are unsure whether it's a feature or a bug, always ask. I will generally assume that if you are giving me a file edit, you have already checked with me in the chat that this is appropriate, do not assume that I will read every line of your edits and understand the implications. Always lean on the side of caution. Please add a summarised version of these instructions to the top of every knowledge file.
 
+Prompt:
+For the following, I am giving you auto-approved edit perms. This means I will not be able to check any of your work. This is specified a few times but it is critical: if you want to check something with me, DO NOT do it through an edit. Instead, ask me in the chat, or if it's something long you can write a .md design document for me to edit. 
+- first off, read the top-level knowledge.md file in the repo. 
+
 // Stuff for now:
 // - Move to the character
 //        - Force stop timer until all player traits set on the first day?

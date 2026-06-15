@@ -110,7 +110,7 @@ With `daysInYear = 12`, each season is exactly 3 days.
 - `stopTimer()` checks `!this.isForceStopped()` before clearing the interval, so if force-stopped, `stopTimer()` is a no-op — this means `unforceStopTimer` must restart the timer manually (which it does via `this.started = false; this.startTimer()`)
 
 ### Developer Notes
-- **Force-stop on first day**: The developer intends to force-stop the timer until all player traits are set on day 1, so the game doesn't run before the player has configured their character. This would use `forceStopTimer(reason)` / `unforceStopTimer(reason)` — the mechanism already exists.
+- **Force-stop on first day**: ✅ **Implemented**. `Character` constructor calls `gameClock.forceStopTimer(reason)` when `isPlayer=true`. `checkTraitsComplete()` is called after every `addTrait`/`removeTrait`; it releases the stop once all 5 trait groups are filled, and re-applies it if a trait is removed leaving a group empty.
 
 ---
 
@@ -190,6 +190,27 @@ Subclasses: `Celtic`, `Roman`. Each defines `getTraits()` returning a list of `T
 - `changePrivilegeTentatively(index, change)`: pauses game clock via `forceStopTimer`
 - `confirmPrivilegeChanges()`: applies `TemporaryLegitimacyBonus(-0.05, 5 years)`, unpauses
 - `updatePrivileges()`: calls `member.updateFactionTraits()` for all members
+
+### `checkTraitsComplete()`
+- Called after every `addTrait` and `removeTrait` on the player character
+- Checks whether all 5 `traitGroups` slots are non-null/undefined
+- If all filled: calls `gameClock.unforceStopTimer(reason)` (only if the stop is currently held)
+- If not all filled: calls `gameClock.forceStopTimer(reason)` (only if not already held)
+- No-op for NPC characters (`isPlayer=false`) or characters without a `gameClock`
+
+### `Faction` — Research System
+- `researchTree`: one `createResearchTree()` call per faction; this is the canonical tree the player interacts with
+- `getPlayerSettlements()`: returns all settlements belonging to any faction member
+- `getTotalResearch()`: sums `resourceStorage.amount.baseValue` for `Resources.research` across all member settlements
+- `canResearch(research)`: checks `research.researched`, sequential unlock (previous item in category must be researched), and `getTotalResearch() >= researchCost`
+- `activateResearch(research)`: drains cost proportionally from each settlement's research storage via `oneOffDemand`; marks faction item `researched = true`; applies bonuses to all member settlements by finding matching item in each settlement's internal `research` tree by name and calling `settlement.activateBonus()` on each bonus
+
+### `FactionResearchComponent`
+- `UIBase` component subscribing to `props.internalTimer` (re-renders each tick)
+- Renders pooled research total (`Math.floor(getTotalResearch())`) and all research categories
+- Sequential unlock: item visible if `researched || j === 0 || researchList[j-1].researched`
+- Calls `faction.canResearch()` and `faction.activateResearch()` (not settlement methods)
+- Rendered in `GameUI` when "Research" button is active
 
 ### `CharacterComponent` / `FactionComponent`
 - `CharacterComponent` subscribes to `character.legitimacy`
@@ -458,8 +479,10 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 - Uses `props.game` passed from `App.js` (no longer creates its own `Game` instance)
 - 3-column MUI Grid: SidePanel (xs=2) | HUD+MainUI (xs=8) | Logger (xs=2)
 - Below the 3-column grid: `MessageLogPanel` — a collapsible scrollable panel showing the full permanent message history
-- `setSelected(selected)`: updates `this.state.selected`; passed down to child components
+- `setSelected(selected)`: pushes to `_navHistory`, truncates forward history, updates `this.state.selected`; also clears `showResearch` state
 - Shows `GameMessage` modal when `game.gameMessages.length > 0`
+- **Back/Forward navigation**: `_navHistory` array + `_navIndex` pointer. `navBack()` / `navForward()` move the index and call `setState`. Two MUI `Button` components (← →) rendered above `MainUI`; disabled when at history boundaries or when Research panel is open. Initial history entry is `game.playerCharacter`.
+- **Research panel**: "Research" button toggles `showResearch` state. When true, renders `FactionResearchComponent` (from `character.js`) instead of `MainUI`. Imports `FactionResearchComponent` from `./character`. Passes `faction = game.playerCharacter.faction` and `internalTimer` as props.
 
 ### `GameMessage`
 - Subscribes to timer (so it re-renders)

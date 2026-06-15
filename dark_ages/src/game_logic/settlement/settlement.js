@@ -1,7 +1,7 @@
 import {VariableModifier, multiplication, subtraction, division, makeTextFile, greaterThan, lesserThan,  exponentiation, max, priority, roundTo, scaledAddition, UnaryModifier, scaledMultiplication, invLogit, min, Variable, castInt, addition, TrendingVariable, TrendingVariableComponent, VariableComponent, CumulatorComponent} from '../UIUtils.js';
 import Grid from  '@mui/material/Grid';
 import Checkbox from '@mui/material/Checkbox';
-import {FormControlLabel} from '@mui/material';
+import {FormControlLabel, Tab, Tabs} from '@mui/material';
 import React from 'react';
 import UIBase from '../UIBase';
 import {Storage, Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, BuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine, Toolmaker, Church, Tavern, CoalMine, Bowyer, WeaponMaker} from './building.js'
@@ -9,10 +9,10 @@ import { Resources, ResourceStorage, ResourceStorageComponent } from './resource
 import { Cumulator } from '../UIUtils.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
 import { getBasePopDemands, RationingComponent, applyRationingModifiers } from './rationing.js';
-import { createResearchTree, ResearchComponent } from './research.js';
+import { createResearchTree } from './research.js';
 import { AddNewBuildingBonus, GeneralProductivityBonus, SettlementBonus } from './bonus.js';
 import { Market, MarketResourceComponent } from './market.js';
-import { titleCase } from '../utils.js';
+import { titleCase, CustomTooltip } from '../utils.js';
 import { winter, summer, seasonToTempFactor  } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
 import { CourtIntrigue, CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack } from '../events.js';
@@ -541,6 +541,8 @@ export class SettlementComponent extends UIBase {
         super(props);
         this.settlement = props.settlement;
         this.addVariables([this.settlement.happiness, this.settlement.unemployed]);
+        // Default to Production tab (index 0)
+        this.state = { ...this.state, tab: 0 };
     }
     getAmount(event, direction, multiplier) {
         event.stopPropagation();
@@ -580,140 +582,165 @@ export class SettlementComponent extends UIBase {
             }
         }
     }
+    /** Render the settlement header: name, leader, terrain, key stats, events */
+    renderHeader() {
+        const s = this.settlement;
+        return <Grid item xs={12}>
+            <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>{s.name}</span>
+            {' · '}
+            <span style={{ color: '#555', cursor: 'pointer' }} onClick={() => this.props.setSelected(s.leader)}>
+                {s.leader.name}
+            </span>
+            {' · '}
+            <TerrainComponent terrain={s.terrain} prefix={true} />
+            <br />
+            {s.settlementEvents.filter(ev => ev.isActive()).map((ev, i) =>
+                <EventComponent key={`${ev.name}_${i}`} event={ev}/>
+            )}
+        </Grid>;
+    }
+    /** Tab 0 — Production: key stats + buildings */
+    renderProductionTab() {
+        const s = this.settlement;
+        const isPlayer = s.leader.isPlayer;
+        return <Grid container justifyContent="center" alignItems="center" spacing={1}>
+            <Grid item xs={12}>
+                <CustomTooltip items={["Total number of people living in this settlement."]}><span><VariableComponent showOwner={false} variable={s.populationSizeExternal} /></span></CustomTooltip><br />
+                <CustomTooltip items={["Rate of population change per tick. Values above 1 mean growth; below 1 mean decline."]}><span><VariableComponent showOwner={false} variable={s.populationSizeChange} /></span></CustomTooltip><br />
+                <CustomTooltip items={["Total job slots available across all buildings."]}><span><VariableComponent showOwner={false} variable={s.totalJobs.variable} /></span></CustomTooltip><br />
+                <CustomTooltip items={["Number of job slots currently filled by workers."]}><span><VariableComponent showOwner={false} variable={s.jobsTaken.variable} /></span></CustomTooltip><br />
+                <CustomTooltip items={["People without a job. Negative means more jobs than workers."]}><span><VariableComponent showOwner={false} variable={s.unemployed} /></span></CustomTooltip><br />
+                <CustomTooltip items={["People without housing. Homelessness reduces happiness, health, and population growth."]}><span><VariableComponent showOwner={false} variable={s.homeless} /></span></CustomTooltip><br />
+                <CustomTooltip items={["How content the population is. Affects productivity and rebellion risk. Influenced by food, housing, entertainment, and health."]}><span><TrendingVariableComponent showOwner={false} variable={s.happiness} /></span></CustomTooltip><br />
+                <CustomTooltip items={["Population health. Affects productivity and population growth. Influenced by food, coal, medicine, and homelessness."]}><span><TrendingVariableComponent showOwner={false} variable={s.health} /></span></CustomTooltip><br />
+                <CustomTooltip items={["Multiplier applied to all building output. Affected by health, happiness, and leader administration."]}><span><VariableComponent showOwner={false} variable={s.generalProductivity} /></span></CustomTooltip><br />
+                <CustomTooltip items={["How much the population accepts the current leader. Contributes to popular support."]}><span><VariableComponent showOwner={false} variable={s.localLegitimacy} /></span></CustomTooltip><br />
+                <CustomTooltip items={["Popular support = happiness + legitimacy + diplomacy effect − 1. Negative support accumulates rebellion pressure."]}><span><VariableComponent showOwner={false} variable={s.support} /></span></CustomTooltip><br />
+                {s.totalRebellionSupport.currentValue > 0
+                    ? <CustomTooltip items={["Accumulated rebellion pressure. When this reaches 1, the settlement rebels and the leader is replaced."]}><span><CumulatorComponent showOwner={false} variable={s.totalRebellionSupport} /><br /></span></CustomTooltip>
+                    : null}
+                <a href={s.logHref}>{Variable.logging ? 'Calculation Log' : 'logging is off'}</a><br />
+                {isPlayer ? <FormControlLabel control={<Checkbox onChange={(e, value) => {
+                    s.autoManageUnemployed = value;
+                    if (s.autoManageUnemployed) s.adjustJobs();
+                }}/>} label="Auto-assign unemployed" style={{maxHeight:'80%', minHeight:'80%'}}/> : null}
+            </Grid>
+            <Grid item xs={12} style={{border:"1px solid grey", padding:"5px", textAlign:"center"}}>
+                <Grid container spacing={3} justifyContent="center" alignItems="center" style={{textAlign:"center"}}>
+                    {s.getBuildings().filter(b => b.unlocked).map((building, i) =>
+                        <Grid item xs={4} key={building.name} style={{alignItems:"center", justifyContent:"center"}}>
+                            {building instanceof ResourceBuilding
+                                ? <BuildingComponent building={building}
+                                    buildText={building.getBuildText(s.resourceStorages)}
+                                    canBuild={building.canBuild(s.resourceStorages)}
+                                    canDemolish={building.size.currentValue > 0}
+                                    canAddWorkers={building.totalJobs.currentValue > 0 && s.unemployed.currentValue > 0}
+                                    canRemoveWorkers={building.filledJobs.currentValue > 0}
+                                    addWorkers={(e, direction) => this.addToBuilding(e, building, direction)}
+                                    addToBuildingSize={(e, direction) => this.addToBuildingSize(e, building, direction)}
+                                    canUpgrade={building.canUpgrade(s.resourceStorages)}
+                                    canDowngrade={building.canDowngrade(s.resourceStorages)}
+                                    isPlayerOwned={isPlayer}
+                                    upgradeBuilding={(e, direction) => this.upgradeBuilding(e, building, direction)}
+                                    upgradeText={building.getUpgradeText(s.resourceStorages, building)}
+                                />
+                                : <BuildingComponent building={building}
+                                    buildText={building.getBuildText(s.resourceStorages)}
+                                    canBuild={building.canBuild(s.resourceStorages)}
+                                    canDemolish={building.size.currentValue > 0}
+                                    addToBuildingSize={(e, direction) => this.addToBuildingSize(e, building, direction)}
+                                    canUpgrade={building.canUpgrade(s.resourceStorages)}
+                                    canDowngrade={building.canDowngrade(s.resourceStorages)}
+                                    isPlayerOwned={isPlayer}
+                                    upgradeBuilding={(e, direction) => this.upgradeBuilding(e, building, direction)}
+                                    upgradeText={building.getUpgradeText(s.resourceStorages, building)}
+                                />
+                            }
+                        </Grid>
+                    )}
+                </Grid>
+            </Grid>
+        </Grid>;
+    }
+    /** Tab 1 — Distribution: rationing + resource storages */
+    renderDistributionTab() {
+        const s = this.settlement;
+        if (!s.leader.isPlayer) {
+            return <Grid item xs={12}><span style={{color:'#888'}}>Distribution is managed by the NPC leader.</span></Grid>;
+        }
+        return <Grid container justifyContent="center" alignItems="center" spacing={1}>
+            <Grid item xs={12}><span style={{fontWeight:'bold', color:'#555'}}>Rationing</span></Grid>
+            {s.rationsDemanded.filter((ration, i) =>
+                s.resourceBuildings.find(b => b.outputResource === s.rationResources[i] && b.unlocked)
+            ).map((ration, i) =>
+                <Grid item xs={4} key={s.rationResources[i].name} justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
+                    <RationingComponent
+                        demandedRation={ration}
+                        recievedRation={s.rationsAchieved[i]}
+                        idealRation={s.idealRations[i]}
+                        addRations={(e, direction) => this.addToRation(e, ration, direction)}
+                    />
+                </Grid>
+            )}
+            <Grid item xs={12}><span style={{fontWeight:'bold', color:'#555'}}>Resources</span></Grid>
+            {s.resourceStorages.filter(rs =>
+                rs.amount.currentValue !== 0 || s.resourceBuildings.find(b => b.outputResource === rs.resource && b.unlocked)
+            ).map((rs, i) =>
+                <Grid item xs={4} key={rs.resource.name} justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
+                    <ResourceStorageComponent resourceStorage={rs} />
+                </Grid>
+            )}
+        </Grid>;
+    }
+    /** Tab 2 — Trading: market. Only shown when Roads building has size > 0 (tradeFactor > 0). */
+    renderTradingTab() {
+        const s = this.settlement;
+        if (!s.leader.isPlayer) {
+            return <Grid item xs={12}><span style={{color:'#888'}}>Trading is managed by the NPC leader.</span></Grid>;
+        }
+        const roadsBuilding = s.getBuildingByName(Roads.name);
+        if (!roadsBuilding || roadsBuilding.size.currentValue === 0) {
+            return <Grid item xs={12}><span style={{color:'#888'}}>Build Roads to unlock trading.</span></Grid>;
+        }
+        return <Grid container justifyContent="center" alignItems="center" spacing={1}>
+            {s.market.marketResources.filter(mr =>
+                s.resourceBuildings.find(b => b.outputResource === mr.resource && b.unlocked)
+            ).map((mr, i) =>
+                <Grid item xs={4} key={mr.resource.name} justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
+                    <MarketResourceComponent
+                        marketResource={mr}
+                        buyFromMarket={(e, direction) => this.buyFromMarket(e, mr, direction)}
+                    />
+                </Grid>
+            )}
+        </Grid>;
+    }
     childRender() {
         this.settlement = this.props.settlement;
-        return <Grid container justifyContent="center" alignItems="center"  style={{alignItems: "center", justifyContent: "center"}} >
-        <Grid item xs={12}>
-            <h4>Information</h4>
-            <span>{this.settlement.name}</span><br />
-            <span onClick={() => this.props.setSelected(this.settlement.leader)} >Leader: {this.settlement.leader.name}</span><br />
-            <TerrainComponent terrain={this.settlement.terrain} prefix={true} /><br />
-            <VariableComponent showOwner={false} variable={this.settlement.populationSizeExternal} /><br />
-            <VariableComponent showOwner={false} variable={this.settlement.populationSizeChange} /><br /> 
-            <VariableComponent showOwner={false} variable={this.settlement.totalJobs.variable} /><br />
-            <VariableComponent showOwner={false} variable={this.settlement.jobsTaken.variable} /><br />
-            <VariableComponent showOwner={false} variable={this.settlement.unemployed} /><br />
-            <VariableComponent showOwner={false} variable={this.settlement.homeless} /><br />
-            <TrendingVariableComponent showOwner={false} variable={this.settlement.happiness} /><br />
-            <TrendingVariableComponent showOwner={false} variable={this.settlement.health} /><br />
-            <VariableComponent showOwner={false} variable={this.settlement.generalProductivity} /><br />
-            <VariableComponent showOwner={false} variable={this.settlement.localLegitimacy} /><br />
-            <VariableComponent showOwner={false} variable={this.settlement.support} /><br />
-            {this.settlement.totalRebellionSupport.currentValue > 0 ?
-                <span><CumulatorComponent showOwner={false} variable={this.settlement.totalRebellionSupport} /><br /></span> : null
-            }
-            <a href={this.settlement.logHref}>{Variable.logging ? 'Calculation Log' : 'logging is off'}</a><br />
-            {this.settlement.leader.isPlayer ? <FormControlLabel control={<Checkbox onChange={(e, value) => {
-                this.settlement.autoManageUnemployed = value;
-                if (this.settlement.autoManageUnemployed) {
-                    this.settlement.adjustJobs();
-                }
-            }}/>} label="Auto-assign unemployed"  style={{maxHeight:'80%', minHeight:'80%'}}/> : null}
-        </Grid>
-        <Grid item xs={12}>
-            {this.settlement.settlementEvents.filter(events => events.isActive()).length ? <h4>Active Events</h4> : null}
-            {this.settlement.settlementEvents.filter(events => events.isActive()).map((ev, i) => {
-                return <EventComponent key={`${ev.name}_${i}`} event={ev}/>
-            })}
-        </Grid>
-        <Grid item xs={12} justifyContent="center" alignItems="center" style={{border:"1px solid grey", padding:"5px", textAlign:"center", alignItems: "center", justifyContent: "center"}}>
-            <h4>Buildings</h4>
-            <Grid container spacing={3} justifyContent="center" alignItems="center" style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
-                {this.settlement.getBuildings().filter((building) => building.unlocked).map((building, i) => {
-                    return <Grid item xs={4} key={building.name} style={{alignItems: "center", justifyContent: "center"}}>
-                        {building instanceof ResourceBuilding ? <BuildingComponent building={building} 
-                            buildText={building.getBuildText(this.settlement.resourceStorages)}
-                            canBuild={building.canBuild(this.settlement.resourceStorages)}
-                            canDemolish={building.size.currentValue > 0}
-                            canAddWorkers={building.totalJobs.currentValue > 0 && this.settlement.unemployed.currentValue > 0}
-                            canRemoveWorkers={building.filledJobs.currentValue > 0}
-                            addWorkers={(e, direction) => {this.addToBuilding(e, building, direction)}}
-                            addToBuildingSize={(e, direction) => {this.addToBuildingSize(e, building, direction)}}
-                            canUpgrade={building.canUpgrade(this.settlement.resourceStorages)}
-                            canDowngrade={building.canDowngrade(this.settlement.resourceStorages)}
-                            isPlayerOwned={this.settlement.leader.isPlayer}
-                            upgradeBuilding={(e, direction) => {this.upgradeBuilding(e, building, direction)}}
-                            upgradeText={building.getUpgradeText(this.settlement.resourceStorages, building)}
-                        /> :  <BuildingComponent building={building} 
-                            buildText={building.getBuildText(this.settlement.resourceStorages)}
-                            canBuild={building.canBuild(this.settlement.resourceStorages)}
-                            canDemolish={building.size.currentValue > 0}
-                            addToBuildingSize={(e, direction) => {this.addToBuildingSize(e, building, direction)}}
-                            canUpgrade={building.canUpgrade(this.settlement.resourceStorages)}
-                            canDowngrade={building.canDowngrade(this.settlement.resourceStorages)}
-                            isPlayerOwned={this.settlement.leader.isPlayer}
-                            upgradeBuilding={(e, direction) => {this.upgradeBuilding(e, building, direction)}}
-                            upgradeText={building.getUpgradeText(this.settlement.resourceStorages, building)}
-                        /> }
-                    </Grid>
-                })}
+        const isPlayer = this.settlement.leader.isPlayer;
+        // Clamp tab to valid range (Research tab removed — only 3 tabs now)
+        const tab = Math.min(this.state.tab || 0, 2);
+        return <Grid container justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
+            {this.renderHeader()}
+            <Grid item xs={12}>
+                <Tabs
+                    value={tab}
+                    onChange={(e, newVal) => this.setState({ tab: newVal })}
+                    variant="fullWidth"
+                    textColor="inherit"
+                    sx={{ borderBottom: '1px solid #ccc', minHeight: '36px' }}
+                >
+                    <Tab label="Production" sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
+                    <Tab label="Distribution" disabled={!isPlayer} sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
+                    <Tab label="Trading" disabled={!isPlayer} sx={{ minHeight: '36px', fontSize: '0.8rem', padding: '6px 8px' }} />
+                </Tabs>
             </Grid>
-            <Grid container spacing={2} justifyContent="center" alignItems="center">
-                <Grid item xs={12}><br/></Grid>
+            <Grid item xs={12} style={{ paddingTop: '8px' }}>
+                {tab === 0 && this.renderProductionTab()}
+                {tab === 1 && this.renderDistributionTab()}
+                {tab === 2 && this.renderTradingTab()}
             </Grid>
-        </Grid>
-        {this.settlement.leader.isPlayer ? <span>
-        <Grid item xs={12}>
-            <h4>Rationing</h4>
-                <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
-                    {this.settlement.rationsDemanded.filter((ration, i) => {
-                        return this.settlement.resourceBuildings.find(building => building.outputResource === this.settlement.rationResources[i] && building.unlocked)
-                    }).map((ration, i) => {
-                        return  <Grid item xs={4} key={this.settlement.rationResources[i].name} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
-                            <RationingComponent demandedRation={ration} recievedRation={this.settlement.rationsAchieved[i]} idealRation={this.settlement.idealRations[i]} addRations={(e, direction) => {this.addToRation(e, ration, direction)}}/>
-                        </Grid>
-                    })}
-                </Grid>
-        </Grid>
-        <Grid item xs={12}>
-            <h4>Market</h4>
-                <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
-                    {this.settlement.market.marketResources.filter(marketResource => {
-                        return this.settlement.resourceBuildings.find(building => building.outputResource === marketResource.resource && building.unlocked)
-                    }).map((marketResource, i) => {
-                        return  <Grid item xs={4} key={marketResource.resource.name} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
-                            <MarketResourceComponent marketResource={marketResource} 
-                            buyFromMarket={(e, direction) => {this.buyFromMarket(e, marketResource, direction)}}
-                            />
-                        </Grid>
-                    })}
-                </Grid>
-        </Grid>
-        <Grid item xs={12}>
-            <h4>Resources</h4>
-                <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
-                    {this.settlement.resourceStorages.filter(resourceStorage => {
-                        return resourceStorage.amount.currentValue !== 0 || this.settlement.resourceBuildings.find(building => building.outputResource === resourceStorage.resource && building.unlocked)
-                    }).map((resourceStorage, i) => {
-                        return  <Grid item xs={4} key={resourceStorage.resource.name} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
-                            <ResourceStorageComponent resourceStorage={resourceStorage} />
-                        </Grid>
-                    })}
-                </Grid>
-        </Grid>
-        <Grid item xs={12}>
-            <h4>Research</h4>
-                <Grid container spacing={2} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}} >
-                    {Object.entries(this.settlement.research).map(([key, researchList], i) => {
-                        return <Grid item xs={6} key={i} justifyContent="center" alignItems="center" style={{alignItems: "center", justifyContent: "center"}}>
-                            <h5>{titleCase(key)}</h5>
-                            {researchList.map((research, i) => {
-                                let visible = false;
-                                if (research.researched || i === 0 || researchList[i-1].researched) {
-                                    visible = true;
-                                }
-                                return visible ? <ResearchComponent key={i} research={research} 
-                                        canResearch={this.settlement.canResearch(research)}
-                                        visible={visible}
-                                        activateResearch={() => {this.settlement.activateResearch(research)}}
-                                    /> : null
-                            })}
-                        </Grid>
-                    })}
-                </Grid>
-        </Grid></span>
-        : null }
-    </Grid>
+        </Grid>;
     }
 }
 

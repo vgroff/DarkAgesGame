@@ -206,7 +206,7 @@ There are two timers:
 
 ### Immediate / Short-Term Tasks
 
-- **Move to character screen on first day**: Force-stop the timer until all player traits are set on day 1. Intent: prevent the game from running before the player has configured their character.
+- **Move to character screen on first day**: ✅ **Implemented**. `Character` constructor calls `gameClock.forceStopTimer(reason)` when `isPlayer=true`. `checkTraitsComplete()` is called after every `addTrait`/`removeTrait`; releases the stop once all 5 trait groups are filled, re-applies if a trait is removed leaving a group empty.
 - **Nomad events for population growth**: Add events where nomads arrive and can be taken in to boost immigration. (See Events section below for detail.)
 - **Permanent game message log**: ✅ **Implemented**. `game.messageLog` is a permanent array of `{text, day}` entries. All messages go through `game.addGameMessage()`. A collapsible `MessageLogPanel` is shown below the 3-column layout in `GameUI`, toggled by a button.
 - **Auto-sell excess goods to market**: ✅ **Implemented**. `Cumulator.excessAmount` tracks overflow each tick. `Settlement.autoSellExcessGoods()` runs each tick and sells excess at market sell price for resources where `desiredSellProp > 0`. Income credited via `game.addToTreasury()`.
@@ -221,11 +221,12 @@ There are two timers:
 
 > These are design suggestions — do not implement without confirmation.
 
-- Tabulate the settlement view: production, distribution, trading, research tabs
-- Move research into its own tab; research should aggregate across all settlements (research is not per-settlement in the intended design)
+- **Tabulate the settlement view**: ✅ **Implemented**. `SettlementComponent` now renders three MUI tabs: Production (stats + buildings), Distribution (rationing + resources), Trading (market). Research moved to top-level faction panel.
+- **Move research into its own tab**: ✅ **Implemented**. Research is now a top-level `FactionResearchComponent` shown in the main panel when the "Research" button is clicked. Uses a shared faction research tree; bonuses propagate to all member settlements; cost drained proportionally from all settlements' research storage.
 - Add Paradox-style warnings for homelessness, unemployment, rebellions, etc.
-- Add browser-style back/forward navigation
-- Hide research and market UI behind having the Library and Market buildings respectively
+- **Browser-style back/forward navigation**: ✅ **Implemented**. `GameUI` maintains `_navHistory` array and `_navIndex`. `setSelected()` pushes to history (truncating forward). ← → buttons rendered above `MainUI`; disabled at history boundaries.
+- **Hide research and market UI behind buildings**: ✅ **Implemented**. Trading tab shows "Build Roads to unlock trading" when Roads size = 0. Research is now faction-level (not per-settlement). Library gating not needed since research is no longer in the settlement view.
+- **Add descriptions/tooltips to character and settlement variables**: ✅ **Implemented**. `CharacterComponent` wraps all skill/attribute `VariableComponent`s in `CustomTooltip` with descriptions. `SettlementComponent` Production tab wraps all stat variables in `CustomTooltip` with descriptions.
 - Add descriptions/tooltips to character and settlement variables
 - "Buy/sell now" button in market to immediately trade as much as possible from storage (developer notes this may be unbalanced)
 
@@ -336,6 +337,15 @@ There are two timers:
 *(all minor bugs fixed — see below)*
 
 ### Fixed (this session)
+- **`character.js` faction research system**: `Faction` now has a `researchTree` (one `createResearchTree()` call per faction). `getTotalResearch()` sums research storage across all member settlements. `canResearch(research)` checks sequential unlock and pooled cost. `activateResearch(research)` drains cost proportionally from all settlements, marks faction item researched, and applies bonuses to all member settlements' internal trees by name lookup.
+- **`character.js` `FactionResearchComponent`**: New `UIBase` component subscribing to `internalTimer`. Renders pooled research total and all research categories with sequential unlock. Used in the top-level Research panel in `GameUI`.
+- **`gameUI.js` top-level Research panel**: "Research" button in nav bar toggles `showResearch` state. When active, renders `FactionResearchComponent` instead of `MainUI`. Back/forward buttons disabled while Research panel is open. Clicking any item in `SidePanel` closes the Research panel.
+- **`settlement.js` Trading tab gated behind Roads**: `renderTradingTab()` checks `getBuildingByName(Roads.name).size.currentValue > 0`; shows "Build Roads to unlock trading" otherwise.
+- **`settlement.js` Research tab removed**: Settlement view now has 3 tabs (Production, Distribution, Trading). Research is faction-level only.
+- **`settlement.js` + `character.js` variable tooltips**: All key stat variables in `SettlementComponent` Production tab and all skill/attribute variables in `CharacterComponent` wrapped in `CustomTooltip` with plain-English descriptions.
+- **`character.js` first-day timer force-stop**: `Character` constructor calls `gameClock.forceStopTimer(reason)` when `isPlayer=true`. New `checkTraitsComplete()` method releases the stop once all 5 trait groups are filled; re-applies if a trait is removed. Called from `addTrait()` and `removeTrait()`.
+- **`gameUI.js` back/forward navigation**: `GameUI` now maintains `_navHistory` (array) and `_navIndex` (integer). `setSelected()` pushes to history and truncates forward entries. `navBack()` / `navForward()` move the index. Two ← → `Button` components rendered above `MainUI`; disabled at history boundaries.
+- **`settlement.js` tabbed settlement view**: `SettlementComponent` refactored into four MUI `Tabs`: Production (stats + buildings), Distribution (rationing + resources), Trading (market), Research. Header (name, leader, terrain, active events) always visible. NPC settlement tabs 1–3 show a placeholder. `Tab`/`Tabs` imported from `@mui/material`.
 - **`building.js` productivity rounding**: `ResourceBuilding.productivity` now has a `roundTo(3dp)` modifier at priority 200, reducing subscriber cascade frequency when productivity changes by tiny amounts.
 - **`UIBase.js` prop-change subscription bug**: Added `addVariableGetters([{key, get}])` dynamic subscription mechanism. `CharacterComponent` updated to use it so subscriptions re-wire when `props.character` changes.
 - **`cumulator.js` excess tracking**: `Cumulator.aggregate()` now computes `excessAmount` — the amount of production that overflowed storage this tick. Used by `Settlement.autoSellExcessGoods()`.

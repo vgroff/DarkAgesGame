@@ -7,6 +7,7 @@ import {SidePanel} from './sidePanelUI'
 import { Box, Button, Modal, Typography } from '@mui/material';
 import { CustomTooltip } from './utils';
 import React from 'react';
+import { FactionResearchComponent } from './character';
 
 class GameUI extends UIBase {
     constructor(props) {
@@ -14,26 +15,74 @@ class GameUI extends UIBase {
         this.game = props.game;
         this.gameClock = this.game.gameClock;
         this.addVariables([props.internalTimer]);
+        // Navigation history: array of selected items, index into it
+        this._navHistory = [props.game.playerCharacter];
+        this._navIndex = 0;
     }
     setSelected(selected) {
-        this.setState({selected: selected});
+        // Truncate forward history when navigating to a new item
+        this._navHistory = this._navHistory.slice(0, this._navIndex + 1);
+        this._navHistory.push(selected);
+        this._navIndex = this._navHistory.length - 1;
+        this.setState({ selected });
+    }
+    navBack() {
+        if (this._navIndex > 0) {
+            this._navIndex -= 1;
+            this.setState({ selected: this._navHistory[this._navIndex] });
+        }
+    }
+    navForward() {
+        if (this._navIndex < this._navHistory.length - 1) {
+            this._navIndex += 1;
+            this.setState({ selected: this._navHistory[this._navIndex] });
+        }
     }
     childRender() {
         const showLog = this.state.showMessageLog || false;
+        const showResearch = this.state.showResearch || false;
+        const canBack = this._navIndex > 0;
+        const canForward = this._navIndex < this._navHistory.length - 1;
+        const faction = this.game.playerCharacter.faction;
         return <div>
             <Grid container spacing={2}>
                 {this.game.gameMessages.length > 0
                     ? <GameMessage gameMessage={this.game.gameMessages[0]} timer={this.gameClock} readGameMessage={() => this.game.messageRead()}/>
                     : null}
                 <Grid item xs={2}>
-                    <SidePanel setSelected={(selected) => this.setSelected(selected)} game={this.game} internalTimer={this.props.internalTimer}/>
+                    <SidePanel setSelected={(selected) => { this.setState({ showResearch: false }); this.setSelected(selected); }} game={this.game} internalTimer={this.props.internalTimer}/>
                 </Grid>
                 <Grid item xs={8}>
                     <div>
                         <HUD gameClock={this.gameClock} treasury={this.game.treasury} harvestEvent={this.game.harvestEvent}/>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            disabled={!canBack || showResearch}
+                            onClick={() => this.navBack()}
+                            sx={{ minWidth: '32px', padding: '2px 6px', fontSize: '16px' }}
+                        >←</Button>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            disabled={!canForward || showResearch}
+                            onClick={() => this.navForward()}
+                            sx={{ minWidth: '32px', padding: '2px 6px', fontSize: '16px' }}
+                        >→</Button>
+                        <Button
+                            variant={showResearch ? "contained" : "outlined"}
+                            size="small"
+                            onClick={() => this.setState({ showResearch: !showResearch })}
+                            sx={{ padding: '2px 10px', fontSize: '12px', marginLeft: '8px' }}
+                        >Research</Button>
+                    </div>
                     <div>
-                        <MainUI selected={this.state.selected || this.game.playerCharacter} setSelected={(selected) => this.setSelected(selected)} gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game}/>
+                        {showResearch
+                            ? <FactionResearchComponent faction={faction} internalTimer={this.props.internalTimer} />
+                            : <MainUI selected={this.state.selected || this.game.playerCharacter} setSelected={(selected) => this.setSelected(selected)} gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game}/>
+                        }
                     </div>
                 </Grid>
                 <Grid item xs={2}>

@@ -1,4 +1,4 @@
-import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
+import { FormControl, Grid, InputLabel, MenuItem, Select } from "@mui/material";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import React from "react";
@@ -9,6 +9,8 @@ import { Apothecary, Church, HuntingCabin, Library, LumberjacksHut } from "./set
 import UIBase from "./UIBase";
 import { addition, multiplication, Variable, VariableComponent, VariableModifier } from "./UIUtils";
 import { CustomTooltip, titleCase } from "./utils";
+import { createResearchTree, ResearchComponent } from "./settlement/research";
+import { Resources } from "./settlement/resource";
 
 export class Faction {
     constructor(props) {
@@ -21,6 +23,9 @@ export class Faction {
         this.members = [this.leader];
         this.tentativelyChanged = false;
         this.numPrivilegesAllowed = 4;
+        // Faction-level research tree. One shared tree for all member settlements.
+        // Player interacts with this; bonuses propagate to all member settlements.
+        this.researchTree = createResearchTree();
         this.privileges = [
             {
                 num: 4,
@@ -121,6 +126,90 @@ export class Faction {
         let traits = this.lastTraits ? this.lastTraits : this.getTraits();
         text = text.concat(traits ? traits.map(trait => extensive ? trait.getText() : trait.name).flat() : ['']);
         return text;
+    }
+
+    /**
+     * Returns all member settlements that belong to the player (isPlayer leader).
+     * Used to determine which settlements receive research bonuses.
+     */
+    getPlayerSettlements() {
+        const settlements = [];
+        this.members.forEach(member => {
+            member.settlements.forEach(s => {
+                if (!settlements.includes(s)) settlements.push(s);
+            });
+        });
+        return settlements;
+    }
+
+    /**
+     * Get the total pooled research points across all member settlements.
+     * Returns the sum of each settlement's research resource storage baseValue.
+     */
+    getTotalResearch() {
+        const settlements = this.getPlayerSettlements();
+        return settlements.reduce((total, settlement) => {
+            const rs = settlement.resourceStorages.find(r => r.resource === Resources.research);
+            return total + (rs ? rs.amount.baseValue : 0);
+        }, 0);
+    }
+
+    /**
+     * Returns true if the faction can afford the research cost from the pooled pool.
+     */
+    canResearch(research) {
+        if (research.researched) return false;
+        // Check sequential unlock: find the category and ensure previous item is researched
+        for (const [, researchList] of Object.entries(this.researchTree)) {
+            const idx = researchList.indexOf(research);
+            if (idx > 0 && !researchList[idx - 1].researched) return false;
+            if (idx !== -1) break;
+        }
+        return this.getTotalResearch() >= research.researchCost;
+    }
+
+    /**
+     * Activate a research item:
+     * 1. Deduct cost proportionally from all member settlements' research storage.
+     * 2. Mark the faction research item as researched.
+     * 3. Apply bonuses to all member settlements by activating the matching item
+     *    in each settlement's internal research tree (by name lookup).
+     */
+    activateResearch(research) {
+        if (!this.canResearch(research)) return;
+        const settlements = this.getPlayerSettlements();
+        const totalResearch = this.getTotalResearch();
+        const cost = research.researchCost;
+
+        // Deduct proportionally from each settlement's research storage
+        settlements.forEach(settlement => {
+            const rs = settlement.resourceStorages.find(r => r.resource === Resources.research);
+            if (!rs) return;
+            const proportion = totalResearch > 0 ? rs.amount.baseValue / totalResearch : 0;
+            const deduction = cost * proportion;
+            if (deduction > 0) {
+                rs.oneOffDemand(deduction);
+            }
+        });
+
+        // Mark faction research as done
+        research.researched = true;
+
+        // Apply bonuses to all member settlements
+        settlements.forEach(settlement => {
+            // Find matching research item in settlement's internal tree by name
+            for (const [, researchList] of Object.entries(settlement.research)) {
+                const match = researchList.find(r => r.name === research.name);
+                if (match && !match.researched) {
+                    // Apply bonuses directly without deducting cost again
+                    for (const bonus of match.researchBonuses) {
+                        settlement.activateBonus(bonus);
+                    }
+                    match.researched = true;
+                    break;
+                }
+            }
+        });
     }
 }
 
@@ -409,6 +498,12 @@ export class Character {
             fameTrait: {trait: props.fameTrait, choices:FameTraits, name: "fame trait"},
             trinketTrait: {trait: props.trinketTrait, choices:TrinketTraits, name: "trinket trait"}
         }
+        // Force-stop the timer on day 1 for the player until all traits are chosen.
+        // This is released in checkTraitsComplete() once all 5 trait groups are filled.
+        this._traitsForceStopReason = "Player must choose all character traits before the game begins";
+        if (this.isPlayer && this.gameClock) {
+            this.gameClock.forceStopTimer(this._traitsForceStopReason);
+        }
         this.legitimacy = new Variable({name:`legitimacy`, startingValue:0.1});
         this.diplomacy = new Variable({name:`diplomacy`, startingValue:props.diplomacy});
         this.strategy = new Variable({name:`strategy`, startingValue:props.strategy});
@@ -438,6 +533,25 @@ export class Character {
         if (props.randomizeTraits) {
             console.log("check2")
             this.randomizeTraits();
+        }
+    }
+    /**
+     * Check whether all 5 trait groups are filled. If so, and the player timer
+     * force-stop is still active, release it. Called after every addTrait/removeTrait.
+     */
+    checkTraitsComplete() {
+        if (!this.isPlayer || !this.gameClock || !this._traitsForceStopReason) return;
+        const allFilled = Object.values(this.traitGroups).every(tg => tg.trait !== null && tg.trait !== undefined);
+        if (allFilled) {
+            // Only unforce-stop if we are currently holding the stop
+            if (this.gameClock.forceStops.includes(this._traitsForceStopReason)) {
+                this.gameClock.unforceStopTimer(this._traitsForceStopReason);
+            }
+        } else {
+            // Re-apply the stop if a trait was removed and not all groups are filled
+            if (!this.gameClock.forceStops.includes(this._traitsForceStopReason)) {
+                this.gameClock.forceStopTimer(this._traitsForceStopReason);
+            }
         }
     }
     randomizeTraits() {
@@ -514,6 +628,7 @@ export class Character {
                 traitGroup.trait = trait;
             }
         });
+        this.checkTraitsComplete();
     }
     removeTrait(trait) {
         trait.deactivate(this);
@@ -526,6 +641,7 @@ export class Character {
                 traitGroup.trait = null;
             }
         });
+        this.checkTraitsComplete();
     }
     activateBonus(bonus) {
         if (bonus instanceof CharacterBonus) {
@@ -622,6 +738,45 @@ export class FactionComponent extends UIBase {
     }
 }
 
+/**
+ * Renders the faction's shared research tree.
+ * Shows pooled research total, and all research categories with sequential unlock.
+ * Subscribes to internalTimer so it re-renders each tick (research points update).
+ * Intended to be rendered in a top-level Research panel (not inside SettlementComponent).
+ */
+export class FactionResearchComponent extends UIBase {
+    constructor(props) {
+        super(props);
+        this.addVariables([props.internalTimer]);
+    }
+    childRender() {
+        const faction = this.props.faction;
+        const totalResearch = faction.getTotalResearch();
+        return <div>
+            <div style={{ marginBottom: '8px', color: '#555', fontSize: '13px' }}>
+                Pooled research: <b>{Math.floor(totalResearch)}</b>
+            </div>
+            <Grid container spacing={2} justifyContent="center" alignItems="flex-start">
+                {Object.entries(faction.researchTree).map(([category, researchList], i) =>
+                    <Grid item xs={6} key={category}>
+                        <div style={{ fontWeight: 'bold', color: '#555', marginBottom: '4px' }}>{titleCase(category)}</div>
+                        {researchList.map((research, j) => {
+                            const visible = research.researched || j === 0 || researchList[j - 1].researched;
+                            return visible ? <ResearchComponent
+                                key={j}
+                                research={research}
+                                canResearch={faction.canResearch(research)}
+                                visible={visible}
+                                activateResearch={() => faction.activateResearch(research)}
+                            /> : null;
+                        })}
+                    </Grid>
+                )}
+            </Grid>
+        </div>;
+    }
+}
+
 export class CharacterComponent extends UIBase {
     constructor(props) {
         super(props);
@@ -644,31 +799,31 @@ export class CharacterComponent extends UIBase {
         return <div>
             
             <div onClick = {() => !this.state.editName ? this.setState({editName: !this.state.editName}) : null}>
-                {this.state.editName ? 
-                    <TextField id="outlined-basic" label="Name" variant="outlined" defaultValue={this.character.name} 
+                {this.state.editName ?
+                    <TextField id="outlined-basic" label="Name" variant="outlined" defaultValue={this.character.name}
                         onChange={(e) => {this.character.name = e.target.value}} onKeyUp={(event) => event.key==="Enter" ? this.setState({editName: false}) : null}/>
                     : this.character.name}<br />
             </div>
             <ChoiceComponent key={`culture`} editable={this.character.isPlayer} chosen={this.character.culture} choices={Object.values(Cultures).map(choice => new choice())} groupName={"Culture"} handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)}/>
             Cultural Traits:
-            <ul>{this.character.culture.lastTraits ? this.character.culture.lastTraits.map((trait, i) => 
+            <ul>{this.character.culture.lastTraits ? this.character.culture.lastTraits.map((trait, i) =>
                 <li key={`cultural_trait_${trait.name}_${i}`}><ChoiceComponent chosen={trait} /></li>)
-             : null}</ul>            
-            {Object.entries(this.character.traitGroups).map(([key, traitGroup], i) => 
-                (this.character.isPlayer || traitGroup.trait) ? 
-                <ChoiceComponent key={`trait_group_${key}_${i}`} editable={this.character.isPlayer} chosen={traitGroup.trait} 
-                    choices={traitGroup.choices.map(choice => new choice())} groupName={traitGroup.name} 
+             : null}</ul>
+            {Object.entries(this.character.traitGroups).map(([key, traitGroup], i) =>
+                (this.character.isPlayer || traitGroup.trait) ?
+                <ChoiceComponent key={`trait_group_${key}_${i}`} editable={this.character.isPlayer} chosen={traitGroup.trait}
+                    choices={traitGroup.choices.map(choice => new choice())} groupName={traitGroup.name}
                     handleChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/> : null)
             }
             <br />
             <b>Skills</b> <br />
-            <VariableComponent showOwner={false} variable={this.character.diplomacy} /><br />
-            <VariableComponent showOwner={false} variable={this.character.strategy} /><br />
-            <VariableComponent showOwner={false} variable={this.character.administration} /><br />
+            <CustomTooltip items={["Affects popular support in settlements and trade negotiations. Higher diplomacy reduces rebellion risk."]}><span><VariableComponent showOwner={false} variable={this.character.diplomacy} /></span></CustomTooltip><br />
+            <CustomTooltip items={["Military skill. Affects combat outcomes and raid defence (not yet fully implemented)."]}><span><VariableComponent showOwner={false} variable={this.character.strategy} /></span></CustomTooltip><br />
+            <CustomTooltip items={["Organisational skill. Directly multiplies settlement general productivity via administrative efficiency."]}><span><VariableComponent showOwner={false} variable={this.character.administration} /></span></CustomTooltip><br />
             <br />
             <b>Attributes</b> <br />
-            <VariableComponent showOwner={false} variable={this.character.legitimacy} /><br />
-            <VariableComponent showOwner={false} variable={this.character.administrativeEfficiency} /><br />
+            <CustomTooltip items={["How much the population accepts this character as their ruler. Contributes to local legitimacy in all settlements."]}><span><VariableComponent showOwner={false} variable={this.character.legitimacy} /></span></CustomTooltip><br />
+            <CustomTooltip items={["Productivity multiplier applied to all settlements. Equals 0.9 + 0.3 × administration."]}><span><VariableComponent showOwner={false} variable={this.character.administrativeEfficiency} /></span></CustomTooltip><br />
             <br />
             <b>Faction</b> <br />
             <FactionComponent faction={this.character.faction} /><br />

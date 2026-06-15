@@ -18,7 +18,7 @@ There are knowledge.md files like this one at most levels of the repo, read thos
 
 | File | Purpose |
 |------|---------|
-| `settlement.js` | `Settlement` class + `SettlementComponent` |
+| `settlement.js` | `Settlement` class + `SettlementComponent` (tabbed UI) |
 | `building.js` | `Building`, `ResourceBuilding`, all concrete building classes |
 | `resource.js` | `Resource`, `ResourceStorage`, `Resources` constants |
 | `bonus.js` | `Bonus` hierarchy: settlement bonuses, character bonuses, temporary bonuses |
@@ -145,6 +145,24 @@ Loop: repeatedly assigns/removes 1 worker to highest-priority building until une
 - Spring/Autumn: `coal.idealAmount = 1.0`
 
 Note: there is also a duplicate subscription in the rationing loop (lines 180-188) that does the same thing — coal demand is adjusted twice per tick.
+
+### `SettlementComponent` — Tabbed UI
+
+`SettlementComponent` renders the settlement view in three tabs using MUI `Tabs`/`Tab`:
+
+| Tab | Label | Content |
+|-----|-------|---------|
+| 0 | **Production** | Key stats with `CustomTooltip` descriptions, auto-assign checkbox, all unlocked buildings |
+| 1 | **Distribution** | Rationing controls + resource storage levels (player settlements only) |
+| 2 | **Trading** | Market buy/sell controls; gated behind Roads size > 0 (player settlements only) |
+
+- Research tab removed — research is now faction-level, accessed via the "Research" button in `GameUI`
+- Header (always visible): settlement name, leader name (clickable → `setSelected`), terrain, active events
+- NPC settlement tabs 1–2 show a grey "managed by NPC leader" message
+- Tab state stored in `this.state.tab` (default 0); clamped to max 2 in `childRender`
+- Trading tab: if `getBuildingByName(Roads.name).size.currentValue === 0`, shows "Build Roads to unlock trading"
+- All key stat variables in Production tab wrapped in `CustomTooltip` with plain-English descriptions
+- Imports `Tab`, `Tabs` from `@mui/material`; `CustomTooltip` from `../utils.js`
 
 ### Known Issues
 
