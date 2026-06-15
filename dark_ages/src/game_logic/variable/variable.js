@@ -5,7 +5,6 @@ import {Logger} from '../logger'
 
 export const unnamedVariableName = 'unnamed variable';
 
-
 var textFile;
 export function makeTextFile(text){
     var data = new Blob([text], {type: 'text/plain'});
@@ -103,6 +102,9 @@ export class Variable {
         if (!(this.modifiers.find(modifier => modifier === removedModifier))) {
             throw Error("don't have this");
         }
+        // Clean up subscriptions for this modifier
+        this._removeSubscriptionSource(removedModifier);
+        
         let modifiers = this.modifiers.filter(modifier => modifier !== removedModifier);
         this.setModifiers(modifiers)       
     }
@@ -123,44 +125,59 @@ export class Variable {
         if (modifiers.length === 0 && this.modifiers.length === 0) {
             return;
         }
-        if (modifiers.length === this.modifierCallbacks.length) {
-            let sameArray = true;
-            for (const [i, modifier] of modifiers.entries()) {
-                if (modifier !== modifiers[i]) {
-                    sameArray = false;
-                    break;
+        
+        // Clean up old subscriptions
+        if (this.modifiers) {
+            for (const modifier of this.modifiers) {
+                if (modifier) {
+                    this._removeSubscriptionSource(modifier);
                 }
             }
-            if (sameArray) {
-                // console.log("Ignoring call to set modiifers")
-                return; // No need to update
-            }
         }
-        for (const [i, modifier] of this.modifiers.entries()) {
-            modifier.unsubscribe(this.modifierCallbacks[i]);
-        } 
         this.modifierCallbacks = [];
+        
         this.modifiers = modifiers;
         this.subscribeToModifiers();
+        
         if (this.modifierCallbacks.length !== this.modifiers.length || undefined in this.modifierCallbacks) {
-            throw Error("what");
+            throw Error("Subscription mismatch");
         }
+        
         this.recalculate('new modifiers', indent);
     }
     subscribeToModifiers() {
+        if (!this.modifiers) {
+            return;
+        }
+
         let self = this;
         for (let modifier of this.modifiers) {
-            if (modifier === undefined) {
-                throw Error('undefined modifier');
+            if (!modifier) {
+                continue;
             }
-            this.modifierCallbacks.push(modifier.subscribe((indent) => {
-                try {
-                    self.recalculate(`modifier ${modifier.name} changed`, indent);
-                } catch(error) {
-                    debugger;
-                    throw Error("error")
+
+            try {
+                // Make sure modifier is initialized
+                if (modifier.init) {
+                    modifier.init();
                 }
-            }, 10));
+
+                const callback = modifier.subscribe((indent) => {
+                    try {
+                        self.recalculate(`modifier ${modifier.name} changed`, indent);
+                    } catch(error) {
+                        console.error('Error in modifier subscription:', error);
+                        self._removeSubscriptionSource(modifier);
+                    }
+                }, 10);
+                
+                if (callback) {
+                    this._addSubscriptionSource(modifier, callback);
+                    this.modifierCallbacks.push(callback);
+                }
+            } catch(error) {
+                console.warn('Failed to subscribe to modifier:', error);
+            }
         }
     }
     subscribe(callback, priority, reason = '') {
@@ -173,14 +190,20 @@ export class Variable {
         return obj;
     }
     unsubscribe(callbackOrSub) {
-        let previousLen = this.subscriptions.length;
-        this.subscriptions = this.subscriptions.filter(c => c !== callbackOrSub && c.callback !== callbackOrSub);
-        if (previousLen === this.subscriptions.length) {
-            throw Error("failed to unsub");
+        // Skip if no subscriptions exist
+        if (!this.subscriptions || !this.subscriptions.length) {
+            return;
         }
-        this.subscriptions = this.subscriptions.sort((a,b) => b.priority - a.priority);
-        if (this.printSubs) {
-            console.log("unsubs from "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
+
+        const previousLen = this.subscriptions.length;
+        this.subscriptions = this.subscriptions.filter(c => c !== callbackOrSub && c.callback !== callbackOrSub);
+        
+        // Only throw if we actually expected to remove something
+        if (previousLen !== this.subscriptions.length) {
+            this.subscriptions = this.subscriptions.sort((a,b) => b.priority - a.priority);
+            if (this.printSubs) {
+                console.log("unsubs from "  + this.name + ' ' + this.currentValue + ' ' + this.subscriptions.length);
+            }
         }
     }
     callSubscribers(indent) {
@@ -259,6 +282,107 @@ export class Variable {
         if (!quietly) {
             this.currentDepth = 0;
         }
+    }
+    init() {
+        // Track initialization state to ensure proper order
+        if (this._initializing) {
+            return; // Prevent recursive initialization
+        }
+        this._initializing = true;
+        
+        try {
+            // Clear any stale subscriptions first
+            this.clearSubscriptions();
+            this.modifierCallbacks = [];
+            
+            // Initialize min/max first if they exist
+            if (this.min && this.min.init) {
+                this.min.init();
+            }
+            if (this.max && this.max.init) {
+                this.max.init();
+            }
+            
+            // Track subscription sources for cleanup
+            if (!this._subscriptionSources) {
+                this._subscriptionSources = new WeakMap();
+            }
+            
+            // Initialize modifiers first
+            if (this.modifiers) {
+                // Sort modifiers by priority
+                this.modifiers.sort((a, b) => {
+                    if (!a || !b) return 0;
+                    return (a.priority?.() || 0) - (b.priority?.() || 0);
+                });
+                
+                // Initialize each modifier
+                for (const modifier of this.modifiers) {
+                    if (modifier && modifier.init) {
+                        modifier.init();
+                    }
+                }
+            }
+            
+            // Now restore subscriptions in correct order
+            if (this.modifiers) {
+                this.subscribeToModifiers();
+            }
+            
+            // Restore min/max subscriptions
+            if (this.max) {
+                this._addSubscriptionSource(this.max, 
+                    this.max.subscribe((indent) => this.recalculate('max changed', indent), 'using as a max', 1)
+                );
+            }
+            if (this.min) {
+                this._addSubscriptionSource(this.min,
+                    this.min.subscribe((indent) => this.recalculate('min changed', indent), 'using as a min', 1)
+                );
+            }
+            
+            // Restore saved subscription priorities
+            if (this._savedSubscriptionPriorities) {
+                for (const subInfo of this._savedSubscriptionPriorities) {
+                    this.subscribe(() => {}, subInfo.priority, subInfo.reason);
+                }
+                delete this._savedSubscriptionPriorities;
+            }
+            
+            // Recalculate after all subscriptions are restored
+            this.recalculate('init after load', 0);
+        } catch (error) {
+            console.error('Error during Variable initialization:', error);
+        } finally {
+            this._initializing = false;
+        }
+    }
+
+    _addSubscriptionSource(source, subscription) {
+        if (!source || !subscription) {
+            return;
+        }
+
+        if (!this._subscriptionSources) {
+            this._subscriptionSources = new WeakMap();
+        }
+        this._subscriptionSources.set(source, subscription);
+    }
+
+    _removeSubscriptionSource(source) {
+        if (!this._subscriptionSources || !source) {
+            return;
+        }
+        
+        if (!this._subscriptionSources.has(source)) {
+            return;
+        }
+
+        const subscription = this._subscriptionSources.get(source);
+        if (subscription) {
+            this.unsubscribe(subscription);
+        }
+        this._subscriptionSources.delete(source);
     }
 }
 
@@ -394,4 +518,3 @@ VariableComponent.defaultProps = {
     showMax: false,
     expanded: false
 };
-
