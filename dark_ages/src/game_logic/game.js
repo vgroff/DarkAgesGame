@@ -1,18 +1,44 @@
 import {Settlement} from "./settlement/settlement";
-import {Variable, VariableModifier, Cumulator, addition, multiplication, max} from './UIUtils';
+import {Variable, VariableModifier, Cumulator, addition, multiplication, max, min} from './UIUtils';
 import { titleCase } from "./utils";
 import {Timer} from './timer'
 import { SumAggModifier } from "./variable/sumAgg";
 import {daysInYear, seasons} from './seasons'
 import { Farmlands, Marshlands } from "./settlement/terrain";
-import { HarvestEvent } from "./events";
-import { Character, Cultures } from "./character";
+import { HarvestEvent, BanditRaid, CropBlight, Pestilence, WarmSpell, Blizzard, NomadsArrive, MerchantBoom, CourtIntrigue } from "./events";
+import { Character, Cultures, ChildhoodTraits, AbilityTraits, PersonalityTraits, FameTraits, TrinketTraits } from "./character";
 import { TradeAgreement, npcWillAcceptTrade } from "./diplomacy";
+import { Resources } from "./settlement/resource";
 export { TradeAgreement, npcWillAcceptTrade };
 
+// Map event class names (as strings) to their constructors, for scenario forceEventsOnDayOne
+const EVENT_CLASS_MAP = {
+    BanditRaid,
+    CropBlight,
+    Pestilence,
+    WarmSpell,
+    Blizzard,
+    NomadsArrive,
+    MerchantBoom,
+    CourtIntrigue,
+};
+
+// Map trait display names (as used in scenario config) to their constructors
+const ALL_TRAIT_CLASSES = [
+    ...ChildhoodTraits,
+    ...AbilityTraits,
+    ...PersonalityTraits,
+    ...FameTraits,
+    ...TrinketTraits,
+];
+
 class Game {
-    constructor(gameClock) {
-        this.gameClock = gameClock || new Timer({name: 'Game timer', meaning: "Current day", every: 800, timeTranslator:(value) => {
+    constructor(scenario) {
+        // scenario is an optional plain config object from scenarios.js.
+        // If omitted, the default (vanilla) game is constructed.
+        this._scenario = scenario || null;
+
+        this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 800, timeTranslator:(value) => {
             let year = parseInt(value/daysInYear) + 1;
             let day = value - (year - 1)*daysInYear + 1;
             let season = seasons[parseInt((day-1)*4/daysInYear)]
@@ -23,10 +49,16 @@ class Game {
         this.warningsShown = new Set(); // Tracks which first-time warnings have been shown
         this.isGameOver = false;
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
+
+        // Determine starting population from scenario (default 37)
+        const startingPop = scenario?.startingPopulation ?? 37;
+
+        // Create player character. If scenario says skipTraitSelection, we will
+        // fill traits after construction (before the timer is released).
         this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic(), isPlayer: true, gameClock: this.gameClock});
         this.npcCharacter = new Character({name:"npc 2", culture: new Cultures.Celtic(), gameClock: this.gameClock, randomizeTraits: true});
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt, handleRebellion: this.handleRebellion.bind(this), addToTreasury: this.addToTreasury.bind(this)}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: startingPop, terrain: new Marshlands(), bankrupt: this.bankrupt, handleRebellion: this.handleRebellion.bind(this), addToTreasury: this.addToTreasury.bind(this)}),
             new Settlement({name: 'Village 2', gameClock: this.gameClock, leader: this.npcCharacter, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt, handleRebellion: () => {}})
         ];
         this.totalMarketIncome = new SumAggModifier(
@@ -41,7 +73,8 @@ class Game {
             }
         );
 
-        this.treasury = new Cumulator({name: 'Treasury', startingValue: 10, timer:this.gameClock, modifiers:[this.totalMarketIncome]});
+        const startingTreasury = scenario?.startingTreasury ?? 10;
+        this.treasury = new Cumulator({name: 'Treasury', startingValue: startingTreasury, timer:this.gameClock, modifiers:[this.totalMarketIncome]});
         this.treasury.subscribe(() => {
             if (this.treasury.baseValue < 0 && this.bankrupt.currentValue === 0) {
                 console.log("user bankrupt");
@@ -101,19 +134,307 @@ class Game {
         // Initialize events
         this.initEvents();
 
-        // On the first tick (day 1), reset trending baselines for happiness and health on all
-        // settlements so the player's day-1 setup is treated as the "always was this way" baseline.
-        // Without this, TrendingVariable would animate from its initial value toward the real value.
-        const resetTrendsOnDayOne = () => {
-            if (this.gameClock.currentValue === 1) {
-                this.settlements.forEach(s => {
-                    s.happiness.forceResetTrend();
-                    s.health.forceResetTrend();
-                });
-                this.gameClock.unsubscribe(resetTrendsOnDayOne);
-            }
+        // Apply scenario overrides (building sizes, resources, research, traits, forced events).
+        // This runs after all normal construction is complete so all systems are wired up.
+        if (scenario) {
+            this._applyScenario(scenario);
+        }
+
+        // ── Day 1 behaviour ────────────────────────────────────────────────────
+        //
+        // On day 1 we want two things:
+        //
+        // 1. Trending variables (happiness, health) snap instantly to any change
+        //    rather than slowly trending. We achieve this by temporarily setting
+        //    trendingUpSpeed and trendingDownSpeed to 1 for the duration of day 1,
+        //    then restoring the original values on day 2.
+        //    This subscription fires at priority 1000 (before the TrendingVariable's
+        //    own timer subscription, which fires at default priority 0).
+        //
+        // 2. No population change on day 1. We add a `min` and `max` modifier to
+        //    populationSizeChange that clamps it to exactly 1.0, so the Cumulator
+        //    multiplies by 1 and population stays flat. The modifier is removed on
+        //    day 2.
+
+        // Store original trending speeds so we can restore them
+        const trendingVarsToSnap = this.settlements.map(s => ({
+            happiness: s.happiness,
+            health: s.health,
+            origHappinessUp: s.happiness.trendingUpSpeed,
+            origHappinessDown: s.happiness.trendingDownSpeed,
+            origHealthUp: s.health.trendingUpSpeed,
+            origHealthDown: s.health.trendingDownSpeed,
+        }));
+
+        // Population freeze: one modifier per settlement clamping populationSizeChange to 1
+        const popFreezeModifiers = this.settlements.map(s => {
+            const one = new Variable({ name: "day 1 pop freeze", startingValue: 1 });
+            const modMin = new VariableModifier({ variable: one, type: min, name: "day 1 pop freeze min", customPriority: 500 });
+            const modMax = new VariableModifier({ variable: one, type: max, name: "day 1 pop freeze max", customPriority: 500 });
+            s.populationSizeChange.addModifier(modMin);
+            s.populationSizeChange.addModifier(modMax);
+            return { settlement: s, modMin, modMax };
+        });
+
+        // Day 1: set trending speeds to 1 AND force-reset the trend baseline so that
+        // currentValue snaps immediately to the target (currentlyTrendingTo).
+        // This fires at priority 1000, before TrendingVariable's own timer subscription
+        // (priority 0), so the speeds are already 1 when storeCurrentValue() runs.
+        // We also call forceResetTrend() to ensure trendingValueAtTurnStart is up to date
+        // before the tick's trend() call, so currentValue == currentlyTrendingTo after day 1.
+        const snapTrendsOnDayOne = () => {
+            if (this.gameClock.currentValue !== 1) return;
+            trendingVarsToSnap.forEach(({ happiness, health }) => {
+                happiness.trendingUpSpeed = 1;
+                happiness.trendingDownSpeed = 1;
+                health.trendingUpSpeed = 1;
+                health.trendingDownSpeed = 1;
+                // forceResetTrend snaps trendingValueAtTurnStart to the current target,
+                // so the subsequent storeCurrentValue() call will see no gap to trend across.
+                happiness.forceResetTrend();
+                health.forceResetTrend();
+            });
         };
-        this.gameClock.subscribe(resetTrendsOnDayOne, 999, 'reset trends on day 1');
+        this.gameClock.subscribe(snapTrendsOnDayOne, 1000, 'day 1: snap trending speeds');
+
+        // Day 2: restore original trending speeds and remove population freeze modifiers
+        const restoreOnDayTwo = () => {
+            if (this.gameClock.currentValue !== 2) return;
+            this.gameClock.unsubscribe(restoreOnDayTwo);
+            this.gameClock.unsubscribe(snapTrendsOnDayOne);
+
+            // Restore trending speeds
+            trendingVarsToSnap.forEach(({ happiness, health, origHappinessUp, origHappinessDown, origHealthUp, origHealthDown }) => {
+                happiness.trendingUpSpeed = origHappinessUp;
+                happiness.trendingDownSpeed = origHappinessDown;
+                health.trendingUpSpeed = origHealthUp;
+                health.trendingDownSpeed = origHealthDown;
+            });
+
+            // Remove population freeze modifiers
+            popFreezeModifiers.forEach(({ settlement, modMin, modMax }) => {
+                settlement.populationSizeChange.removeModifier(modMin);
+                settlement.populationSizeChange.removeModifier(modMax);
+            });
+        };
+        this.gameClock.subscribe(restoreOnDayTwo, 999, 'day 2: restore trending speeds and pop freeze');
+    }
+
+    /**
+     * Apply a scenario config to the freshly-constructed game.
+     *
+     * Called at the end of the constructor when a scenario is provided.
+     * All game systems (settlements, characters, events) are fully wired
+     * before this runs, so it is safe to call settlement/character methods.
+     *
+     * @param {object} scenario — plain config object from scenarios.js
+     */
+    _applyScenario(scenario) {
+        const playerSettlement = this.settlements[0];
+
+        // ── 1. Starting resources ──────────────────────────────────────────────
+        if (scenario.startingResources) {
+            for (const [resourceName, amount] of Object.entries(scenario.startingResources)) {
+                const rs = playerSettlement.resourceStorages.find(
+                    s => s.resource.name === resourceName
+                );
+                if (rs && rs.amount && amount > 0) {
+                    rs.amount.setNewBaseValue(
+                        rs.amount.baseValue + amount,
+                        `scenario starting resource: ${resourceName}`
+                    );
+                } else if (!rs) {
+                    console.warn(`[Scenario] Unknown resource name: "${resourceName}"`);
+                }
+            }
+        }
+
+        // ── 2. Building sizes ──────────────────────────────────────────────────
+        // We use forceNewSize() to bypass resource cost checks.
+        if (scenario.startingBuildingSizes) {
+            for (const [buildingName, targetSize] of Object.entries(scenario.startingBuildingSizes)) {
+                const building = playerSettlement.getBuildings().find(b => b.name === buildingName);
+                if (building) {
+                    if (targetSize !== building.size.currentValue) {
+                        building.forceNewSize(targetSize);
+                        if (!building.unlocked && targetSize > 0) {
+                            building.unlocked = true;
+                        }
+                    }
+                } else {
+                    console.warn(`[Scenario] Building not found: "${buildingName}"`);
+                }
+            }
+        }
+
+        // ── 3. Building upgrades ───────────────────────────────────────────────
+        // Apply upgrades by index, bypassing resource cost checks (force=true).
+        // We must also mark the upgrade as unlocked before forcing it, since
+        // BuildingUpgrade.upgrade(force=true) still checks canUpgrade() for the
+        // unlocked flag... actually force=true bypasses canUpgrade() entirely.
+        // We call Building.upgrade(resourceStorages, force=true) which increments
+        // currentUpgradeIndex and updates displayName correctly.
+        if (scenario.startingBuildingUpgrades) {
+            for (const [buildingName, upgradeIndex] of Object.entries(scenario.startingBuildingUpgrades)) {
+                const building = playerSettlement.getBuildings().find(b => b.name === buildingName);
+                if (!building) {
+                    console.warn(`[Scenario] Building not found for upgrade: "${buildingName}"`);
+                    continue;
+                }
+                // Apply upgrades sequentially up to and including upgradeIndex.
+                // Building.upgrade() increments currentUpgradeIndex each call.
+                while (building.currentUpgradeIndex <= upgradeIndex && building.upgrades[building.currentUpgradeIndex]) {
+                    // Mark unlocked so the upgrade is visible in UI after the fact
+                    building.upgrades[building.currentUpgradeIndex].unlocked = true;
+                    building.upgrade(playerSettlement.resourceStorages, true);
+                }
+            }
+        }
+
+        // ── 4. Pre-research ────────────────────────────────────────────────────
+        // Activate research items by name on the player's faction research tree.
+        // Items are activated in the order listed, so dependencies must be listed first.
+        if (scenario.preResearched && scenario.preResearched.length > 0) {
+            const faction = this.playerCharacter.faction;
+            if (faction) {
+                const allItems = Object.values(faction.researchTree).flat();
+                for (const researchName of scenario.preResearched) {
+                    const item = allItems.find(r => r.name === researchName);
+                    if (item && !item.researched) {
+                        // Bypass cost check — just activate directly
+                        item.researched = true;
+                        // Apply bonuses to all member settlements
+                        for (const settlement of faction.getPlayerSettlements()) {
+                            for (const [, researchList] of Object.entries(settlement.research)) {
+                                const match = researchList.find(r => r.name === researchName);
+                                if (match && !match.researched) {
+                                    for (const bonus of match.researchBonuses) {
+                                        settlement.activateBonus(bonus);
+                                    }
+                                    match.researched = true;
+                                    break;
+                                }
+                            }
+                        }
+                    } else if (!item) {
+                        console.warn(`[Scenario] Research item not found: "${researchName}"`);
+                    }
+                }
+            }
+        }
+
+        // ── 5. Pre-arm soldiers ────────────────────────────────────────────────
+        // armSoldiers() deducts weapons from weapon storage and adds units to unit storage.
+        // The startingResources step (above) must have already added the weapon resources.
+        if (scenario.startingArmy) {
+            for (const [unitName, count] of Object.entries(scenario.startingArmy)) {
+                const unitResource = Object.values(Resources).find(r => r.name === unitName);
+                if (!unitResource) {
+                    console.warn(`[Scenario] Unit resource not found: "${unitName}"`);
+                    continue;
+                }
+                const success = playerSettlement.armSoldiers(unitResource, count);
+                if (!success) {
+                    console.warn(`[Scenario] armSoldiers failed for "${unitName}" × ${count} — check weapon resources in startingResources`);
+                }
+            }
+        }
+
+        // ── 6. Player traits (skipTraitSelection) ──────────────────────────────
+        // If skipTraitSelection is set, fill all trait groups automatically.
+        // playerTraits can specify exact trait names; otherwise sensible defaults are used.
+        if (scenario.skipTraitSelection) {
+            const traitNameMap = {};
+            for (const TraitClass of ALL_TRAIT_CLASSES) {
+                const instance = new TraitClass();
+                traitNameMap[instance.name.toLowerCase()] = TraitClass;
+            }
+
+            const traitGroupKeys = ['childhoodTrait', 'abilityTrait', 'personalityTrait', 'fameTrait', 'trinketTrait'];
+            const traitGroupChoices = {
+                childhoodTrait: ChildhoodTraits,
+                abilityTrait: AbilityTraits,
+                personalityTrait: PersonalityTraits,
+                fameTrait: FameTraits,
+                trinketTrait: TrinketTraits,
+            };
+
+            for (const groupKey of traitGroupKeys) {
+                // Skip if already set (e.g. from culture traits)
+                if (this.playerCharacter.traitGroups[groupKey].trait) continue;
+
+                let TraitClass = null;
+
+                // Check if scenario specifies a trait for this group
+                if (scenario.playerTraits && scenario.playerTraits[groupKey]) {
+                    const specifiedName = scenario.playerTraits[groupKey].toLowerCase();
+                    TraitClass = traitNameMap[specifiedName];
+                    if (!TraitClass) {
+                        console.warn(`[Scenario] Trait not found: "${scenario.playerTraits[groupKey]}" for group "${groupKey}"`);
+                    }
+                }
+
+                // Fall back to first available choice for this group
+                if (!TraitClass) {
+                    TraitClass = traitGroupChoices[groupKey][0];
+                }
+
+                if (TraitClass) {
+                    this.playerCharacter.addTrait(new TraitClass());
+                }
+            }
+            // checkTraitsComplete() is called by addTrait, so the force-stop will be released
+            // automatically once all 5 groups are filled.
+        }
+
+        // ── 7. Bandit raid ban override ────────────────────────────────────────
+        if (scenario.banditRaidBanDays !== null && scenario.banditRaidBanDays !== undefined) {
+            const banditRaidEvent = playerSettlement.settlementEvents?.find(
+                e => e instanceof BanditRaid
+            );
+            if (banditRaidEvent) {
+                banditRaidEvent.bannedUntil = scenario.banditRaidBanDays;
+            }
+        }
+
+        // ── 8. Force events on day 1 ───────────────────────────────────────────
+        // We subscribe to the game clock and fire the specified events on the first tick.
+        if (scenario.forceEventsOnDayOne && scenario.forceEventsOnDayOne.length > 0) {
+            const forcedEventNames = new Set(scenario.forceEventsOnDayOne);
+            const onDayOne = () => {
+                if (this.gameClock.currentValue !== 1) return;
+                this.gameClock.unsubscribe(onDayOne);
+
+                for (const settlement of this.settlements) {
+                    if (!settlement.settlementEvents) continue;
+                    for (const event of settlement.settlementEvents) {
+                        const className = event.constructor.name;
+                        if (forcedEventNames.has(className)) {
+                            // Override lastChecked so triggerChecks() won't block it
+                            event.lastChecked = -event.checkEvery;
+                            event.bannedUntil = -1e9;
+                            // Fire directly
+                            if (!event.isActive()) {
+                                event.lastTriggered = this.gameClock.currentValue;
+                                event.fire();
+                                if (event.forcePause) {
+                                    this.gameClock.forceStopTimer("Event: " + event.name);
+                                } else if (event.pause) {
+                                    this.gameClock.stopTimer();
+                                }
+                                event.read = false;
+                            }
+                        }
+                    }
+                }
+            };
+            // Priority 998 — fires just before the trend reset (999) on day 1
+            this.gameClock.subscribe(onDayOne, 998, 'scenario: force events on day 1');
+        }
+
+        // Note: we do NOT call forceResetTrend() here. The day-1 snap mechanism
+        // (trendingUpSpeed/Down = 1 on day 1) handles instant convergence for all
+        // settlements on the first tick, including any scenario-applied changes.
     }
 
     initEvents() {

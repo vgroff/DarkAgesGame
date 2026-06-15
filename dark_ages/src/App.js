@@ -4,6 +4,7 @@ import GameUI from './game_logic/gameUI.js'
 import React from 'react';
 import { saveGame, loadGame } from './game_logic/save_load';
 import Game from './game_logic/game';
+import ScenarioSelectUI from './game_logic/ScenarioSelectUI';
 
 function App() {
     const [timer] = React.useState(() => {
@@ -12,7 +13,8 @@ function App() {
         return timer;
     });
     const [game, setGame] = React.useState(null);
-    const [ready, setReady] = React.useState(false);
+    // null = show scenario select; non-null = game is running
+    const [scenarioChosen, setScenarioChosen] = React.useState(false);
     const [uiState, setUiState] = React.useState({
         openPanels: new Set(),
         selectedTabs: new Map(),
@@ -20,14 +22,19 @@ function App() {
     });
     const fileInputRef = React.useRef(null);
 
-    React.useEffect(() => {
-        if (!game) {
-            setGame(new Game());
-        }
-        setReady(true);
-    }, [game]);
+    /**
+     * Called when the player clicks "Begin" on the scenario select screen.
+     * Creates a new Game with the chosen scenario config.
+     * The game clock is NOT started here — the player uses the HUD Play button.
+     */
+    const handleScenarioStart = (scenarioConfig) => {
+        const newGame = new Game(scenarioConfig);
+        setGame(newGame);
+        setScenarioChosen(true);
+    };
 
     const handleSave = () => {
+        if (!game) return;
         // Save game state and UI state together
         const saveData = {
             version: '1.0',
@@ -89,6 +96,7 @@ function App() {
                 // Initialize game with restored state
                 loadedGame.init();
                 setGame(loadedGame);
+                setScenarioChosen(true); // Skip scenario select when loading a save
                 
             } catch (error) {
                 console.error('Failed to load save file:', error);
@@ -126,8 +134,32 @@ function App() {
         });
     };
 
-    if (!ready || !game) {
-        return <div>Not ready</div>;
+    // Show scenario select screen until the player has chosen a scenario
+    if (!scenarioChosen) {
+        return (
+            <div>
+                <ScenarioSelectUI onStart={handleScenarioStart} />
+                {/* Allow loading a save from the scenario select screen too */}
+                <div style={{
+                    position: 'fixed', bottom: '16px', right: '16px',
+                    backgroundColor: 'rgba(0,0,0,0.6)', padding: '8px 12px',
+                    borderRadius: '4px', fontSize: '12px', color: '#ccc'
+                }}>
+                    <span style={{ marginRight: '8px' }}>Load save:</span>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        onChange={handleLoad}
+                        accept=".json"
+                        style={{ color: '#ccc', fontSize: '12px' }}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    if (!game) {
+        return <div>Loading...</div>;
     }
 
     return (
@@ -139,8 +171,8 @@ function App() {
                 onScroll={handleScroll}
                 onPanelToggle={togglePanel}
             />
-            <div style={{ margin: '10px' }}>
-                <button onClick={handleSave} style={{ marginRight: '10px' }}>
+            <div style={{ margin: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button onClick={handleSave}>
                     Save Game
                 </button>
                 <input
@@ -149,6 +181,17 @@ function App() {
                     onChange={handleLoad}
                     accept=".json"
                 />
+                <button
+                    onClick={() => {
+                        // Return to scenario select — stop current game clock first
+                        if (game) game.gameClock.stopTimer();
+                        setGame(null);
+                        setScenarioChosen(false);
+                    }}
+                    style={{ marginLeft: '8px', color: '#888', fontSize: '12px' }}
+                >
+                    ↩ Scenario Select
+                </button>
             </div>
         </div>
     );
