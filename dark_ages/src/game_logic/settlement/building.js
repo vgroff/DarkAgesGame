@@ -1,4 +1,4 @@
-import {VariableModifier, Variable, addition, subtraction, min, max, minBase, multiplication,division } from '../UIUtils.js';
+import {VariableModifier, Variable, addition, subtraction, min, max, minBase, multiplication, division, roundTo } from '../UIUtils.js';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
@@ -240,7 +240,10 @@ export class ResourceBuilding extends Building {
         if (!this.productivityModifiers) {
             throw Error('Need a productivity modifier');
         };
-        this.productivity = new Variable({owner: this, name:"productivity", startingValue: props.startingProductivity || 1, modifiers:this.productivityModifiers});
+        this.productivity = new Variable({owner: this, name:"productivity", startingValue: props.startingProductivity || 1, modifiers:[
+            ...this.productivityModifiers,
+            new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200})
+        ]});
         this.startingJobs = props.startingJobs || 0;
         this.sizeJobsMultiplier = props.sizeJobsMultiplier;
         if (this.sizeJobsMultiplier === undefined) {

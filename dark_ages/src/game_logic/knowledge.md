@@ -44,11 +44,13 @@ There are knowledge.md files like this one at most levels of the repo, read thos
 2. Creates `playerCharacter` (Celtic culture, `isPlayer: true`)
 3. Creates NPC character with randomized traits
 4. Creates two `Settlement` instances (Village 1 = Marshlands, Village 2 = Farmlands)
+   - Village 1 (player) receives `addToTreasury` callback for auto-sell excess goods income
 5. Creates `totalMarketIncome` as a `SumAggModifier` over all settlements' `market.netMarketIncome`
 6. Creates `treasury` as a `Cumulator` with `totalMarketIncome` as modifier; starting value 10
 7. Subscribes to treasury to set `bankrupt` Variable (0 or 1) when `baseValue` crosses zero
 8. Creates `HarvestEvent` as the only global event
 9. Calls `initEvents()` to fire any events that should fire immediately
+10. Initialises `messageLog = []` — permanent log of all game messages (never cleared)
 
 ### `init()` — Post-Load Re-wiring
 Called after `loadGame()`. Order matters:
@@ -63,8 +65,14 @@ Called after `loadGame()`. Order matters:
 ### `triggerChecks()`
 Called every tick. Iterates `globalEvents` and calls `event.fire()` if `eventShouldFire()` returns true.
 
+### `addGameMessage(message)`
+Pushes `message` to both `gameMessages` (transient modal queue) and `messageLog` (permanent log with `{text, day}` entries). All game messages should go through this method.
+
+### `addToTreasury(amount, reason)`
+Adds `amount` directly to `treasury.baseValue`. Used by settlements to credit auto-sold excess goods income. Only acts if `amount > 0`.
+
 ### `handleRebellion(settlement)`
-Pushes a game message. If `playerCharacter.settlements.length === 0`, pushes game-over message. **Bug**: does not actually stop the game or prevent further play.
+Calls `addGameMessage()` with rebellion text. If `playerCharacter.settlements.length === 0`, calls `addGameMessage()` with game-over text. **Bug**: does not actually stop the game or prevent further play.
 
 ### Known Issues
 - `handleRebellion` does not stop the game clock or prevent further interaction after game over
@@ -351,34 +359,49 @@ Classes with `hasInit: true`: Game, Settlement, Timer, Variable, Cumulator, SumA
 
 All class-based UI components extend `UIBase`.
 
-### Pattern
+### Two Subscription Modes
+
+**Static (original)**: call `this.addVariables([variable1, variable2])` in the constructor. Subscriptions are set up once on mount and never change. Use when the variables you care about never change identity across re-renders.
+
+**Dynamic (new)**: call `this.addVariableGetters([getter1, getter2, ...])` in the constructor, where each getter is `{ key: string, get: (props) => Variable }`. On mount AND on every `componentDidUpdate`, the getters are re-evaluated against the current props. If any variable identity has changed, old subscriptions are torn down and new ones are set up. Use when props (e.g. `props.character`) can change after mount.
+
+The two modes can be combined.
+
+### Static API: `addVariables(variables)`
+- Can only be called once (throws if called twice)
+- Stores `{key, variable}` pairs in `this.subs`
+- On mount: subscribes each variable; on change, calls `setState` with the variable as the new state value for that key
+
+### Dynamic API: `addVariableGetters(getters)`
+- Accepts `[{ key: string, get: (props) => Variable }, ...]`
+- On mount: evaluates all getters, subscribes to each variable, sets state
+- On `componentDidUpdate`: re-evaluates getters; if any variable identity changed, tears down old subscriptions and sets up new ones
+- On unmount: tears down all dynamic subscriptions
+
+### Pattern (static)
 ```js
 constructor(props) {
     super(props);
     this.addVariables([variable1, variable2]);  // call once in constructor
 }
-componentDidMount() {
-    // subscribes each variable; setState on change
-}
-componentWillUnmount() {
-    // unsubscribes all
-}
-render() {
-    if (this.state.ready) return <div>{this.childRender()}</div>;
-    return <div>Not Ready</div>;
-}
-childRender() { /* override in subclass */ }
 ```
 
-### `addVariables(variables)`
-- Can only be called once (throws if called twice)
-- Stores `{key, variable}` pairs in `this.subs`
-- On mount: subscribes each variable; on change, calls `setState` with the variable as the new state value for that key
+### Pattern (dynamic — for prop-dependent variables)
+```js
+constructor(props) {
+    super(props);
+    this.addVariableGetters([
+        { key: 'legitimacy', get: (p) => p.character.legitimacy }
+    ]);
+}
+```
 
 ### Known Issues
 - `addVariables` uses array index as the state key — so `this.state[0]`, `this.state[1]`, etc. This means state keys are numbers, not meaningful names
 - `variablesSet` flag prevents calling `addVariables` twice, but subclasses that call `super(props)` and then `addVariables` in the same constructor are fine; the issue arises if a subclass tries to add more variables later
-- **Prop-change subscription bug** (from developer notes): `UIBase` does not correctly handle cases where a prop (e.g. `props.character` in `CharacterComponent`) changes after mount — subscriptions are not re-wired to the new prop's variables. The suggested fix is to give components a callback that retrieves the correct variable from props and re-runs it in `componentDidUpdate()`, including clearing old subscriptions. This is also confirmed by `VariableComponent.ingestProps()` analysis — see variable system knowledge.md.
+
+### Fixed
+- **Prop-change subscription bug**: `UIBase` previously did not handle cases where a prop (e.g. `props.character` in `CharacterComponent`) changed after mount — subscriptions were not re-wired to the new prop's variables. Fixed by adding the `addVariableGetters` dynamic subscription mechanism. `CharacterComponent` now uses `addVariableGetters` instead of `addVariables`.
 
 ---
 
@@ -434,6 +457,7 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 ### `gameUI.js` — `GameUI`
 - Uses `props.game` passed from `App.js` (no longer creates its own `Game` instance)
 - 3-column MUI Grid: SidePanel (xs=2) | HUD+MainUI (xs=8) | Logger (xs=2)
+- Below the 3-column grid: `MessageLogPanel` — a collapsible scrollable panel showing the full permanent message history
 - `setSelected(selected)`: updates `this.state.selected`; passed down to child components
 - Shows `GameMessage` modal when `game.gameMessages.length > 0`
 
@@ -441,6 +465,14 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 - Subscribes to timer (so it re-renders)
 - Calls `timer.stopTimer()` in `childRender()` — stops the game while message is shown
 - "Close" button calls `readGameMessage()` which shifts the first message
+
+### `MessageLogPanel`
+- Pure React component (not UIBase)
+- Props: `messageLog` (array of `{text, day}` objects), `show` (boolean), `onToggle` (callback)
+- Toggle button shows/hides the panel; button label shows message count when hidden
+- When shown: scrollable div (max-height 200px) showing all messages newest-first
+- Each entry shows the day number and message text
+- Rendered by `GameUI.childRender()` below the main grid
 
 ### `hud.js` — `HUD`
 - Subscribes to `treasury` and `gameClock`

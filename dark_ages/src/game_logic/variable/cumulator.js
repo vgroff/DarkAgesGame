@@ -12,6 +12,7 @@ export class Cumulator extends Variable {
         let self = this;
         this.previousAgg = -1;
         this.expectedChange = 0;
+        this.excessAmount = 0; // Amount produced this tick that couldn't be stored (storage full)
         this.valueAtTurnStart = this.baseValue;
         this.timer.subscribe(() => {
             // console.log("aggregated on timer");
@@ -26,6 +27,16 @@ export class Cumulator extends Variable {
     }
     aggregate() {
         this.valueAtTurnStart = this.currentValue;
+        // Detect excess: if storage is full (max exists and currentValue == max),
+        // the uncapped value would have been baseValue + expectedChange.
+        // Excess = uncapped - max, clamped to >= 0.
+        if (this.max) {
+            let uncapped = this.baseValue + this.expectedChange;
+            let maxVal = this.max.currentValue;
+            this.excessAmount = Math.max(0, uncapped - maxVal);
+        } else {
+            this.excessAmount = 0;
+        }
         if (this.baseValue !== this.currentValue) {
             this.setNewBaseValue(this.currentValue, `Turn start: ${roundNumber(this.valueAtTurnStart, this.displayRound)}`, 0);
             this.recalculateLastChange();

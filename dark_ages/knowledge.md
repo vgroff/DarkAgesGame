@@ -208,13 +208,13 @@ There are two timers:
 
 - **Move to character screen on first day**: Force-stop the timer until all player traits are set on day 1. Intent: prevent the game from running before the player has configured their character.
 - **Nomad events for population growth**: Add events where nomads arrive and can be taken in to boost immigration. (See Events section below for detail.)
-- **Permanent game message log**: Keep a persistent log of all game messages somewhere accessible to the player.
-- **Auto-sell excess goods to market**: Currently excess production is wasted when storage is full. The developer suggests tracking excess within the `Cumulator` variable and picking it up at end of day. This is considered important for the economy to function correctly.
-- **UIBase subscription bug**: `UIBase` does not correctly handle cases where a prop (e.g. `props.character` in `CharacterComponent`) changes after mount — subscriptions are not re-wired. The fix suggested is to give components a callback that retrieves the correct variable from props, and re-run it in `componentDidUpdate()` (including clearing old subscriptions). This is confirmed by code analysis — see `UIBase.js` Known Issues.
+- **Permanent game message log**: ✅ **Implemented**. `game.messageLog` is a permanent array of `{text, day}` entries. All messages go through `game.addGameMessage()`. A collapsible `MessageLogPanel` is shown below the 3-column layout in `GameUI`, toggled by a button.
+- **Auto-sell excess goods to market**: ✅ **Implemented**. `Cumulator.excessAmount` tracks overflow each tick. `Settlement.autoSellExcessGoods()` runs each tick and sells excess at market sell price for resources where `desiredSellProp > 0`. Income credited via `game.addToTreasury()`.
+- **UIBase subscription bug**: ✅ **Fixed**. `UIBase` now supports a `addVariableGetters([{key, get}])` dynamic subscription mechanism. Getters are re-evaluated on every `componentDidUpdate`; if any variable identity changes, subscriptions are re-wired. `CharacterComponent` updated to use this pattern.
 
 ### Optimisation Notes
 
-- **Round happiness, health, building productivity to 3dp**: Reduces subscriber cascade frequency. `TrendingVariable` already rounds via `trendingRoundTo`, but underlying modifiers may still fire frequently. Suggested fix: add `new VariableModifier({type: roundTo, startingValue: 3, customPriority: 200})` to building `productivity` Variables.
+- **Round happiness, health, building productivity to 3dp**: ✅ **Implemented for building productivity**. `TrendingVariable` already rounds via `trendingRoundTo`. A `roundTo(3dp)` modifier at priority 200 is now added to every `ResourceBuilding.productivity` Variable in the `ResourceBuilding` constructor.
 - **Bankruptcy state change is slow**: When `bankrupt` flips between 0 and 1, it triggers a cascade through all market `buyProp` Variables. Developer suggests examining via logging to find the bottleneck. Rounding to dp may help.
 
 ### UI Improvement Ideas
@@ -336,6 +336,13 @@ There are two timers:
 *(all minor bugs fixed — see below)*
 
 ### Fixed (this session)
+- **`building.js` productivity rounding**: `ResourceBuilding.productivity` now has a `roundTo(3dp)` modifier at priority 200, reducing subscriber cascade frequency when productivity changes by tiny amounts.
+- **`UIBase.js` prop-change subscription bug**: Added `addVariableGetters([{key, get}])` dynamic subscription mechanism. `CharacterComponent` updated to use it so subscriptions re-wire when `props.character` changes.
+- **`cumulator.js` excess tracking**: `Cumulator.aggregate()` now computes `excessAmount` — the amount of production that overflowed storage this tick. Used by `Settlement.autoSellExcessGoods()`.
+- **`settlement.js` auto-sell excess goods**: `Settlement.autoSellExcessGoods()` runs each tick. For resources where `desiredSellProp > 0`, excess production (from `Cumulator.excessAmount`) is sold at market sell price and credited to treasury via `addToTreasury` callback.
+- **`game.js` message log**: Added `game.messageLog` (permanent array of `{text, day}` entries) and `game.addGameMessage(message)` helper. All game messages now go through this method.
+- **`game.js` addToTreasury**: Added `game.addToTreasury(amount, reason)` method for crediting one-off income directly to treasury base value.
+- **`gameUI.js` MessageLogPanel**: Added `MessageLogPanel` component below the 3-column layout. Shows full message history (newest first) in a scrollable panel, toggled by a button.
 - **`events.js` debug flags**: `forceLastCheckedDebug` and `forceFireEvents` set to `false` — were hardcoded `true`, causing all events to fire on day 2 regardless of `eventShouldFire_()` logic
 - **`default_buildings.js` module-level side effects + timer leak**: `DefaultBuildings` was constructed at module import time, creating live `Timer` (with `setInterval`) and `ResourceStorage` instances. Replaced with `createDefaultBuildings()` factory and `getDefaultBuildings()` lazy singleton. `settlement.js` updated to call `getDefaultBuildings()`. `resource.defaultBuilding` assignment now happens at game construction time, not import time.
 - **`settlement.js` coal demand set twice**: the rationing loop subscribed to `gameClock` to set `coal.idealAmount` on every tick, duplicating `adjustCoalDemand()`. The redundant subscription removed; `adjustCoalDemand()` is the sole owner.

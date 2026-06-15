@@ -380,11 +380,16 @@ Extends `Variable`. Represents a value that accumulates over time (e.g. resource
 
 On each timer tick: `aggregate()` is called.
 - Sets `valueAtTurnStart = currentValue`
+- Computes `excessAmount`: if `max` is set and the uncapped value (`baseValue + expectedChange`) would exceed `max.currentValue`, `excessAmount = uncapped - max`. Otherwise `excessAmount = 0`.
 - If `baseValue !== currentValue`: calls `setNewBaseValue(currentValue, ...)` — "banks" the accumulated change
 
 `recalculateLastChange()`: `expectedChange = currentValue - baseValue` — the net change from all modifiers for this tick.
 
 Subscribes to itself (priority 1) to keep `expectedChange` up to date.
+
+### `excessAmount`
+
+New field (added for auto-sell feature). After each `aggregate()` call, `excessAmount` holds the amount of production that could not be stored because storage was full. This is used by `Settlement.autoSellExcessGoods()` to auto-sell overflow to the market.
 
 ### `CumulatorComponent`
 
@@ -399,6 +404,7 @@ A `Cumulator` with supply and demand modifiers:
 baseValue = amount at start of turn
 currentValue = baseValue + supply - demand (from modifiers)
 On tick: baseValue = currentValue (banks the change)
+excessAmount = max(0, (baseValue + expectedChange) - max)  [if max is set]
 ```
 
 This means `baseValue` always represents the amount at the start of the current tick, and `currentValue` represents the projected amount at the end.
@@ -543,7 +549,7 @@ From the developer's handwritten notes:
 - **Subscription chain length**: each Variable in a chain adds latency; deep chains (e.g. `health → unhealth → populationDecline → populationChange → populationInternal → populationExternal → unemployed → ...`) can cause many recalculations per tick
 
 ### Optimisation Ideas (from notes)
-1. Add `roundTo 3` modifier to building `productivity` Variables — **ask before implementing**, as this changes game behaviour
+1. ✅ **Done**: `roundTo 3` modifier added to every `ResourceBuilding.productivity` Variable in `building.js` constructor (priority 200). This reduces subscriber cascade frequency when productivity changes by tiny amounts.
 2. Cache `currentValue` and only recalculate when a modifier's variable actually changes (already partially done via epsilon check)
 3. Batch subscription notifications (currently each change immediately propagates)
 4. The `resubscribeToVariables` bug in `AggregatorModifier` means subscriptions accumulate — fixing this would reduce memory usage and is a confirmed bug fix

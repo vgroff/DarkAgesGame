@@ -18,11 +18,12 @@ class Game {
             return {day, season, year, text: `Day ${day}, ${titleCase(season)}, Year ${year}`}
         }});
         this.gameMessages = [];
+        this.messageLog = []; // Permanent log — messages are never removed from here
         this.bankrupt = new Variable({name: 'bankruptcy (binary)', startingValue: 0})
         this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic(), isPlayer: true, gameClock: this.gameClock});
         let char2 = new Character({name:"npc 2", culture: new Cultures.Celtic(), gameClock: this.gameClock, randomizeTraits: true});
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt, handleRebellion: this.handleRebellion.bind(this)}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: 37, terrain: new Marshlands(), bankrupt: this.bankrupt, handleRebellion: this.handleRebellion.bind(this), addToTreasury: this.addToTreasury.bind(this)}),
             new Settlement({name: 'Village 2', gameClock: this.gameClock, leader: char2, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt, handleRebellion: () => {}})
         ];
         this.totalMarketIncome = new SumAggModifier(
@@ -150,13 +151,36 @@ class Game {
         }
     }
 
+    /**
+     * Push a message to both the transient queue (shown as modal) and the permanent log.
+     * @param {string} message
+     */
+    addGameMessage(message) {
+        this.gameMessages.push(message);
+        this.messageLog.push({ text: message, day: this.gameClock ? this.gameClock.currentValue : 0 });
+    }
+
     handleRebellion(settlement) {
         console.log("handleRebellion")
-        this.gameMessages.push(`${settlement.name} has rebelled! You have lost control of this settlement.`);
+        this.addGameMessage(`${settlement.name} has rebelled! You have lost control of this settlement.`);
         if (this.playerCharacter.settlements.length === 0) {
             console.log("game over");
-            this.gameMessages.push(`You have lost control of all your settlements! \n Game over.`);
+            this.addGameMessage(`You have lost control of all your settlements! Game over.`);
         }
+    }
+
+    /**
+     * Add an amount directly to the treasury base value.
+     * Used by settlements to credit auto-sold excess goods income.
+     * @param {number} amount
+     * @param {string} reason
+     */
+    addToTreasury(amount, reason) {
+        if (!this.treasury || amount <= 0) return;
+        this.treasury.setNewBaseValue(
+            this.treasury.baseValue + amount,
+            reason || 'treasury addition'
+        );
     }
 
     messageRead() {

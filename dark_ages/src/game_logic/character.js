@@ -625,7 +625,10 @@ export class FactionComponent extends UIBase {
 export class CharacterComponent extends UIBase {
     constructor(props) {
         super(props);
-        this.addVariables([props.character.legitimacy]);
+        // Use dynamic getters so subscriptions re-wire when props.character changes
+        this.addVariableGetters([
+            { key: 'legitimacy', get: (p) => p.character.legitimacy }
+        ]);
     }
     handleTraitChange(newTrait, oldTrait) {
         if (oldTrait) {

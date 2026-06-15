@@ -6,36 +6,87 @@ import {Logger, LoggerComponent} from './logger'
 import {SidePanel} from './sidePanelUI'
 import { Box, Button, Modal, Typography } from '@mui/material';
 import { CustomTooltip } from './utils';
+import React from 'react';
 
 class GameUI extends UIBase {
     constructor(props) {
         super(props);
         this.game = props.game;
         this.gameClock = this.game.gameClock;
-
         this.addVariables([props.internalTimer]);
     }
     setSelected(selected) {
         this.setState({selected: selected});
     }
     childRender() {
-        return <Grid container spacing={2}>
-            {this.game.gameMessages.length > 0? <GameMessage gameMessage={this.game.gameMessages[0]} timer={this.gameClock} readGameMessage={() => this.game.messageRead()}/> : null}
-            <Grid item xs={2}>
-                <SidePanel setSelected={(selected) => this.setSelected(selected)} game={this.game} internalTimer={this.props.internalTimer}/>
+        const showLog = this.state.showMessageLog || false;
+        return <div>
+            <Grid container spacing={2}>
+                {this.game.gameMessages.length > 0
+                    ? <GameMessage gameMessage={this.game.gameMessages[0]} timer={this.gameClock} readGameMessage={() => this.game.messageRead()}/>
+                    : null}
+                <Grid item xs={2}>
+                    <SidePanel setSelected={(selected) => this.setSelected(selected)} game={this.game} internalTimer={this.props.internalTimer}/>
+                </Grid>
+                <Grid item xs={8}>
+                    <div>
+                        <HUD gameClock={this.gameClock} treasury={this.game.treasury} harvestEvent={this.game.harvestEvent}/>
+                    </div>
+                    <div>
+                        <MainUI selected={this.state.selected || this.game.playerCharacter} setSelected={(selected) => this.setSelected(selected)} gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game}/>
+                    </div>
+                </Grid>
+                <Grid item xs={2}>
+                    <LoggerComponent logger={Logger.getLogger()}/>
+                </Grid>
             </Grid>
-            <Grid item xs={8}>
-                <div>
-                    <HUD gameClock={this.gameClock} treasury={this.game.treasury} harvestEvent={this.game.harvestEvent}/>
-                </div>
-                <div>
-                    <MainUI selected={this.state.selected || this.game.playerCharacter} setSelected={(selected) => this.setSelected(selected)} gameClock={this.gameClock} internalTimer={this.props.internalTimer} game={this.game}/>
-                </div>
-            </Grid>
-            <Grid item xs={2}>
-                <LoggerComponent logger={Logger.getLogger()}/>
-            </Grid>
-        </Grid>
+            <MessageLogPanel
+                messageLog={this.game.messageLog}
+                show={showLog}
+                onToggle={() => this.setState({ showMessageLog: !showLog })}
+            />
+        </div>
+    }
+}
+
+/**
+ * A collapsible panel shown below the main 3-column layout.
+ * Displays the full permanent message history (newest first).
+ * Toggled by a button.
+ */
+export class MessageLogPanel extends React.Component {
+    render() {
+        const { messageLog, show, onToggle } = this.props;
+        const reversedLog = messageLog ? [...messageLog].reverse() : [];
+        return <div style={{ borderTop: '1px solid #ccc', marginTop: '12px', padding: '8px 16px' }}>
+            <Button
+                variant="outlined"
+                size="small"
+                onClick={onToggle}
+                style={{ marginBottom: show ? '8px' : 0 }}
+            >
+                {show ? 'Hide Message Log' : `Show Message Log (${messageLog ? messageLog.length : 0})`}
+            </Button>
+            {show && <div style={{
+                maxHeight: '200px',
+                overflowY: 'auto',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                padding: '8px',
+                backgroundColor: '#fafafa',
+                fontSize: '13px'
+            }}>
+                {reversedLog.length === 0
+                    ? <span style={{ color: '#888' }}>No messages yet.</span>
+                    : reversedLog.map((entry, i) => (
+                        <div key={i} style={{ marginBottom: '4px', borderBottom: '1px solid #eee', paddingBottom: '4px' }}>
+                            <span style={{ color: '#888', marginRight: '8px', fontSize: '11px' }}>Day {entry.day}</span>
+                            <span>{entry.text}</span>
+                        </div>
+                    ))
+                }
+            </div>}
+        </div>
     }
 }
 

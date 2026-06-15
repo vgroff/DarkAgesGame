@@ -55,6 +55,11 @@ There are knowledge.md files like this one at most levels of the repo, read thos
 18. **Settlement events** (currently only `CourtIntrigue`)
 19. **Leader assignment** via `setLeader()`
 20. **Coal demand adjustment** subscription
+21. **Auto-sell excess goods** subscription (calls `autoSellExcessGoods()` each tick)
+
+### Constructor Props
+
+- `addToTreasury`: optional callback `(amount, reason) => void`. If provided, `autoSellExcessGoods()` will call it when excess goods are sold. Pass `game.addToTreasury.bind(game)` for player settlements; omit for NPC settlements.
 
 ### Population System
 
@@ -172,7 +177,7 @@ Methods:
 Additional props: `outputResource`, `productivityModifiers`, `sizeJobsMultiplier`, `startingProductivity`, `passiveProductionPerSize`, `inputResources`.
 
 Key Variables:
-- `productivity`: starts at `startingProductivity` (default 1); receives `generalProductivityModifier` from settlement
+- `productivity`: starts at `startingProductivity` (default 1); receives `generalProductivityModifier` from settlement. **Always has a `roundTo(3dp)` modifier at priority 200** — added in `ResourceBuilding` constructor to reduce subscriber cascade frequency (optimisation).
 - `totalJobs` = `startingJobs + sizeJobsMultiplier × size`
 - `filledJobs`: clamped 0..totalJobs; subscriber reduces to max if size shrinks
 - `emptyJobs` = totalJobs - filledJobs
@@ -739,7 +744,7 @@ Updates base values of all `marketSellPrice` and `marketBuyPrice` Variables.
 
 > From `handwritten_notes.md`. Do not implement without confirmation.
 
-- **Auto-sell excess goods**: Currently excess production is wasted when storage is full. The developer considers this important — the suggestion is to track excess within the `Cumulator` variable and pick it up at end of day to auto-sell to the market. This would require changes to `ResourceStorage` and `Market`.
+- **Auto-sell excess goods**: ✅ **Implemented**. When storage is full and production overflows, the excess is automatically sold to the market at the current sell price, but only for resources where the player has set `desiredSellProp > 0`. Income is credited to the treasury via `game.addToTreasury()`. See `Settlement.autoSellExcessGoods()` and `Cumulator.excessAmount`.
 - **Buy inputs without producing them**: The developer wants settlements to be able to buy resources on the market even if they don't produce them (e.g. buy iron without an iron mine). Currently market resources are only registered for resources the settlement produces. This would require registering market entries for all tradeable resources regardless of whether a building produces them.
 - **Tavern/entertainment should improve trade modifier**: Currently `entertainment` has no effect on `tradeFactor`. The developer intends to add this connection.
 - **"Buy/sell now" button**: Allow buying/selling as much as possible immediately from storage. Developer notes this may be unbalanced.

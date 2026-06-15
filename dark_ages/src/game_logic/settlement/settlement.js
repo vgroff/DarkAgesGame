@@ -26,6 +26,7 @@ export class Settlement {
         this.autoManageUnemployed = false;
         this.gameClock = props.gameClock;
         this.handleRebellion = props.handleRebellion;
+        this.addToTreasury = props.addToTreasury || null; // Optional callback: (amount, reason) => void
         if (!this.handleRebellion || !this.gameClock) {
             throw Error("Settlement needs gameClock and handleRebellion");
         }
@@ -270,6 +271,9 @@ export class Settlement {
         this.gameClock.subscribe(() => {
             this.adjustCoalDemand();
         });
+        this.gameClock.subscribe(() => {
+            this.autoSellExcessGoods();
+        });
     }
     addBuilding(building) {
         console.log(`Adding ${building.name}`);
@@ -342,6 +346,34 @@ export class Settlement {
         if (tempFactor !== this.tempFactor) {
             this.popDemands.coal.idealAmount.setNewBaseValue(1 - 0.5*tempFactor, 'determined by season');
             this.tempFactor = tempFactor;
+        }
+    }
+    /**
+     * Auto-sell excess goods to the market.
+     * Called each tick. For each resource storage whose Cumulator recorded excess this tick
+     * (i.e. production overflowed storage), if the player has set a desiredSellProp > 0 for
+     * that resource in the market, the excess is sold at the current market sell price and
+     * the income is added to the treasury via the addToTreasury callback.
+     * Only fires if addToTreasury callback was provided (i.e. player-owned settlement).
+     */
+    autoSellExcessGoods() {
+        if (!this.addToTreasury) return;
+        for (const resourceStorage of this.resourceStorages) {
+            if (!resourceStorage.cumulates) continue;
+            const excess = resourceStorage.amount.excessAmount;
+            if (!excess || excess <= 0) continue;
+            // Find the corresponding market resource
+            const marketResource = this.market.marketResources.find(
+                mr => mr.resource === resourceStorage.resource
+            );
+            if (!marketResource) continue;
+            // Only auto-sell if the player has opted into selling this resource
+            if (marketResource.desiredSellProp.currentValue <= 0) continue;
+            // Sell at the current market sell price
+            const income = excess * marketResource.marketSellPrice.currentValue;
+            if (income > 0) {
+                this.addToTreasury(income, `auto-sold excess ${resourceStorage.resource.name}`);
+            }
         }
     }
     addWorkersToBuilding(building, amount) {
