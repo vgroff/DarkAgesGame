@@ -520,7 +520,7 @@ export class Housing extends ResourceBuilding {
             name: Housing.brickHouses,
             newDisplayName: Housing.brickHouses,
             newBuildCost: [[Resources.labourTime, 100], [Resources.stoneBricks, 40]],
-            changes: [[outputResourceChange, Resources.steelTools]]
+            changes: [[outputResourceChange, Resources.brickHouses]]
         }
     ];
     constructor(props) {

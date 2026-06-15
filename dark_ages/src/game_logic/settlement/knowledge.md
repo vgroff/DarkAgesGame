@@ -59,7 +59,7 @@ There are knowledge.md files like this one at most levels of the repo, read thos
 ### Population System
 
 ```
-populationSizeChange = (1 + growth - decline) * immigrationFactor
+populationSizeChange = immigrationFactor * (1 + growth) - decline
 populationSizeInternal[t+1] = populationSizeInternal[t] * populationSizeChange
 populationSizeExternal = castInt(populationSizeInternal)
 ```
@@ -143,8 +143,6 @@ Note: there is also a duplicate subscription in the rationing loop (lines 180-18
 
 ### Known Issues
 
-1. **`unemployed` subscriber** (line 241): checks `this.unemployed.currentVariable` (undefined property) instead of `this.unemployed.currentValue` — the debugger check never fires
-2. **`forceResetTrend()` called 4 times**: health twice, happiness twice — comment says "twice for good measure" but this is fragile and suggests initialization order issues
 3. **Coal demand set twice**: once in the rationing loop (lines 180-188) and once via `adjustCoalDemand()` subscription — redundant
 4. **`autoManageUnemployed` default false**: the auto-assign checkbox is only shown for player settlements; NPC settlements never auto-assign workers unless `unemployed < 0`
 5. **`setLeader()` creates new Variables**: every time a leader changes, new `localLegitimacy`, `support`, `rebellionSupport`, `totalRebellionSupport` Variables are created — old ones are not cleaned up, potentially leaking subscriptions
@@ -252,12 +250,10 @@ Input resource demand system:
 
 ### Known Issues
 
-1. **`Housing` upgrade bug** (line 523): second upgrade `changes` uses `Resources.steelTools` instead of `Resources.brickHouses` — Brick Houses upgrade changes output to steel tools
-2. **`SpecificBuildingMaxSizeBonus.activate()`** (bonus.js lines 163-170): adds modifier to `building.productivity` instead of `building.size.max` — max size bonus has no effect
-3. **`SpecificBuildingEfficiencyBonus`** (bonus.js lines 128-154): adds modifier to `building.productivity` instead of `building.efficiency` — efficiency bonus actually changes productivity
-4. **`Building.canBuild()`** uses `resourceStorage.amount.baseValue` not `currentValue` — correct for Cumulators (baseValue = start of turn amount) but may be confusing
-5. **`ResourceBuilding.filledJobs` subscriber**: reduces `filledJobs` to `max` when size shrinks, but this fires synchronously during size change which may cause re-entrancy issues
-6. **`BuildingComponent` tooltip**: `extraVars` includes `outputPerWorker` calculation that divides by `filledJobs.currentValue` — will be `NaN` or `Infinity` when `filledJobs = 0`
+1. **`SpecificBuildingEfficiencyBonus`** (bonus.js lines 128-154): adds modifier to `building.productivity` instead of `building.efficiency` — efficiency bonus actually changes productivity
+2. **`Building.canBuild()`** uses `resourceStorage.amount.baseValue` not `currentValue` — correct for Cumulators (baseValue = start of turn amount) but may be confusing
+3. **`ResourceBuilding.filledJobs` subscriber**: reduces `filledJobs` to `max` when size shrinks, but this fires synchronously during size change which may cause re-entrancy issues
+4. **`BuildingComponent` tooltip**: `extraVars` includes `outputPerWorker` calculation that divides by `filledJobs.currentValue` — will be `NaN` or `Infinity` when `filledJobs = 0`
 
 ---
 
@@ -470,8 +466,7 @@ Returns object with 12 research categories, each an ordered array of `Research` 
 ### Known Issues
 
 1. **"Bowyery and Fletching"** (military research): unlocks `WeaponMaker` again — but `WeaponMaker` is already unlocked by "Stone Weaponry". This research has no effect.
-2. **`SpecificBuildingMaxSizeBonus` in mining research** ("Deeper Mining", "Deepest Mining"): due to the bug in `SpecificBuildingMaxSizeBonus.activate()`, these bonuses add to `CoalMine.productivity` instead of `CoalMine.size.max` — they have no intended effect
-3. **Research is not saved/loaded**: `researched` is a plain boolean on the `Research` instance; `Research` is not in `CLASS_MAP` in `save_load.js` — research progress will be lost on save/load
+2. **Research is not saved/loaded**: `researched` is a plain boolean on the `Research` instance; `Research` is not in `CLASS_MAP` in `save_load.js` — research progress will be lost on save/load
 
 ---
 
@@ -501,7 +496,7 @@ Props: `name`, `bonuses`. Calls `bonus.setOrigin("terrain {name}")` on all bonus
 **`Marshlands`**:
 - Adds `BogIronPit` (size 0, locked)
 - Adds `PeatBog` (size 1, unlocked)
-- CoalMine max size +3 ← BUG: `SpecificBuildingMaxSizeBonus` adds to productivity not max size
+- CoalMine max size +3
 - Farm productivity ×0.93
 - ConstructionSite productivity ×0.8
 - Apothecary productivity ×1.2
@@ -509,7 +504,7 @@ Props: `name`, `bonuses`. Calls `bonus.setOrigin("terrain {name}")` on all bonus
 
 **`Mountains`**:
 - Adds `CoalMine` (size 1, unlocked)
-- CoalMine max size +5 ← BUG: same as above
+- CoalMine max size +5
 - Farm productivity ×0.9
 - ConstructionSite productivity ×0.85
 - Apothecary productivity ×1.2
@@ -522,8 +517,7 @@ Simple tooltip showing effect list, clicking sets Logger inspect to terrain obje
 
 ### Known Issues
 
-1. **`SpecificBuildingMaxSizeBonus` bug**: Marshlands and Mountains terrain both use this bonus to increase CoalMine max size, but the bonus modifies productivity instead — the max size increase has no effect
-2. **`BogIronPit` and `PeatBog` not in `CLASS_MAP`**: saves with Marshlands terrain will fail to deserialize these buildings
+*(none remaining — `SpecificBuildingMaxSizeBonus` now correctly modifies `building.size.max`; `BogIronPit`, `CoalPit`, `PeatBog` are now in `CLASS_MAP`)*
 
 ---
 
@@ -537,9 +531,8 @@ After construction, sets `resource.defaultBuilding` for each resource that has a
 
 ### Known Issues
 
-1. **Duplicate entry**: `dummyIronWeaponMaker` appears at indices 11 and 13; `dummySteelWeaponMaker` is at index 15 but `dummyIronWeaponMaker` is listed twice instead of once iron + once steel
-2. **Dummy timer**: each call to `default_buildings.js` creates a `new Timer({every: 100000})` — this starts a `setInterval` that never gets cleared, leaking timers on every module load
-3. **Module-level side effects**: `DefaultBuildings` is constructed at module import time, including the dummy timer and resource storages — this makes testing difficult and causes side effects on import
+1. **Dummy timer**: each call to `default_buildings.js` creates a `new Timer({every: 100000})` — this starts a `setInterval` that never gets cleared, leaking timers on every module load
+2. **Module-level side effects**: `DefaultBuildings` is constructed at module import time, including the dummy timer and resource storages — this makes testing difficult and causes side effects on import
 
 ---
 
@@ -678,9 +671,8 @@ Called on all bonuses when they are added to a `Trait` or `Event`. Appends `" fr
 ### Known Issues
 
 1. **`SpecificBuildingEfficiencyBonus`**: adds modifier to `building.productivity` instead of `building.efficiency` — efficiency system is not functional
-2. **`SpecificBuildingMaxSizeBonus`**: adds modifier to `building.productivity` instead of `building.size.max` — max size bonuses from research have no effect
-3. **`TemporaryModifierBonus.deactivate()`**: no-op — relies on timer callback; if settlement is destroyed or event ends early, modifier may persist
-4. **`TemporaryCharacterBonus`**: identical implementation to `TemporaryModifierBonus` but for characters — code duplication that could be unified
+2. **`TemporaryModifierBonus.deactivate()`**: no-op — relies on timer callback; if settlement is destroyed or event ends early, modifier may persist
+3. **`TemporaryCharacterBonus`**: identical implementation to `TemporaryModifierBonus` but for characters — code duplication that could be unified
 
 ---
 

@@ -8,8 +8,9 @@ export function titleCase(str) {
 }
 
 export function roundNumber(number, dp = 3) {
-    if (number === undefined) {
-        // debugger;
+    if (number === undefined || number === null || isNaN(number)) {
+        console.warn('roundNumber called with invalid value:', number);
+        return 0;
     }
     return parseFloat(number.toFixed(dp));
 }

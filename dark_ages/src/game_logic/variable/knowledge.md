@@ -116,12 +116,16 @@ Uses `_initializing` flag to prevent recursive initialization.
 ```js
 let eps = 1e-8;
 let absChange = Math.abs(this.currentValue - value);
-if (this.currentValue === undefined || (Math.abs(absChange) > eps && absChange / Math.abs(this.currentValue) > 2e-5)) {
+if (this.currentValue === undefined || (Math.abs(absChange) > eps && (Math.abs(this.currentValue) < eps || absChange / Math.abs(this.currentValue) > 2e-5))) {
     // update and notify
 }
 ```
 
-**Bug**: when `currentValue = 0`, `absChange / Math.abs(0)` = `Infinity`, which is always `> 2e-5`. So any change from 0 always triggers subscribers — this is actually correct behaviour but the intent is unclear. The real bug is when `currentValue` is very small but non-zero, the relative epsilon may suppress legitimate small changes.
+The condition fires if the absolute change exceeds `1e-8` AND either:
+- `currentValue` is itself near zero (skip the relative check entirely — any absolute change matters), or
+- the relative change exceeds `2e-5` (suppress noise on large values)
+
+This guards against the original bug where `currentValue = 0` caused `absChange / 0 = Infinity`, always triggering subscribers regardless of the absolute epsilon.
 
 ### Static Properties
 
@@ -215,7 +219,7 @@ Modifiers are applied in ascending priority order. Lower number = applied first.
 
 Base class. Props: `name`, `type` (required).
 
-- `subscribe(callback, priority=0)`: **BUG** — parameter is named `proiority` (misspelled) but the closure captures the module-level `priority` object (the constants dict) instead of the parameter. All `AbstractModifier` subscriptions get `priority = {addition:1, subtraction:2, ...}` (an object, not a number). This means subscription sorting on `AbstractModifier` is broken.
+- `subscribe(callback, priority=0)`: pushes `{callback, priority}` to subscriptions, re-sorts by priority descending, returns the subscription object
 - `callSubscribers(indent)`: calls all subscription callbacks
 - `unsubscribe(callback)`: filters by reference
 
@@ -416,9 +420,7 @@ Extends `Variable`. Smoothly interpolates `currentValue` toward a target, preven
 
 ### `recalculate(reason, indent)`
 
-Overrides parent. Calls `super.recalculate(..., quietly=true)` to compute the target value without notifying subscribers, then calls `trend(indent)` to apply the smoothing.
-
-**Bug**: increments `currentDepth` before calling super (which also increments it in non-quiet mode — but quiet mode skips the increment). Actually `quietly=true` means super does NOT increment `currentDepth`. So `currentDepth` is incremented once here and reset to 0 at the end. This is correct but fragile.
+Overrides parent. Calls `super.recalculate(..., quietly=true)` to compute the target value without notifying subscribers, then calls `trend(indent)` to apply the smoothing. Does not manually manage `currentDepth` — the parent handles it via the `quietly` flag.
 
 ### `trend(indent)`
 
@@ -562,31 +564,11 @@ This is a design idea — the implementation approach is not specified. Ask befo
 
 ## Known Bugs & Issues
 
-### Critical
-
-1. **`AggregatorModifier.resubscribeToVariables()` loop bug** (`aggregator.js` line 67):
-   ```js
-   for (let i = 0; i < this.variable.length; i++) {  // BUG: this.variable is a Variable, not array
-   ```
-   Should be `this.variables.length`. The unsubscribe loop never runs — old subscriptions accumulate on every `modify()` call (which calls `resubscribeToVariables`). This means `SumAggModifier` and `ListAggModifier` leak subscriptions every tick.
-
-2. **`AbstractModifier.subscribe()` priority bug** (`modifier.js` line 46):
-   ```js
-   subscribe(callback, proiority=0) {  // BUG: misspelled parameter
-       let obj = {callback, priority};  // captures module-level 'priority' object, not parameter
-   ```
-   All `AbstractModifier` subscriptions get `priority = {addition:1, subtraction:2, ...}` (the constants object). Subscription sorting on modifiers is broken — they all have the same (wrong) priority.
-
 ### Moderate
 
-3. **`variable.js` min explanation typo** (line 252):
-   ```js
-   abridgedExplanations.push({text: `max value is ${this.min.currentValue}`})  // says "max" not "min"
-   ```
+1. **`variable.js` epsilon check with zero** (line 256): `absChange / Math.abs(this.currentValue)` when `currentValue = 0` produces `Infinity`, which is always `> 2e-5`. This means any change from 0 always triggers subscribers — probably correct but unintentional.
 
-4. **`variable.js` epsilon check with zero** (line 256): `absChange / Math.abs(this.currentValue)` when `currentValue = 0` produces `Infinity`, which is always `> 2e-5`. This means any change from 0 always triggers subscribers — probably correct but unintentional.
-
-5. **`TrendingVariable.recalculate()` depth tracking**: increments `currentDepth` before calling `super.recalculate(..., quietly=true)`. Since quiet mode doesn't increment, the total increment is 1. But if `recalculate` is called recursively (e.g. from a subscriber), `currentDepth` may not be reset correctly because `trend()` calls `callSubscribers` directly without going through the depth guard.
+2. **`TrendingVariable.recalculate()` depth tracking**: `trend()` calls `callSubscribers` directly without going through the depth guard in `recalculate`. If a subscriber triggers another `recalculate`, the depth guard in the parent will not prevent it from calling subscribers again via `trend()`.
 
 6. **`VariableModifier` with `object`/`keys`**: calls `resubscribeToVariable()` on every `modify()` call. If the variable hasn't changed, it returns early — but this still does a property traversal on every tick for every such modifier.
 

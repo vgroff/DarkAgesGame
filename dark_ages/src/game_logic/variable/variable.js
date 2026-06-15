@@ -249,11 +249,11 @@ export class Variable {
         } else if (this.min && value < this.min.currentValue) {
             value = this.min.currentValue;
             explanations.push({text: `min value is ${this.min.currentValue}`})
-            abridgedExplanations.push({text: `max value is ${this.min.currentValue}`})
+            abridgedExplanations.push({text: `min value is ${this.min.currentValue}`})
         }
         let eps = 1e-8;
         let absChange = Math.abs(this.currentValue - value);
-        if (this.currentValue === undefined || (Math.abs(absChange) > eps && absChange / Math.abs(this.currentValue) > 2e-5)) {
+        if (this.currentValue === undefined || (Math.abs(absChange) > eps && (Math.abs(this.currentValue) < eps || absChange / Math.abs(this.currentValue) > 2e-5))) {
             if (Variable.logging) {
                 Variable.logText += '  '.repeat(indent);
                 Variable.logText += `recalculated ${this.name} to ${roundNumber(value, 7)} ${ Math.abs(this.currentValue - value)} - ${reason}`;

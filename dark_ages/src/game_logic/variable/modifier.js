@@ -18,11 +18,6 @@ export const scaledMultiplication = 'scaledMultiplication';
 export const greaterThan = 'greaterThan';
 export const lesserThan = 'lesserThan';
 
-function compare(val1, comparator, val2) {
-    return val1 > val2 ? comparator === greaterThan : val1 < val2;
-}
-
-
 export const priority = {
     addition: 1,
     scaledAddition: 1,
@@ -42,7 +37,7 @@ export class AbstractModifier {
             throw Error('Need this');
         }
     }
-    subscribe(callback, proiority=0) {
+    subscribe(callback, priority=0) {
         let obj = {callback, priority};
         this.subscriptions.push(obj);
         this.subscriptions = this.subscriptions.sort((a,b) => b.priority - a.priority);

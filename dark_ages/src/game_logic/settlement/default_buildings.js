@@ -41,9 +41,8 @@ export const DefaultBuildings = [
     dummyToolmaker,
     dummyIronWeaponMaker,
     dummyIronToolMaker,
-    dummyIronWeaponMaker,
-    dummySteelToolMaker,
     dummySteelWeaponMaker,
+    dummySteelToolMaker,
 ];
 DefaultBuildings.forEach( building => {
     Object.entries(Resources).forEach(([_, resource]) => {

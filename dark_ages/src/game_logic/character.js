@@ -77,8 +77,8 @@ export class Faction {
         this.privileges[privilegeIndex].num += change;
         if (this.tentativelyChanged) {
             // Check if equal to oldPrivilegeNums and if so set tentativelyChanged to false
-            this.privileges.filter((privilege, i) => privilege.num !== this.oldPrivilegeNums[i]);
-            if (this.privileges.length === 0) {
+            const changedPrivileges = this.privileges.filter((privilege, i) => privilege.num !== this.oldPrivilegeNums[i]);
+            if (changedPrivileges.length === 0) {
                 this.tentativelyChanged = false;
                 this.gameClock.unforceStopTimer(this.timerMessage)
             }

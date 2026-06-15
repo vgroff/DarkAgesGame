@@ -43,10 +43,12 @@ export class Settlement {
         this.populationSizeChange = new Variable({owner:this, name:"population rate of change", startingValue: 0,
             displayRound: 5,
             modifiers: [
+                // Formula: immigrationFactor * (1 + growth) - decline
+                // immigrationFactor scales inflow (baseline + births) but not deaths
                 new VariableModifier({startingValue: 1, type: addition}),
                 new VariableModifier({variable: this.populationSizeGrowth, type: addition}),
+                new VariableModifier({variable: this.immigrationFactor, type: multiplication}),
                 new VariableModifier({variable: this.populationSizeDecline, type: subtraction}),
-                new VariableModifier({variable: this.immigrationFactor, type: multiplication}) // Causes higher growth and higher decline intentionally - not sure if we want this?
             ]
         });
         this.populationSizeInternal = new Cumulator({owner: this, name:`population_size_internal`, startingValue: props.startingPopulation + 0.65,
@@ -238,7 +240,7 @@ export class Settlement {
         });
         this.unemployed.subscribe(() => {
             // Searching for some kind of bug, should be fixed now
-            if (this.unemployed.currentVariable < 0) {
+            if (this.unemployed.currentValue < 0) {
                 debugger;
             }
         });
@@ -254,9 +256,7 @@ export class Settlement {
         }
         this.activateTerrain(props.terrain);
         this.health.forceResetTrend();
-        this.happiness.forceResetTrend(); // Start health and happiness off with values from this
-        this.health.forceResetTrend();
-        this.happiness.forceResetTrend(); // Twice for good measure
+        this.happiness.forceResetTrend(); // Snap trending variables to their initial calculated values
 
         this.idealPrices = {};
         this.localPriceModifiers = {};

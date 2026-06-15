@@ -64,7 +64,7 @@ export class AggregatorModifier extends VariableModifier {
     }
  
     resubscribeToVariables(indent=0) {
-        for (let i = 0; i < this.variable.length; i++) {
+        for (let i = 0; i < this.variables.length; i++) {
             this.variableSubscriptions.forEach(sub => this.variables[i].unsubscribe(sub, 'aggregator'));
         }
         this.variables = this.getVariables(this.aggregatorList, this.keys);

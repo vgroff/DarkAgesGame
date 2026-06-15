@@ -23,9 +23,12 @@ import {
     Toolmaker, 
     Church, 
     Tavern, 
-    CoalMine, 
-    Bowyer, 
-    WeaponMaker 
+    CoalMine,
+    Bowyer,
+    WeaponMaker,
+    BogIronPit,
+    CoalPit,
+    PeatBog
 } from './settlement/building';
 import { 
     Farmlands, 
@@ -113,6 +116,9 @@ const CLASS_MAP = {
     CoalMine: { constructor: CoalMine, hasInit: false },
     Bowyer: { constructor: Bowyer, hasInit: false },
     WeaponMaker: { constructor: WeaponMaker, hasInit: false },
+    BogIronPit: { constructor: BogIronPit, hasInit: false },
+    CoalPit: { constructor: CoalPit, hasInit: false },
+    PeatBog: { constructor: PeatBog, hasInit: false },
 
     Farmlands: { constructor: Farmlands, hasInit: false },
     Marshlands: { constructor: Marshlands, hasInit: false },

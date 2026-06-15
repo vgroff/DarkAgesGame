@@ -117,7 +117,7 @@ export class LoggerComponent extends UIBase {
             <div style={{textAlign:'center'}}>
                 <Button onClick={() => {this.logger.backOne()}} variant='outlined' style={{fontSize:12}}>Go Back</Button>
             </div>
-            {this.logger.lines.map((line, i) => <span key={i}>line<br /></span>)}
+            {this.logger.lines.map((line, i) => <span key={i}>{line}<br /></span>)}
         </div>
     }
 }

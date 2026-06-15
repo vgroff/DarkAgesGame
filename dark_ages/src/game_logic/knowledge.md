@@ -69,7 +69,6 @@ Pushes a game message. If `playerCharacter.settlements.length === 0`, pushes gam
 ### Known Issues
 - `handleRebellion` does not stop the game clock or prevent further interaction after game over
 - `init()` re-subscribes the game clock to `triggerChecks()` but the constructor does not — so after load there is a subscription but before load there is none (events only fire via `triggerChecks()` called from `Settlement` constructor indirectly via timer)
-- `App.js` passes a `game` prop to `GameUI` but `GameUI` ignores it and creates `new Game()` internally — the `game` prop in `App.js` is wasted
 
 ---
 
@@ -141,7 +140,7 @@ Maps to: 'great', 'good', 'poor', 'very poor'. Used in HUD harvest display.
 Returns a random element. Used for NPC trait randomization.
 
 ### Known Issues
-- `compare(val1, comparator, val2)` is defined but never called anywhere — dead code
+- *(none remaining — `compare()` dead code removed)*
 
 ---
 
@@ -190,7 +189,6 @@ Subclasses: `Celtic`, `Roman`. Each defines `getTraits()` returning a list of `T
 - `ChoiceComponent` renders a tooltip-wrapped display or a MUI `Select` dropdown for editing
 
 ### Known Issues
-- `changePrivilegeTentatively()` line 80: `this.privileges.filter(...)` result is discarded — the check to revert `tentativelyChanged` never works
 - `addTrait()` throws if a trait group already has a trait — but `updateFactionTraits()` calls `removeTrait` then `addTrait` which should be safe; however if `factionTraits` is undefined on first call, `forEach` on undefined throws
 - `copyCulture(character)` creates a new culture instance by finding the matching class — works but creates a fresh culture losing any runtime state
 
@@ -263,7 +261,6 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 - Opens a Modal with event text, choice buttons, and applied choice display
 
 ### Known Issues
-- `events.js` imports `getButtonUnstyledUtilityClass` from `@mui/base` and `toHaveDisplayValue` from `@testing-library/jest-dom` — both unused; the testing-library import will break in production
 - `forceLastCheckedDebug` and `forceFireEvents` are both `true` — must be changed before release
 - `TemporaryEventDisabled.deactivate()` is a no-op — the ban is set but never cleared on deactivate
 - `MineShaftCollapse.getEventChoices()` uses `Farm.name` instead of `IronMine.name` when calculating the size change amount (line 460)
@@ -308,7 +305,6 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 - "Go Back" button calls `logger.backOne()`
 
 ### Known Issues
-- `childRender()` line 120: `{this.logger.lines.map((line, i) => <span key={i}>line<br /></span>)}` renders the string literal `"line"` instead of the variable `line` — log lines never display their content
 - `backOne()` pops twice from `inspects` (once explicitly, once via `setInspect`) — the history navigation is off by one
 
 ---
@@ -342,7 +338,6 @@ Classes with `hasInit: true`: Game, Settlement, Timer, Variable, Cumulator, SumA
 - Unknown types: returns `$data` as plain object with a console warning
 
 ### Known Issues
-- `BogIronPit`, `CoalPit`, `PeatBog` are not in `CLASS_MAP` — saves with Marshlands/Mountains terrain will fail to deserialize these buildings
 - `VariableModifier` is in `CLASS_MAP` but `AggregatorModifier`, `ListAggModifier`, `SumAggModifier` (only `SumAggModifier` is present) are not fully covered
 - `visualAlerts` is a function reference — serialized as `undefined` (functions are skipped by `JSON.stringify`); after load, visual alerts will be missing
 - The `subscriptionPriorities` saved for Variables are restored as `_savedSubscriptionPriorities` but `init()` creates empty subscriptions for them rather than the actual callbacks — this is a placeholder that doesn't fully restore subscription behaviour
@@ -402,7 +397,7 @@ Re-exports everything from the variable system for convenient import in settleme
 Uppercases first character only. Does not handle multi-word strings.
 
 ### `roundNumber(number, dp=3)`
-`parseFloat(number.toFixed(dp))`. If `number` is `undefined`, throws (the `debugger` is commented out).
+`parseFloat(number.toFixed(dp))`. If `number` is `undefined`, `null`, or `NaN`, logs a warning and returns `0` instead of throwing.
 
 ### `percentagize(amount)`
 `roundNumber((amount - 1) * 100, 1)` — converts a multiplier (e.g. 1.05) to a percentage string ("5").
@@ -434,7 +429,7 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 ## UI Components
 
 ### `gameUI.js` — `GameUI`
-- Creates `new Game()` internally (ignores `game` prop from `App.js`)
+- Uses `props.game` passed from `App.js` (no longer creates its own `Game` instance)
 - 3-column MUI Grid: SidePanel (xs=2) | HUD+MainUI (xs=8) | Logger (xs=2)
 - `setSelected(selected)`: updates `this.state.selected`; passed down to child components
 - Shows `GameMessage` modal when `game.gameMessages.length > 0`

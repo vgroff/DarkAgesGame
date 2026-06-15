@@ -1,5 +1,4 @@
 import UIBase from './UIBase';
-import Game from './game.js'
 import HUD from './hud.js'
 import Grid from  '@mui/material/Grid';
 import MainUI from './mainUI.js'
@@ -11,7 +10,7 @@ import { CustomTooltip } from './utils';
 class GameUI extends UIBase {
     constructor(props) {
         super(props);
-        this.game = new Game();
+        this.game = props.game;
         this.gameClock = this.game.gameClock;
 
         this.addVariables([props.internalTimer]);

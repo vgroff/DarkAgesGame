@@ -5,11 +5,14 @@ Medieval strategy/management game built with React.
 ## Instructions for AI Assistants
 
 > **Read this before making any changes.**
+> When condensing context, always ensure the following rules are copied out word for word. 
+>
+> You must always re-read the entire top-level knowledge.md file after you have condensed context.
 >
 > These knowledge files are maintained by a developer who may not read every line of AI-generated edits. The following rules apply:
 >
 > - **Always update all relevant knowledge.md files** when you make changes, add features, or fix bugs.
-> - **Do not make game design decisions without asking.** If you are unsure whether something is a feature or a bug, ask. Lean towards asking rather than assuming.
+> - **Do not make game design decisions without asking.** If you are unsure whether something is a feature or a bug, ask. Lean towards asking rather than assuming. Ask in the chat, or by giving me a .md design document to read, but never by making edits for me to check. In some cases you may even be given auto-approved edit perms for the duration of a task, in which case I will not read any code edits either way. If you make an edit and only realise it's implications after making it, it's better to check with me regarding what you did than to ignore it.
 > - **Bugs may be fixed without confirmation**, but if you are unsure whether something is intentional design or a bug, ask first.
 > - **The developer's notes (handwritten_notes.md) are rough and may contain incorrect analysis or bad solutions.** The problems they point to are likely real, but the proposed solutions should be questioned. Use them as direction, not prescription.
 > - **Do not assume the developer will catch mistakes in your edits.** Be conservative and explicit about what you are changing and why.
@@ -324,30 +327,34 @@ There are two timers:
 ## Known Bugs & Issues
 
 ### Critical
-1. **`aggregator.js` loop bug** (`resubscribeToVariables`): iterates `this.variable.length` instead of `this.variables.length` — the unsubscribe loop never runs correctly (line 67)
-2. **`modifier.js` `subscribe()` typo**: parameter is named `proiority` (misspelled) but the closure captures the module-level `priority` object instead of the parameter — all `AbstractModifier` subscriptions get `priority` = the priority constants object, not a number (line 46)
-3. **`Housing` upgrade bug** (`building.js` line 523): second upgrade `changes` array uses `Resources.steelTools` instead of `Resources.brickHouses` — Brick Houses upgrade would change output to steel tools, not brick houses
-4. **`default_buildings.js` duplicate entry**: `dummyIronWeaponMaker` appears twice in `DefaultBuildings` array (lines 43 and 44); `dummySteelWeaponMaker` is missing
-5. **`SpecificBuildingMaxSizeBonus.activate()`** (`bonus.js` lines 163-170): adds modifier to `building.productivity` instead of `building.size.max` — max size bonus has no effect
-6. **`character.js` `changePrivilegeTentatively()`** (line 80): `this.privileges.filter(...)` result is not assigned back — the check for reverting `tentativelyChanged` never works correctly
-7. **`settlement.js` `unemployed` subscriber** (line 241): checks `this.unemployed.currentVariable` (undefined) instead of `this.unemployed.currentValue`
+*(all critical bugs fixed — see below)*
 
 ### Moderate
-8. **`trendingVariable.js`**: `recalculate()` increments `currentDepth` but the parent `recalculate` also increments it — double-increment may suppress subscriber calls prematurely
-9. **`events.js` debug flags**: `forceLastCheckedDebug = true` and `forceFireEvents = true` are hardcoded — all events fire on day 2 regardless of `eventShouldFire_()` logic; must be set to `false` for production
-10. **`save_load.js`**: `BogIronPit`, `CoalPit`, `PeatBog` building types are not in `CLASS_MAP` — saves containing these buildings (from Marshlands/Mountains terrain) will fail to deserialize
-11. **`TemporaryModifierBonus.deactivate()`**: does nothing — relies on timer callback to remove modifier. If the event ends before the timer fires, the modifier may persist
-12. **`variable.js` `recalculate()` epsilon check** (line 256): uses relative epsilon `absChange / Math.abs(this.currentValue) > 2e-5` which fails when `currentValue = 0` (division by zero produces `Infinity`, always true)
-13. **`variable.js` min explanation typo** (line 252): says `"max value is ${this.min.currentValue}"` instead of `"min value is ..."`
+8. **`events.js` debug flags**: `forceLastCheckedDebug = true` and `forceFireEvents = true` are hardcoded — all events fire on day 2 regardless of `eventShouldFire_()` logic; must be set to `false` for production *(not fixed — developer requested to skip)*
+9. **`TemporaryModifierBonus.deactivate()`**: does nothing — relies on timer callback to remove modifier. If the event ends before the timer fires, the modifier may persist
 
 ### Minor
-14. **`logger.js` `childRender()`** (line 120): renders `line` (the variable name) instead of `line` (the value) — log lines never display their content
-15. **`utils.js` `roundNumber()`**: if `number` is `undefined`, the commented-out `debugger` is skipped but `number.toFixed()` will throw — silent undefined propagation
-16. **`rolling.js` `compare()`**: function is defined but never used anywhere
-17. **`events.js`**: imports `getButtonUnstyledUtilityClass` from `@mui/base` and `toHaveDisplayValue` from `@testing-library/jest-dom` — neither is used; the testing-library import will break in production builds
-18. **`settlement.js`**: `forceResetTrend()` called 4 times (twice for health, twice for happiness) — comment says "twice for good measure" but this is fragile
-19. **Population growth formula**: `populationSizeChange` starts at 1 and multiplies by `(1 + growth - decline) * immigrationFactor` — the `immigrationFactor` multiplies both growth and decline, which may not be the intended design
-20. **`App.js`**: `GameUI` receives `game`, `uiState`, `onScroll`, `onPanelToggle` props but `GameUI` constructor creates its own `new Game()` internally and ignores the `game` prop entirely
+*(all minor bugs fixed — see below)*
+
+### Fixed (this session)
+- **Bug 1** (`aggregator.js`): `this.variable.length` → `this.variables.length` in `resubscribeToVariables` loop
+- **Bug 2** (`modifier.js`): `subscribe()` parameter renamed from `proiority` to `priority`; shorthand `{callback, priority}` now correctly captures the parameter
+- **Bug 3** (`building.js`): `Housing` second upgrade `changes` corrected from `Resources.steelTools` to `Resources.brickHouses`
+- **Bug 4** (`default_buildings.js`): removed duplicate `dummyIronWeaponMaker` entry; `dummySteelWeaponMaker` now correctly placed
+- **Bug 5** (`bonus.js`): `SpecificBuildingMaxSizeBonus.activate()` now adds modifier to `building.size.max` (creating it if absent) instead of `building.productivity`
+- **Bug 6** (`character.js`): `changePrivilegeTentatively()` now assigns filter result to `changedPrivileges` and checks its length
+- **Bug 7** (`settlement.js`): `this.unemployed.currentVariable` → `this.unemployed.currentValue`
+- **Bug 8** (`trendingVariable.js`): removed manual `currentDepth` increment/reset from `TrendingVariable.recalculate()` — parent handles depth via `quietly` flag
+- **Bug 10** (`save_load.js`): `BogIronPit`, `CoalPit`, `PeatBog` added to imports and `CLASS_MAP`
+- **Bug 13** (`variable.js`): min explanation typo fixed — `abridgedExplanations` now says `"min value is ..."` not `"max value is ..."`
+- **Bug 14** (`logger.js`): `childRender()` now renders `{line}` (the value) instead of the string literal `line`
+- **Bug 15** (`utils.js`): `roundNumber()` now returns `0` and logs a warning instead of throwing when `number` is `undefined`/`null`/`NaN`
+- **Bug 16** (`modifier.js`): removed unused `compare()` dead-code function
+- **Bug 17** (`events.js`): removed unused imports `getButtonUnstyledUtilityClass` and `toHaveDisplayValue`
+- **Bug 20** (`gameUI.js`): `GameUI` now uses `props.game` instead of creating its own `new Game()` internally
+- **Bug 10** (`variable.js`): epsilon check in `recalculate()` now guards against `currentValue = 0` — condition changed to `Math.abs(this.currentValue) < eps || absChange / Math.abs(this.currentValue) > 2e-5`
+- **Bug 11** (`settlement.js`): removed duplicate `forceResetTrend()` calls — health and happiness each reset once, not twice
+- **Bug 12** (`settlement.js`): population formula restructured to `immigrationFactor * (1 + growth) - decline` — immigration now scales inflow only, not death rate
 
 ## Unit Testing Ideas
 

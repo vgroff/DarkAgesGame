@@ -163,21 +163,25 @@ export class SpecificBuildingMaxSizeBonus extends SettlementBonus {
     activate(settlement) {
         for (const building of settlement.resourceBuildings) {
             if (building.name === this.buildingName) {
+                if (!building.size.max) {
+                    building.size.max = new Variable({startingValue: 0});
+                }
                 this.modifier = new VariableModifier({startingValue: this.amount, name: this.name, type: addition});
-                building.productivity.addModifier(this.modifier);
+                building.size.max.addModifier(this.modifier);
             }
         }
     }
     deactivate(settlement) {
         for (const building of settlement.resourceBuildings) {
             if (building.name === this.buildingName) {
-                building.productivity.removeModifier(this.modifier);
+                if (building.size.max) {
+                    building.size.max.removeModifier(this.modifier);
+                }
             }
         }
     }
     getEffectText() {
-        let percentage = percentagize(this.amount)
-        return `Increase maximum size of ${this.buildingName} by ${percentage}%`;
+        return `Increase maximum size of ${this.buildingName} by ${this.amount}`;
     }
 };
 

@@ -31,10 +31,8 @@ export class TrendingVariable extends Variable {
         this.timerStartVal = this.timer.currentValue;
     }
     recalculate(reason='', indent) {
-        this.currentDepth += 1;
         super.recalculate(`trending - ${reason}`, indent, true);
         this.trend(indent);
-        this.currentDepth = 0;
     }
     trend(indent) {
         this.currentlyTrendingTo = roundNumber(this.currentValue, this.trendingRoundTo);

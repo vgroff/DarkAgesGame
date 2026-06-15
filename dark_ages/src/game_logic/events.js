@@ -1,4 +1,3 @@
-import { getButtonUnstyledUtilityClass } from "@mui/base";
 import { Logger } from "./logger";
 import { rollSuccess, successToNumber, successToTruthy, majorFailureText, majorSuccessText, successText, getProbabilities, defaultMajorModifier, failureText } from "./rolling";
 import { daysInYear } from "./seasons";
@@ -9,7 +8,6 @@ import UIBase from "./UIBase";
 import { CustomTooltip, percentagize, randomRange, roundNumber, titleCase } from "./utils";
 import {Box, Button, Modal, Typography} from "@mui/material";
 import { Variable, multiplication, VariableModifier, addition } from "./UIUtils";
-import { toHaveDisplayValue } from "@testing-library/jest-dom/dist/matchers";
 
 const forceLastCheckedDebug = true; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
 const forceFireEvents = true; // Force all events to fire no matter what eventShouldFire_() says
