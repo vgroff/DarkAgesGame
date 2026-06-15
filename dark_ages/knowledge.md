@@ -330,13 +330,16 @@ There are two timers:
 *(all critical bugs fixed — see below)*
 
 ### Moderate
-8. **`events.js` debug flags**: `forceLastCheckedDebug = true` and `forceFireEvents = true` are hardcoded — all events fire on day 2 regardless of `eventShouldFire_()` logic; must be set to `false` for production *(not fixed — developer requested to skip)*
 9. **`TemporaryModifierBonus.deactivate()`**: does nothing — relies on timer callback to remove modifier. If the event ends before the timer fires, the modifier may persist
 
 ### Minor
 *(all minor bugs fixed — see below)*
 
 ### Fixed (this session)
+- **`events.js` debug flags**: `forceLastCheckedDebug` and `forceFireEvents` set to `false` — were hardcoded `true`, causing all events to fire on day 2 regardless of `eventShouldFire_()` logic
+- **`default_buildings.js` module-level side effects + timer leak**: `DefaultBuildings` was constructed at module import time, creating live `Timer` (with `setInterval`) and `ResourceStorage` instances. Replaced with `createDefaultBuildings()` factory and `getDefaultBuildings()` lazy singleton. `settlement.js` updated to call `getDefaultBuildings()`. `resource.defaultBuilding` assignment now happens at game construction time, not import time.
+- **`settlement.js` coal demand set twice**: the rationing loop subscribed to `gameClock` to set `coal.idealAmount` on every tick, duplicating `adjustCoalDemand()`. The redundant subscription removed; `adjustCoalDemand()` is the sole owner.
+- **`settlement.js` stale `debugger` statement**: removed leftover `debugger;` in the `unemployed` subscription callback.
 - **Bug 1** (`aggregator.js`): `this.variable.length` → `this.variables.length` in `resubscribeToVariables` loop
 - **Bug 2** (`modifier.js`): `subscribe()` parameter renamed from `proiority` to `priority`; shorthand `{callback, priority}` now correctly captures the parameter
 - **Bug 3** (`building.js`): `Housing` second upgrade `changes` corrected from `Resources.steelTools` to `Resources.brickHouses`

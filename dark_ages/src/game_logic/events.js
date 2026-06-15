@@ -9,9 +9,9 @@ import { CustomTooltip, percentagize, randomRange, roundNumber, titleCase } from
 import {Box, Button, Modal, Typography} from "@mui/material";
 import { Variable, multiplication, VariableModifier, addition } from "./UIUtils";
 
-const forceLastCheckedDebug = true; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
-const forceFireEvents = true; // Force all events to fire no matter what eventShouldFire_() says
-// Setting both of the above the true can make debugging events easier as it forces them all to fire on day 2 
+const forceLastCheckedDebug = false; // Force all events to fire on day 2 if this is set to true (besides Harvest and other manual overrides)
+const forceFireEvents = false; // Force all events to fire no matter what eventShouldFire_() says
+// Setting both of the above to true can make debugging events easier as it forces them all to fire on day 2
 
 class Event {
     constructor(props) {

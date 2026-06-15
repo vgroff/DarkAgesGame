@@ -196,11 +196,12 @@ Subclasses: `Celtic`, `Roman`. Each defines `getTraits()` returning a list of `T
 
 ## `events.js` — Event System
 
-### Debug Flags (MUST SET TO FALSE FOR PRODUCTION)
+### Debug Flags
 ```js
-const forceLastCheckedDebug = true;  // Forces all events to fire on day 2
-const forceFireEvents = true;         // Forces all events to fire regardless of eventShouldFire_()
+const forceLastCheckedDebug = false;  // If true: forces all events to fire on day 2
+const forceFireEvents = false;         // If true: forces all events to fire regardless of eventShouldFire_()
 ```
+Both flags are now correctly set to `false`. Set them to `true` temporarily when debugging event logic.
 
 ### `Event` (base class)
 - `checkEvery`: ticks between checks
@@ -261,8 +262,10 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 - Opens a Modal with event text, choice buttons, and applied choice display
 
 ### Known Issues
-- `forceLastCheckedDebug` and `forceFireEvents` are both `true` — must be changed before release
 - `TemporaryEventDisabled.deactivate()` is a no-op — the ban is set but never cleared on deactivate
+
+### Fixed
+- **`forceLastCheckedDebug` and `forceFireEvents`** set to `false` — were hardcoded `true`, causing all events to fire on day 2 regardless of `eventShouldFire_()` logic
 - `MineShaftCollapse.getEventChoices()` uses `Farm.name` instead of `IronMine.name` when calculating the size change amount (line 460)
 
 ### Developer Notes on Events

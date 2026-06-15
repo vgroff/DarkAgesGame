@@ -143,7 +143,6 @@ Note: there is also a duplicate subscription in the rationing loop (lines 180-18
 
 ### Known Issues
 
-3. **Coal demand set twice**: once in the rationing loop (lines 180-188) and once via `adjustCoalDemand()` subscription — redundant
 4. **`autoManageUnemployed` default false**: the auto-assign checkbox is only shown for player settlements; NPC settlements never auto-assign workers unless `unemployed < 0`
 5. **`setLeader()` creates new Variables**: every time a leader changes, new `localLegitimacy`, `support`, `rebellionSupport`, `totalRebellionSupport` Variables are created — old ones are not cleaned up, potentially leaking subscriptions
 6. **`removeLeader()`**: creates a new `support` Variable with `startingValue: 0` but does not clean up `localLegitimacy`, `rebellionSupport`, or `totalRebellionSupport`
@@ -429,8 +428,11 @@ Amount per click: 0.01, Ctrl=0.05, Shift=0.10.
 ### Known Issues
 
 1. **`recievedRation`** is misspelled throughout (should be `receivedRation`)
-2. **Coal demand set twice**: once in the rationing loop (settlement.js lines 180-188) and once via `adjustCoalDemand()` — the rationing loop subscription fires on every tick, redundant with `adjustCoalDemand()`
-3. **`getBasePopDemands()` must be called per settlement**: it creates new Variable instances each call. If called once and shared, all settlements would share the same `idealAmount` Variables — the function comment correctly notes this
+2. **`getBasePopDemands()` must be called per settlement**: it creates new Variable instances each call. If called once and shared, all settlements would share the same `idealAmount` Variables — the function comment correctly notes this
+
+### Fixed
+
+- **Coal demand set twice** (`settlement.js`): the rationing loop previously subscribed to `gameClock` to set `coal.idealAmount` on every tick, duplicating the work already done by `adjustCoalDemand()`. The redundant subscription in the rationing loop has been removed; `adjustCoalDemand()` is the sole owner of this logic.
 
 ---
 
@@ -531,8 +533,11 @@ After construction, sets `resource.defaultBuilding` for each resource that has a
 
 ### Known Issues
 
-1. **Dummy timer**: each call to `default_buildings.js` creates a `new Timer({every: 100000})` — this starts a `setInterval` that never gets cleared, leaking timers on every module load
-2. **Module-level side effects**: `DefaultBuildings` is constructed at module import time, including the dummy timer and resource storages — this makes testing difficult and causes side effects on import
+*(none — module-level side effects and timer leak fixed; see Fixed section below)*
+
+### Fixed
+
+- **Dummy timer leak + module-level side effects** (`default_buildings.js`): `DefaultBuildings` was constructed at module import time, creating live `Timer` instances (with `setInterval`) and `ResourceStorage` instances as side effects. Replaced with a `createDefaultBuildings()` factory and a `getDefaultBuildings()` lazy singleton. `settlement.js` updated to call `getDefaultBuildings()` instead of importing `DefaultBuildings` directly. `resource.defaultBuilding` is still set as a side effect of the first call, but this now happens at game construction time rather than at module import time.
 
 ---
 

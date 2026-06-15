@@ -16,7 +16,7 @@ import { titleCase } from '../utils.js';
 import { winter, summer, seasonToTempFactor  } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
 import { CourtIntrigue, CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack } from '../events.js';
-import { DefaultBuildings } from './default_buildings.js';
+import { getDefaultBuildings } from './default_buildings.js';
 import { Character, copyCulture, Cultures } from '../character.js';
 
 
@@ -178,16 +178,6 @@ export class Settlement {
                     new VariableModifier({type: multiplication, variable: this.populationSizeInternal}),
                 ]});
                 this.totalHousedInternal.addModifier(housed);
-            } else if (demand.resource === Resources.coal) {
-                this.gameClock.subscribe(() => {
-                    if (this.gameClock.translatedTime.season === winter) {
-                        demand.idealAmount.setNewBaseValue(1.5, 'winter amount');
-                    } else if (this.gameClock.translatedTime.season === summer) {
-                        demand.idealAmount.setNewBaseValue(0.5, 'summer amount');
-                    } else {
-                        demand.idealAmount.setNewBaseValue(1.0, 'normal amount');
-                    }
-                })
             }
             if (!demand.alwaysFullRations) {
                 this.rationsAchieved.push(rationAchieved);
@@ -238,12 +228,6 @@ export class Settlement {
                 this.adjustJobs();
             }
         });
-        this.unemployed.subscribe(() => {
-            // Searching for some kind of bug, should be fixed now
-            if (this.unemployed.currentValue < 0) {
-                debugger;
-            }
-        });
         this.logHref = makeTextFile(Variable.logText);
         this.logTextLength = 0;
         if (Variable.logging) {
@@ -260,7 +244,7 @@ export class Settlement {
 
         this.idealPrices = {};
         this.localPriceModifiers = {};
-        DefaultBuildings.forEach(building => {
+        getDefaultBuildings().forEach(building => {
             this.idealPrices[building.outputResource.name] = building.getIdealisedPrice(this.localPriceModifiers)
         });
         this.market = new Market({population: this.populationSizeExternal, idealPrices: this.idealPrices, resourceStorages: this.resourceStorages, tradeFactor: this.tradeFactor, bankrupt: props.bankrupt});
@@ -497,7 +481,7 @@ export class Settlement {
         this.recalculatePrices();
     }
     recalculatePrices(bankrupt) {
-        DefaultBuildings.forEach(building => {
+        getDefaultBuildings().forEach(building => {
             this.idealPrices[building.outputResource.name] = building.getIdealisedPrice(this.localPriceModifiers);
         })
         this.market.setNewIdealPrices(this.idealPrices);
