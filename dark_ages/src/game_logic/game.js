@@ -4,7 +4,7 @@ import { titleCase } from "./utils";
 import {Timer} from './timer'
 import { SumAggModifier } from "./variable/sumAgg";
 import {daysInYear, seasons} from './seasons'
-import { Farmlands, Marshlands } from "./settlement/terrain";
+import { Farmlands, Marshlands, Woodlands, Mountains, NoTerrain } from "./settlement/terrain";
 import { HarvestEvent, BanditRaid, CropBlight, Pestilence, WarmSpell, Blizzard, NomadsArrive, MerchantBoom, CourtIntrigue } from "./events";
 import { Character, Cultures, ChildhoodTraits, AbilityTraits, PersonalityTraits, FameTraits, TrinketTraits } from "./character";
 import { TradeAgreement, npcWillAcceptTrade } from "./diplomacy";
@@ -53,12 +53,20 @@ class Game {
         // Determine starting population from scenario (default 37)
         const startingPop = scenario?.startingPopulation ?? 37;
 
+        // Resolve player terrain from scenario string (default: Marshlands)
+        const TERRAIN_CLASS_MAP = { Marshlands, Farmlands, Woodlands, Mountains, NoTerrain };
+        const terrainClassName = scenario?.playerTerrain ?? 'Marshlands';
+        const TerrainClass = TERRAIN_CLASS_MAP[terrainClassName] || Marshlands;
+        if (scenario?.playerTerrain && !TERRAIN_CLASS_MAP[scenario.playerTerrain]) {
+            console.warn(`[Scenario] Unknown playerTerrain: "${scenario.playerTerrain}", defaulting to Marshlands`);
+        }
+
         // Create player character. If scenario says skipTraitSelection, we will
         // fill traits after construction (before the timer is released).
         this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic(), isPlayer: true, gameClock: this.gameClock});
         this.npcCharacter = new Character({name:"npc 2", culture: new Cultures.Celtic(), gameClock: this.gameClock, randomizeTraits: true});
         this.settlements = [
-            new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: startingPop, terrain: new Marshlands(), bankrupt: this.bankrupt, handleRebellion: this.handleRebellion.bind(this), addToTreasury: this.addToTreasury.bind(this)}),
+            new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: startingPop, terrain: new TerrainClass(), bankrupt: this.bankrupt, handleRebellion: this.handleRebellion.bind(this), addToTreasury: this.addToTreasury.bind(this)}),
             new Settlement({name: 'Village 2', gameClock: this.gameClock, leader: this.npcCharacter, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt, handleRebellion: () => {}})
         ];
         this.totalMarketIncome = new SumAggModifier(

@@ -48,20 +48,99 @@
  *     trinketTrait?: string,
  *   },
  *
+ *   // --- Difficulty modifiers (applied via _applyScenario) ---
+ *   researchRateMultiplier: number | null,   // null = no modifier; e.g. 1.15 = +15% research
+ *   generalProductivityBonus: number | null, // null = no modifier; multiplicative e.g. 1.05
+ *   legitimacyBonus: number | null,          // null = no modifier; additive e.g. 0.05
+ *   eventBanUntilDay: number | null,         // null = no ban; number = ban all settlement events until this day
+ *
  *   // --- Debug / event forcing ---
  *   // Force specific events to fire on day 1 (by event class name).
  *   forceEventsOnDayOne: string[],
  *   // Override the bandit raid ban period (default: 2 years = 24 ticks).
  *   // Set to 0 to allow bandit raid to fire immediately.
- *   banditRaidBanDays: number,
+ *   banditRaidBanDays: number | null,
  * }
  */
 
+/**
+ * Available terrain options for the player settlement in a New Game.
+ * The id must match the class name in terrain.js so game.js can look it up.
+ */
+export const TERRAIN_OPTIONS = [
+    {
+        id: 'Marshlands',
+        label: 'Marshlands',
+        description: 'Bog iron pit and peat bog available. Good for apothecary and lumber. Weaker farming and construction.',
+    },
+    {
+        id: 'Farmlands',
+        label: 'Farmlands',
+        description: 'Strong farming. Weaker apothecary and lumber. Coal pit available.',
+    },
+    {
+        id: 'Woodlands',
+        label: 'Woodlands',
+        description: 'Excellent lumber and apothecary. Hunting cabin bonus and extra max size. Weaker farming and construction.',
+    },
+    {
+        id: 'Mountains',
+        label: 'Mountains',
+        description: 'Coal mine and iron mine bonuses. Weaker farming and construction.',
+    },
+];
+
+/**
+ * Difficulty preset definitions.
+ * These are used by ScenarioSelectUI to populate the difficulty preset buttons
+ * and to set the slider limits for the "New Game" scenario.
+ *
+ * The "intended" preset is the hardest allowed (lower bound for sliders).
+ * The "easy" preset is the easiest allowed (upper bound for sliders).
+ */
+export const DIFFICULTY_PRESETS = {
+    intended: {
+        id: 'intended',
+        label: 'Intended',
+        description: 'Standard start with a one-year grace period before events begin.',
+        startingTreasury: 10,
+        researchRateMultiplier: null,
+        generalProductivityBonus: null,
+        legitimacyBonus: null,
+        eventBanUntilDay: 12,   // 1 year = 12 days
+        skipTraitSelection: false,
+    },
+    easy: {
+        id: 'easy',
+        label: 'Easy',
+        description: 'Extra gold, research bonus, productivity boost, legitimacy boost, and two years before events begin.',
+        startingTreasury: 30,
+        researchRateMultiplier: 1.15,
+        generalProductivityBonus: 1.05,
+        legitimacyBonus: 0.05,
+        eventBanUntilDay: 24,   // 2 years = 24 days
+        skipTraitSelection: false,
+    },
+};
+
+/**
+ * Slider limits for the difficulty options panel.
+ * Min = hardest allowed (Intended values), Max = easiest allowed (Easy values).
+ * These are derived from DIFFICULTY_PRESETS to keep them in sync.
+ */
+export const DIFFICULTY_SLIDER_LIMITS = {
+    startingTreasury:          { min: 10,   max: 30,   step: 5,    default: 10 },
+    researchRateMultiplier:    { min: 1.0,  max: 1.15, step: 0.01, default: 1.0,  nullMeaning: 1.0 },
+    generalProductivityBonus:  { min: 1.0,  max: 1.05, step: 0.01, default: 1.0,  nullMeaning: 1.0 },
+    legitimacyBonus:           { min: 0.0,  max: 0.05, step: 0.01, default: 0.0,  nullMeaning: 0.0 },
+    eventBanUntilDay:          { min: 12,   max: 24,   step: 1,    default: 12 },
+};
+
 export const SCENARIOS = {
-    default: {
-        id: 'default',
+    newGame: {
+        id: 'newGame',
         name: 'New Game',
-        description: 'Standard start. Set up your leader, then manage your settlement from scratch.',
+        description: 'Standard start. Set up your leader, then manage your settlement from scratch. Choose a difficulty preset or customise the options below.',
         startingPopulation: 37,
         startingTreasury: 10,
         startingResources: {},
@@ -73,53 +152,13 @@ export const SCENARIOS = {
         playerTraits: {},
         forceEventsOnDayOne: [],
         banditRaidBanDays: null, // null = use default (2 years)
-        // Difficulty modifiers (applied via _applyScenario)
-        researchRateMultiplier: null,       // null = no modifier
-        generalProductivityBonus: null,     // null = no modifier (multiplicative, e.g. 1.05)
-        legitimacyBonus: null,              // null = no modifier (additive, e.g. 0.05)
-        eventBanUntilDay: null,             // null = no ban; number = ban all settlement events until this day
-    },
-
-    intended: {
-        id: 'intended',
-        name: 'Intended Difficulty',
-        description: 'Standard start with a grace period — no events fire in the first year, giving you time to get established.',
-        startingPopulation: 37,
-        startingTreasury: 10,
-        startingResources: {},
-        startingBuildingSizes: {},
-        startingBuildingUpgrades: {},
-        startingArmy: {},
-        preResearched: [],
-        skipTraitSelection: false,
-        playerTraits: {},
-        forceEventsOnDayOne: [],
-        banditRaidBanDays: null,
+        // Terrain for the player settlement (class name string, matched in game.js)
+        playerTerrain: 'Marshlands',
+        // Difficulty modifiers — set to Intended defaults
         researchRateMultiplier: null,
         generalProductivityBonus: null,
         legitimacyBonus: null,
-        eventBanUntilDay: 12, // 1 year = 12 days
-    },
-
-    easy: {
-        id: 'easy',
-        name: 'Easy',
-        description: 'A more forgiving start: extra gold, a research bonus, a small productivity boost, a legitimacy boost, and no events for the first two years.',
-        startingPopulation: 37,
-        startingTreasury: 30,
-        startingResources: {},
-        startingBuildingSizes: {},
-        startingBuildingUpgrades: {},
-        startingArmy: {},
-        preResearched: [],
-        skipTraitSelection: false,
-        playerTraits: {},
-        forceEventsOnDayOne: [],
-        banditRaidBanDays: null,
-        researchRateMultiplier: 1.15,   // +15% research production
-        generalProductivityBonus: 1.05, // +5% general productivity
-        legitimacyBonus: 0.05,          // +5% legitimacy (additive)
-        eventBanUntilDay: 24,           // 2 years = 24 days
+        eventBanUntilDay: 12,   // 1 year grace period (Intended default)
     },
 
     banditRaid: {
