@@ -5,6 +5,7 @@ import React from 'react';
 import { saveGame, loadGame } from './game_logic/save_load';
 import Game from './game_logic/game';
 import ScenarioSelectUI from './game_logic/ScenarioSelectUI';
+import { ThemeContext, getTheme, THEME_LIST } from './game_logic/theme';
 
 function App() {
     const [timer] = React.useState(() => {
@@ -21,6 +22,17 @@ function App() {
         scrollPositions: new Map()
     });
     const fileInputRef = React.useRef(null);
+
+    // Theme state — persisted in localStorage so it survives page reloads
+    const [themeId, setThemeId] = React.useState(() => {
+        return localStorage.getItem('darkAgesTheme') || 'parchment';
+    });
+    const theme = getTheme(themeId);
+
+    const handleThemeChange = (id) => {
+        setThemeId(id);
+        localStorage.setItem('darkAgesTheme', id);
+    };
 
     /**
      * Called when the player clicks "Begin" on the scenario select screen.
@@ -163,37 +175,100 @@ function App() {
     }
 
     return (
-        <div>
-            <GameUI 
-                internalTimer={timer}
-                game={game}
-                uiState={uiState}
-                onScroll={handleScroll}
-                onPanelToggle={togglePanel}
-            />
-            <div style={{ margin: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button onClick={handleSave}>
-                    Save Game
-                </button>
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    onChange={handleLoad}
-                    accept=".json"
+        <ThemeContext.Provider value={theme}>
+            {/* Root page background */}
+            <div style={{ minHeight: '100vh', backgroundColor: theme.colors.pageBg }}>
+                <GameUI 
+                    internalTimer={timer}
+                    game={game}
+                    uiState={uiState}
+                    onScroll={handleScroll}
+                    onPanelToggle={togglePanel}
                 />
-                <button
-                    onClick={() => {
-                        // Return to scenario select — stop current game clock first
-                        if (game) game.gameClock.stopTimer();
-                        setGame(null);
-                        setScenarioChosen(false);
-                    }}
-                    style={{ marginLeft: '8px', color: '#888', fontSize: '12px' }}
-                >
-                    ↩ Scenario Select
-                </button>
+                {/* Bottom toolbar: save/load, scenario select, theme switcher */}
+                <div style={{
+                    margin: '0',
+                    padding: '6px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    backgroundColor: theme.colors.hudBg,
+                    borderTop: `1px solid ${theme.colors.hudBorder}`,
+                    flexWrap: 'wrap',
+                }}>
+                    <button
+                        onClick={handleSave}
+                        style={{
+                            backgroundColor: 'transparent',
+                            border: `1px solid ${theme.colors.btnBorder}`,
+                            color: theme.colors.btnText,
+                            padding: '3px 10px',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                        }}
+                    >
+                        Save Game
+                    </button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        onChange={handleLoad}
+                        accept=".json"
+                        style={{ color: theme.colors.textMuted, fontSize: '12px' }}
+                    />
+                    <button
+                        onClick={() => {
+                            // Return to scenario select — stop current game clock first
+                            if (game) game.gameClock.stopTimer();
+                            setGame(null);
+                            setScenarioChosen(false);
+                        }}
+                        style={{
+                            backgroundColor: 'transparent',
+                            border: `1px solid ${theme.colors.btnBorder}`,
+                            color: theme.colors.textMuted,
+                            padding: '3px 10px',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                        }}
+                    >
+                        ↩ Scenario Select
+                    </button>
+
+                    {/* Theme switcher */}
+                    <div style={{
+                        marginLeft: 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                    }}>
+                        <span style={{ fontSize: '11px', color: theme.colors.textMuted }}>Theme:</span>
+                        {THEME_LIST.map(t => (
+                            <button
+                                key={t.id}
+                                onClick={() => handleThemeChange(t.id)}
+                                title={t.description}
+                                style={{
+                                    backgroundColor: themeId === t.id ? theme.colors.accent : 'transparent',
+                                    border: `1px solid ${themeId === t.id ? theme.colors.accent : theme.colors.btnBorder}`,
+                                    color: themeId === t.id ? theme.colors.accentText : theme.colors.btnText,
+                                    padding: '3px 10px',
+                                    borderRadius: '3px',
+                                    cursor: 'pointer',
+                                    fontSize: '11px',
+                                    fontWeight: themeId === t.id ? 'bold' : 'normal',
+                                    transition: 'all 0.15s',
+                                }}
+                            >
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
-        </div>
+        </ThemeContext.Provider>
     );
 }
 

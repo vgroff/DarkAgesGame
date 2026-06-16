@@ -95,7 +95,7 @@ There are two timers:
 - `triggerChecks()` is called each tick to fire eligible events
 - `handleRebellion()` handles settlement loss; game-over if all settlements lost
 - `_applyScenario(scenario)` applies scenario overrides after full construction
-- Day 1 behaviour: trending variables (happiness/health) snap instantly; population is frozen via `min`/`max` modifiers on `populationSizeChange` (both removed on day 2)
+- Day 1 behaviour: trending variables (happiness/health) snap instantly to their long-term values on day 1 and continue to snap whenever the player changes anything (rationing, workers, etc.) before pressing Play. This is achieved by setting `trendingUpSpeed = trendingDownSpeed = 1` immediately at construction time (not just on tick 1). The `TrendingVariable.trend()` method also updates `trendingValueAtTurnStart` when speed=1, so each recalculation snaps independently. Speeds are restored on day 2. Population is frozen via `min`/`max` modifiers on `populationSizeChange` (both removed on day 2).
 
 ### Scenario System
 
@@ -125,6 +125,7 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 | `generalProductivityBonus` | number \| null | Multiplication modifier on settlement `generalProductivity` |
 | `legitimacyBonus` | number \| null | Addition modifier on player character `legitimacy` |
 | `eventBanUntilDay` | number \| null | Ban all settlement events until this day (grace period) |
+| `goodFirstYearHarvest` | boolean | If true (default), forces the first harvest to be a "success" outcome (modifier=1.0, "Good" quality). Prevents a terrible first harvest ruining the start. |
 
 **`_applyScenario(scenario)` steps (in order):**
 1. Starting resources — `rs.amount.setNewBaseValue(baseValue + amount)`
@@ -249,6 +250,24 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 - Group related UI elements into tabs (production, distribution, trading, research)
 - `HTMLTooltip` for explanatory hover text (white background, right-aligned text)
 - `CustomTooltip` wraps `HTMLTooltip` and accepts `Variable` instances, strings, or `{text, style}` objects
+
+### Theme System (`theme.js`)
+- Four themes selectable live during playtesting: **Parchment**, **Parchment Dark**, **Iron**, **Iron Slate**
+- Theme is stored in `localStorage` under the key `'darkAgesTheme'` and persists across reloads
+- `ThemeContext` (React Context) provides the current theme object to all components without prop drilling
+- Class components access the theme via `static contextType = ThemeContext` (or `ComponentName.contextType = ThemeContext` after the class), then read `this.context` in `childRender()` / `render()`
+- `App.js` owns the theme state, wraps the game in `<ThemeContext.Provider value={theme}>`, and renders theme-switcher buttons in the bottom toolbar
+- Each theme object has: `id`, `label`, `description`, and a `colors` object with ~25 named tokens:
+  - `pageBg`, `contentBg`, `contentBgAlt`, `contentBgHover` — background layers
+  - `textPrimary`, `textMuted`, `textAccent` — text colours
+  - `accent` — highlight/active colour (used for active HUD buttons, selected nav items)
+  - `borderLight`, `borderMid`, `borderStrong` — border intensity levels
+  - `hudBg`, `hudBorder` — HUD / toolbar backgrounds
+  - `sidePanelBg`, `sidePanelBorder` — side panel backgrounds
+  - `btnBorder`, `btnText`, `btnHoverBg` — button styling tokens
+  - `warningBg`, `warningBorder`, `warningText` — warning banner colours
+  - `modalBg`, `modalBorder` — modal overlay colours
+- Exports: `THEME_LIST` (array), `getTheme(id)`, `ThemeContext`, `useTheme()` hook
 
 ### Code Style
 - Keep Variable/Modifier pattern for all numeric game state

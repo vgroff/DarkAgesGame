@@ -2,6 +2,8 @@ import { Variable, VariableModifier, addition, subtraction, scaledMultiplication
 import { Button } from "@mui/material";
 import UIBase from "../UIBase";
 import { roundNumber } from "../utils";
+import { ThemeContext } from "../theme";
+import { RESOURCE_ICONS } from "./resource";
 
 
 export class Market {
@@ -123,8 +125,21 @@ export class MarketResourceComponent extends UIBase {
         const mr = this.marketResource;
         const selling = mr.desiredSellProp.currentValue > 0;
         const buying = mr.buyProp.currentValue > 0;
+        const theme = this.context;
+        const c = theme ? theme.colors : null;
+
+        const btnSx = c ? {
+            minHeight: '100%', maxHeight: '100%', minWidth: '120px', maxWidth: '120px',
+            borderColor: c.btnBorder,
+            color: c.btnText,
+            '&:hover': { borderColor: c.accentHover, backgroundColor: c.contentBgHover },
+        } : { minHeight: '100%', maxHeight: '100%', minWidth: '120px', maxWidth: '120px' };
+
+        const icon = RESOURCE_ICONS[mr.resource.name] || '';
+
         return <span style={{alignItems: "center", justifyContent: "center", fontSize: 14}}>
             <div>
+            {icon && <span style={{ fontSize: '16px', marginRight: '4px' }}>{icon}</span>}
             <VariableComponent variable={mr.marketSellPrice} /><br/>
             <VariableComponent variable={mr.marketBuyPrice} /><br/>
             {selling && <span>
@@ -138,8 +153,9 @@ export class MarketResourceComponent extends UIBase {
             </span>}
             {(buying || selling) && <span><VariableComponent variable={mr.netIncome} description="Net gold income from this resource per day (sell income minus buy costs)." /></span>}
             </div>
-            <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "120px", maxWidth: "120px"}}>Buy</Button>
-            <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "120px", maxWidth: "120x"}}>Sell</Button>
+            <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, 1)} sx={btnSx}>Buy</Button>
+            <Button variant={"outlined"} onClick={(e) => this.props.buyFromMarket(e, -1)} sx={btnSx}>Sell</Button>
         </span>
     }
 }
+MarketResourceComponent.contextType = ThemeContext;

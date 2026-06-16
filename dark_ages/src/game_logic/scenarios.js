@@ -109,6 +109,7 @@ export const DIFFICULTY_PRESETS = {
         legitimacyBonus: null,
         eventBanUntilDay: 12,   // 1 year = 12 days
         skipTraitSelection: false,
+        goodFirstYearHarvest: true,  // Force a decent (not amazing) first harvest
     },
     easy: {
         id: 'easy',
@@ -120,6 +121,7 @@ export const DIFFICULTY_PRESETS = {
         legitimacyBonus: 0.05,
         eventBanUntilDay: 24,   // 2 years = 24 days
         skipTraitSelection: false,
+        goodFirstYearHarvest: true,  // Force a decent (not amazing) first harvest
     },
 };
 
@@ -159,6 +161,7 @@ export const SCENARIOS = {
         generalProductivityBonus: null,
         legitimacyBonus: null,
         eventBanUntilDay: 12,   // 1 year grace period (Intended default)
+        goodFirstYearHarvest: true,  // Force a decent (not amazing) first harvest
     },
 
     banditRaid: {
@@ -211,7 +214,7 @@ export const SCENARIOS = {
         startingArmy: {
             'iron spears': 10,
             'stone swords': 5,
-            'shortbowmen': 8,
+            'short bows': 8,
         },
         preResearched: [
             // Military (needed for iron weaponry upgrade)
@@ -241,6 +244,7 @@ export const SCENARIOS = {
         generalProductivityBonus: null,
         legitimacyBonus: null,
         eventBanUntilDay: null,
+        goodFirstYearHarvest: true,  // Give a decent first harvest even in playtest scenarios
     },
 };
 

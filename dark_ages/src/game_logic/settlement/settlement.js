@@ -4,6 +4,7 @@ import Checkbox from '@mui/material/Checkbox';
 import {FormControlLabel, Tab, Tabs, Modal, Box, Typography} from '@mui/material';
 import React from 'react';
 import UIBase from '../UIBase';
+import { ThemeContext } from '../theme';
 import {Storage, Farm, LumberjacksHut, Brewery, CharcoalKiln, Quarry, Housing, ResourceBuilding, BuildingComponent, Stonecutters, HuntingCabin, Apothecary, ConstructionSite, Library, Roads, IronMine, Toolmaker, Church, Tavern, CoalMine, Bowyer, WeaponMaker} from './building.js'
 import { Resources, ResourceStorage, ResourceStorageComponent, UNIT_ATTACK_VALUES, UNIT_WEAPON_COSTS } from './resource.js';
 import { SumAggModifier } from '../variable/sumAgg.js';
@@ -707,9 +708,16 @@ export class SettlementComponent extends UIBase {
     /** Compact stats bar shown at the top of every tab — always bolded, support first */
     renderStatsBar() {
         const s = this.settlement;
-        const statStyle = {fontWeight: 'bold'};
-        const sepStyle = {color: '#aaa', margin: '0 8px'};
-        return <Grid item xs={12} style={{borderBottom: '1px solid #ddd', paddingBottom: '6px', marginBottom: '6px'}}>
+        const theme = this.context;
+        const c = theme ? theme.colors : null;
+        const statStyle = { fontWeight: 'bold', color: c ? c.textPrimary : 'inherit' };
+        const sepStyle = { color: c ? c.textMuted : '#aaa', margin: '0 8px' };
+        const barStyle = {
+            borderBottom: `1px solid ${c ? c.borderMid : '#ddd'}`,
+            paddingBottom: '6px',
+            marginBottom: '6px',
+        };
+        return <Grid item xs={12} style={barStyle}>
             <span style={statStyle}><VariableComponent showOwner={false} variable={s.support} description="Popular support = happiness + legitimacy + diplomacy effect − 1. Negative support accumulates rebellion pressure." /></span>
             <span style={sepStyle}>|</span>
             <span style={statStyle}><TrendingVariableComponent showOwner={false} variable={s.happiness} description="How content the population is. Affects productivity and rebellion risk." /></span>
@@ -722,19 +730,54 @@ export class SettlementComponent extends UIBase {
     renderProductionTab() {
         const s = this.settlement;
         const isPlayer = s.leader.isPlayer;
+        const theme = this.context;
+        const c = theme ? theme.colors : null;
+
+        // Divider between stat groups
+        const divider = <div style={{
+            borderTop: `1px solid ${c ? c.borderLight : '#e0e0e0'}`,
+            margin: '6px 0 4px',
+        }} />;
+
+        // Group label style
+        const groupLabel = (text) => <div style={{
+            fontSize: '10px',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: '0.07em',
+            color: c ? c.textMuted : '#aaa',
+            marginBottom: '2px',
+            marginTop: '2px',
+        }}>{text}</div>;
+
         return <Grid container justifyContent="center" alignItems="center" spacing={1}>
             {this.renderStatsBar()}
             <Grid item xs={12}>
+                {/* Group 1: Population */}
+                {groupLabel('Population')}
                 <VariableComponent showOwner={false} variable={s.populationSizeExternal} description="Total number of people living in this settlement." /><br />
                 <VariableComponent showOwner={false} variable={s.populationSizeChange} description="Rate of population change per tick. Values above 1 mean growth; below 1 mean decline." /><br />
+
+                {divider}
+
+                {/* Group 2: Jobs & Homes */}
+                {groupLabel('Jobs & Homes')}
                 <VariableComponent showOwner={false} variable={s.totalJobs.variable} description="Total job slots available across all buildings." /><br />
                 <VariableComponent showOwner={false} variable={s.jobsTaken.variable} description="Number of job slots currently filled by workers." /><br />
                 <VariableComponent showOwner={false} variable={s.unemployed} description="People without a job. Negative means more jobs than workers." /><br />
                 <VariableComponent showOwner={false} variable={s.homeless} description="People without housing. Homelessness reduces happiness, health, and population growth." /><br />
+
+                {divider}
+
+                {/* Group 3: Legitimacy */}
+                {groupLabel('Legitimacy')}
                 <VariableComponent showOwner={false} variable={s.localLegitimacy} description="How much the population accepts the current leader. Contributes to popular support." /><br />
-                {s.totalRebellionSupport.currentValue > 0
-                    ? <><CumulatorComponent showOwner={false} variable={s.totalRebellionSupport} description="Accumulated rebellion pressure. When this reaches 1, the settlement rebels and the leader is replaced." /><br /></>
-                    : null}
+                <VariableComponent showOwner={false} variable={s.rebellionSupport} description="Instantaneous rebellion pressure this tick (positive = support is negative). Accumulates into total rebellion support." /><br />
+                <CumulatorComponent showOwner={false} variable={s.totalRebellionSupport} description="Accumulated rebellion pressure. When this reaches 1, the settlement rebels and the leader is replaced." /><br />
+
+                {divider}
+
+                {/* Controls */}
                 <a href={s.logHref}>{Variable.logging ? 'Calculation Log' : 'logging is off'}</a><br />
                 {isPlayer ? <FormControlLabel control={<Checkbox onChange={(e, value) => {
                     s.autoManageUnemployed = value;
@@ -1104,4 +1147,5 @@ export class SettlementComponent extends UIBase {
         </Grid>;
     }
 }
+SettlementComponent.contextType = ThemeContext;
 

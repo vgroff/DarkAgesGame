@@ -781,14 +781,25 @@ export class HarvestEvent extends SettlementEvent {
         });
         // this.triggerChecks(); // Harvest fires immediately
         this.lastChecked = -this.checkEvery; // Harvest fires on day one of the year
+        // If true, the next getBonuses() call will produce a "success" (decent, not amazing) harvest.
+        // Set by _applyScenario when goodFirstYearHarvest is enabled.
+        this.forceGoodNextHarvest = props.forceGoodNextHarvest || false;
     }
     eventShouldFire_(day, settlements) {
         return true;
     }
     getBonuses() {
-        this.harvestSuccess = rollSuccess(0.7);
-        let harvestSuccess  = successToNumber(this.harvestSuccess, 3);
-        this.harvestModifier = 0.95 + 0.05*harvestSuccess; // varies between ~0.75 and ~1.15
+        if (this.forceGoodNextHarvest) {
+            // Force a "success" outcome — decent but not amazing (modifier = 1.0)
+            // successToNumber('success', 3) = 1, so 0.95 + 0.05*1 = 1.0
+            this.forceGoodNextHarvest = false; // Only applies once
+            this.harvestSuccess = successText;
+            this.harvestModifier = 1.0;
+        } else {
+            this.harvestSuccess = rollSuccess(0.7);
+            let harvestSuccess  = successToNumber(this.harvestSuccess, 3);
+            this.harvestModifier = 0.95 + 0.05*harvestSuccess; // varies between ~0.75 and ~1.15
+        }
         return [
             new SpecificBuildingProductivityBonus({name: "effect of weather on the harvest", building: Farm.name, amount: this.harvestModifier}),
             new ChangePriceBonus({name: "effect of weather on the harvest", resource: Resources.food, amount: 1/this.harvestModifier})
@@ -1297,9 +1308,9 @@ function buildPlayerArmy(settlement) {
     const army = new BattleArmy({ name: settlement.name, isPlayer: true });
 
     const BOW_UNITS = [
-        { name: 'shortbowmen', attack: 1.2 },
-        { name: 'warbowmen',   attack: 2.5 },
-        { name: 'longbowmen',  attack: 4.0 },
+        { name: 'short bows', attack: 1.2 },
+        { name: 'war bows',   attack: 2.5 },
+        { name: 'long bows',  attack: 4.0 },
     ];
     BOW_UNITS.forEach(({ name, attack }) => {
         const rs = settlement.resourceStorages.find(rs => rs.resource.name === name);
@@ -1361,7 +1372,7 @@ function buildPlayerArmy(settlement) {
 function buildBanditArmy(settlement) {
     const pop = settlement.populationSizeExternal.currentValue;
     // Count all player military units
-    const militaryNames = ['stone spears','stone swords','iron spears','iron swords','steel spears','steel short swords','steel long swords','shortbowmen','warbowmen','longbowmen'];
+    const militaryNames = ['stone spears','stone swords','iron spears','iron swords','steel spears','steel short swords','steel long swords','short bows','war bows','long bows'];
     let playerUnitCount = 0;
     for (const name of militaryNames) {
         const rs = settlement.resourceStorages.find(rs => rs.resource.name === name);

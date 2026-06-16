@@ -69,6 +69,7 @@ function difficultyFromScenario(scenario, currentTerrain) {
         legitimacyBonus:          toSliderValue('legitimacyBonus',          scenario.legitimacyBonus),
         eventBanUntilDay:         scenario.eventBanUntilDay ?? DIFFICULTY_SLIDER_LIMITS.eventBanUntilDay.default,
         skipTraitSelection:       scenario.skipTraitSelection ?? false,
+        goodFirstYearHarvest:     scenario.goodFirstYearHarvest ?? true,
         // Terrain is not part of difficulty presets — preserve current selection or use scenario default
         playerTerrain:            currentTerrain ?? scenario.playerTerrain ?? 'Marshlands',
     };
@@ -167,6 +168,7 @@ class ScenarioSelectUI extends React.Component {
             merged.legitimacyBonus          = fromSliderValue('legitimacyBonus',          difficulty.legitimacyBonus);
             merged.eventBanUntilDay         = difficulty.eventBanUntilDay;
             merged.skipTraitSelection       = difficulty.skipTraitSelection;
+            merged.goodFirstYearHarvest     = difficulty.goodFirstYearHarvest;
             merged.playerTerrain            = difficulty.playerTerrain;
         }
 
@@ -554,6 +556,24 @@ function DifficultyPanel({ difficulty, activePreset, onApplyPreset, onSetField }
                 formatValue={v => v === 0 ? 'None' : `+${Math.round(v * 100)}%`}
                 onChange={v => onSetField('legitimacyBonus', v)}
                 hint="Additive bonus to your character's legitimacy."
+            />
+
+            {/* Good first year harvest */}
+            <FormControlLabel
+                control={
+                    <Checkbox
+                        checked={difficulty.goodFirstYearHarvest ?? true}
+                        onChange={e => onSetField('goodFirstYearHarvest', e.target.checked)}
+                        size="small"
+                        sx={{ padding: '2px 4px', color: '#8b6914', '&.Mui-checked': { color: '#8b6914' } }}
+                    />
+                }
+                label={
+                    <Typography sx={{ fontSize: '13px', color: '#3d2b00' }}>
+                        Decent first year harvest (not amazing, not terrible)
+                    </Typography>
+                }
+                sx={{ display: 'block', marginTop: '6px', marginLeft: 0 }}
             />
 
             {/* Skip trait selection */}

@@ -6,6 +6,7 @@ import {Resources} from './resource.js'
 import Grid from  '@mui/material/Grid';
 import Button from '@mui/material/Button';
 import {Logger} from '../logger.js';
+import { ThemeContext } from '../theme';
 
 const outputResourceChange = "new output resource";
 const inputResourceChange = "new input resource";
@@ -410,6 +411,9 @@ export class BuildingComponent extends UIBase {
     }
     childRender() {
         this.building = this.props.building;
+        const theme = this.context;
+        const c = theme ? theme.colors : null;
+
         let extraStyle = {}
         let extraVars = [];
         if (this.building instanceof ResourceBuilding) {
@@ -430,42 +434,112 @@ export class BuildingComponent extends UIBase {
                 })
             }
         }
-        return <Grid container spacing={0.5} style={{border:"2px solid #2196f3", borderRadius:"7px", alignItems: "center", justifyContent: "center"}} >
+
+        // Themed border colour — replaces the hardcoded blue
+        const borderColor = c ? c.borderStrong : '#2196f3';
+        const cardStyle = {
+            border: `1px solid ${borderColor}`,
+            borderRadius: '6px',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: c ? c.contentBgAlt : 'transparent',
+        };
+
+        // Themed button sx — active and disabled states
+        const activeBtnSx = c ? {
+            fontSize: 12,
+            minWidth: '100%', maxWidth: '100%', minHeight: '100%', maxHeight: '100%',
+            borderColor: c.btnBorder,
+            color: c.btnText,
+            '&:hover': { borderColor: c.accentHover, backgroundColor: c.contentBgHover },
+        } : { fontSize: 12, minWidth: '100%', maxWidth: '100%', minHeight: '100%', maxHeight: '100%' };
+
+        const disabledBtnSx = c ? {
+            fontSize: 12,
+            minWidth: '100%', maxWidth: '100%', minHeight: '100%', maxHeight: '100%',
+            borderColor: c.borderLight,
+            color: c.textMuted,
+        } : { fontSize: 12, minWidth: '100%', maxWidth: '100%', minHeight: '100%', maxHeight: '100%' };
+
+        const workerBtnSx = c ? {
+            minHeight: '100%', maxHeight: '100%', minWidth: '6px', maxWidth: '6px',
+            borderColor: c.btnBorder,
+            color: c.btnText,
+            '&:hover': { borderColor: c.accentHover, backgroundColor: c.contentBgHover },
+        } : { minHeight: '100%', maxHeight: '100%', minWidth: '6px', maxWidth: '6px' };
+
+        const workerDisabledBtnSx = c ? {
+            minHeight: '100%', maxHeight: '100%', minWidth: '6px', maxWidth: '6px',
+            borderColor: c.borderLight,
+            color: c.textMuted,
+        } : { minHeight: '100%', maxHeight: '100%', minWidth: '6px', maxWidth: '6px' };
+
+        const nameStyle = c ? { color: c.textPrimary, ...extraStyle } : extraStyle;
+
+        const BUILDING_ICONS = {
+            'Farm': '🌾',
+            'Hunting Cabin': '🍖',
+            'Housing': '🏠',
+            "Lumberjack's Hut": '🪵',
+            'Charcoal Kiln': '🔥',
+            'Brewery': '🍺',
+            'Apothecary': '🌿',
+            'Library': '📚',
+            'Construction Site': '🏗️',
+            'Church': '⛪',
+            'Tavern': '🎭',
+            'Roads': '🛤️',
+            'Quarry': '🪨',       // produces stone → stone icon
+            'Stonecutters': '🧱',
+            'Iron Mine': '⛏️',
+            'Bog Iron Pit': '⛏️', // produces iron → iron icon
+            'Coal Mine': '🔥',    // produces coal → coal icon
+            'Coal Pit': '🔥',     // produces coal → coal icon
+            'Peat Bog': '🔥',     // produces coal → coal icon
+            'Toolmaker': '🔨',
+            'Bowyer': '🏹',
+            'Weapon Maker': '⚔️',
+            'Storage': '📦',
+        };
+        const buildingIcon = BUILDING_ICONS[titleCase(this.building.displayName)] || '';
+
+        return <Grid container spacing={0.5} style={cardStyle}>
             <Grid item xs={9}>
                 <CustomTooltip items={this.toolTipVars.concat(extraVars)} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                    <span style={extraStyle} onClick={()=>{Logger.setInspect(this.building)}}>{titleCase(this.building.displayName)} {this.building.sizeJobsMultiplier ? <span>{this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span> : this.building.passiveProduction ? this.building.passiveProduction.currentValue : this.building.size.currentValue} </span>
+                    <span style={nameStyle} onClick={()=>{Logger.setInspect(this.building)}}>{buildingIcon} {titleCase(this.building.displayName)} {this.building.sizeJobsMultiplier ? <span>{this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span> : this.building.passiveProduction ? this.building.passiveProduction.currentValue : this.building.size.currentValue} </span>
                 </CustomTooltip>
             </Grid>
-            {this.props.addWorkers && this.props.isPlayerOwned ? 
+            {this.props.addWorkers && this.props.isPlayerOwned ?
             <Grid item xs={3} style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>
-                <Button variant={this.props.canAddWorkers ? "outlined" : "disabled"} onClick={(e) => this.props.addWorkers(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
-                <Button variant={this.props.canRemoveWorkers ? "outlined" : "disabled"} onClick={(e) => this.props.addWorkers(e, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>
+                <Button variant={this.props.canAddWorkers ? "outlined" : "disabled"} onClick={(e) => this.props.addWorkers(e, 1)} sx={this.props.canAddWorkers ? workerBtnSx : workerDisabledBtnSx}>+</Button>
+                <Button variant={this.props.canRemoveWorkers ? "outlined" : "disabled"} onClick={(e) => this.props.addWorkers(e, -1)} sx={this.props.canRemoveWorkers ? workerBtnSx : workerDisabledBtnSx}>-</Button>
             </Grid> : null}
-            {this.props.isPlayerOwned ? 
+            {this.props.isPlayerOwned ?
             <CustomTooltip items={this.props.buildText} style={{textAlign: "left"}}>
             <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
-                    <Button variant={this.props.canBuild ? "outlined" : "disabled"} onClick={(e) => this.props.addToBuildingSize(e, 1)} sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Build</Button>
+                    <Button variant={this.props.canBuild ? "outlined" : "disabled"} onClick={(e) => this.props.addToBuildingSize(e, 1)} sx={this.props.canBuild ? activeBtnSx : disabledBtnSx}>Build</Button>
             </Grid>
             </CustomTooltip> : null}
-            {this.props.isPlayerOwned ? 
+            {this.props.isPlayerOwned ?
             <CustomTooltip items={["reduce size by 1"]} style={{textAlign: "left"}}>
             <Grid item xs={6} style={{textAlign:"center", padding: "2px",alignItems: "center", justifyContent: "center"}}>
-                <Button variant={this.props.canDemolish ? "outlined" : "disabled"} onClick={(e) => this.props.addToBuildingSize(e, -1)} sx={{fontSize: 12,  minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Demolish</Button>
+                <Button variant={this.props.canDemolish ? "outlined" : "disabled"} onClick={(e) => this.props.addToBuildingSize(e, -1)} sx={this.props.canDemolish ? activeBtnSx : disabledBtnSx}>Demolish</Button>
             </Grid>
             </CustomTooltip>  : null}
-            {this.props.isPlayerOwned ? 
+            {this.props.isPlayerOwned ?
             <CustomTooltip items={this.props.upgradeText} style={{textAlign: "left"}}>
             <Grid item xs={6} style={{textAlign:"center",  padding: "2px",alignItems: "center", justifyContent: "center"}}>
-                <Button variant={this.props.canUpgrade ? "outlined" : "disabled"} onClick={(e) => this.props.upgradeBuilding(e, 1)} sx={{fontSize: 12, minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Upgrade</Button>
+                <Button variant={this.props.canUpgrade ? "outlined" : "disabled"} onClick={(e) => this.props.upgradeBuilding(e, 1)} sx={this.props.canUpgrade ? activeBtnSx : disabledBtnSx}>Upgrade</Button>
             </Grid>
             </CustomTooltip>  : null}
-            {this.props.isPlayerOwned ? 
+            {this.props.isPlayerOwned ?
             <Grid item xs={6} style={{textAlign:"center",  padding: "2px",alignItems: "center", justifyContent: "center"}}>
-                <Button variant={this.props.canDowngrade ? "outlined" : "disabled"} onClick={(e) => this.props.upgradeBuilding(e, -1)}  sx={{fontSize: 12, minWidth:"100%", maxWidth: "100%", minHeight: "100%", maxHeight: "100%"}}>Downgrade</Button>
+                <Button variant={this.props.canDowngrade ? "outlined" : "disabled"} onClick={(e) => this.props.upgradeBuilding(e, -1)} sx={this.props.canDowngrade ? activeBtnSx : disabledBtnSx}>Downgrade</Button>
             </Grid>  : null}
         </Grid>
     }
 }
+BuildingComponent.contextType = ThemeContext;
 
 
 export class Storage extends Building {

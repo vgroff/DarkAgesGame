@@ -171,6 +171,11 @@ Note: there is also a duplicate subscription in the rationing loop (lines 180-18
 - All key stat variables in Production tab wrapped in `CustomTooltip` with plain-English descriptions
 - Imports `Tab`, `Tabs` from `@mui/material`; `CustomTooltip` from `../utils.js`
 
+**Production tab — Legitimacy group** includes (in order):
+1. `s.localLegitimacy` — the smoothed legitimacy value
+2. `s.rebellionSupport` — instantaneous rebellion pressure this tick (positive = support is negative); shown so the player can see what is accumulating each tick
+3. `s.totalRebellionSupport` — cumulated total rebellion support (shown as `CumulatorComponent`)
+
 ### Known Issues
 
 4. **`autoManageUnemployed` default false**: the auto-assign checkbox is only shown for player settlements; NPC settlements never auto-assign workers unless `unemployed < 0`
@@ -355,11 +360,13 @@ Finds demand by `idealDesiredProp` reference, removes the modifier from `demand.
 ### Military Unit Resources
 10 unit resources added (§4.1): `stoneSpears`, `stoneSwords`, `ironSpears`, `ironSwords`, `steelSpears`, `steelShortSwords`, `steelLongSwords`, `shortbowmen`, `warbowmen`, `longbowmen`. All have `cumulates: true`.
 
+**Note on bow unit naming**: The JS object keys in `Resources` remain `shortbowmen`, `warbowmen`, `longbowmen` (unchanged), but their `.name` string properties (used for display and all lookup tables) are `"short bows"`, `"war bows"`, `"long bows"`. All lookup tables (`UNIT_ATTACK_VALUES`, `UNIT_WEAPON_COSTS`, `BOW_UNIT_NAMES`, `BOW_UNITS` in events.js, `militaryNames` in events.js, `startingArmy` in scenarios.js) use the `.name` string.
+
 Exported constants:
-- `UNIT_ATTACK_VALUES` — `{ 'stone spears': 0.6, ... }` attack value per unit
+- `UNIT_ATTACK_VALUES` — `{ 'stone spears': 0.6, ..., 'short bows': ..., 'war bows': ..., 'long bows': ... }` attack value per unit
 - `UNIT_WEAPON_COSTS` — `{ 'stone spears': { resourceName: 'stoneWeaponry', amount: 1 }, ... }` weapon cost per unit
 - `MELEE_UNIT_NAMES` — array of melee unit resource names
-- `BOW_UNIT_NAMES` — array of bow unit resource names
+- `BOW_UNIT_NAMES` — `['short bows', 'war bows', 'long bows']`
 
 `ironWeaponry.startingAmount = 5` (player starts with 5 iron weapons).
 
@@ -383,12 +390,20 @@ Exported constants:
 
 **Military**: `stoneWeaponry` (×50), `bows` (×50), `ironWeaponry` (×50), `steelWeaponry` (×50)
 
+### `RESOURCE_ICONS`
+
+- Exported constant from `resource.js`: `{ [resourceName: string]: string }` mapping lowercase resource names to emoji icons
+- Used by `ResourceStorageComponent`, `RationingComponent`, and `MarketResourceComponent` to prefix resource names with an icon
+- Also used by `BuildingComponent` via a local `BUILDING_ICONS` map (keyed by `titleCase(displayName)`)
+- To add a new resource icon, add an entry to `RESOURCE_ICONS` in `resource.js`
+
 ### `ResourceStorageComponent`
 
 - Subscribes to `resourceStorage.amount`
 - Cumulating resources: shows `CumulatorComponent` (with expected change)
 - Flow resources: shows `VariableComponent` with "Excess" prefix
 - Tooltip shows resource description
+- Prefixes resource name with emoji icon from `RESOURCE_ICONS`
 
 ### Known Issues
 

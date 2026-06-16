@@ -139,6 +139,48 @@ export class ResourceStorage {
     }
 }
 
+/**
+ * Emoji icons for resources and rationing, keyed by resource name (lowercase).
+ * Exported so building.js, rationing.js, and market.js can share the same map.
+ */
+export const RESOURCE_ICONS = {
+    'food':               '🌾',
+    'coal':               '🔥',
+    'mud huts':           '🏚️',
+    'wooden huts':        '🏠',
+    'brick houses':       '🏛️',
+    'beer':               '🍺',
+    'medicinal herbs':    '🌿',
+    'religion':           '⛪',
+    'entertainment':      '🎭',
+    'labour time':        '⚒️',
+    'research':           '📚',
+    'wood':               '🪵',
+    'dirt path access':   '🛤️',
+    'gravel path access': '🛤️',
+    'brick road access':  '🛤️',
+    'stone':              '🪨',
+    'stone bricks':       '🧱',
+    'iron':               '⛏️',
+    'stone tools':        '🔨',
+    'iron tools':         '🔨',
+    'steel tools':        '🔨',
+    'stone weaponry':     '⚔️',
+    'iron weaponry':      '⚔️',
+    'steel weaponry':     '⚔️',
+    'bows':               '🏹',
+    'stone spears':       '⚔️',
+    'stone swords':       '⚔️',
+    'iron spears':        '⚔️',
+    'iron swords':        '⚔️',
+    'steel spears':       '⚔️',
+    'steel short swords': '⚔️',
+    'steel long swords':  '⚔️',
+    'short bows':         '🏹',
+    'war bows':           '🏹',
+    'long bows':          '🏹',
+};
+
 export class ResourceStorageComponent extends UIBase {
     constructor(props) {
         super(props);
@@ -150,15 +192,16 @@ export class ResourceStorageComponent extends UIBase {
     }
     childRender() {
         this.resourceStorage = this.props.resourceStorage;
+        const icon = RESOURCE_ICONS[this.resourceStorage.resource.name] || '';
 
         if (this.resourceStorage.cumulates) {
             return <span style={{alignItems: "center", justifyContent: "center"}}>
-                <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>{titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
+                <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>{icon} {titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
                 <CumulatorComponent variable={this.resourceStorage.amount} showName={false}/><br />
             </span>
         } else {
             return <span style={{alignItems: "center", justifyContent: "center"}}>
-                <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>Excess {titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
+                <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>{icon} Excess {titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
                 <VariableComponent variable={this.resourceStorage.amount} showName={false}/><br />
             </span>
         }
@@ -201,9 +244,9 @@ export const Resources = {
     steelSpears:      new Resource({ name: "steel spears",       storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with steel spears (1 steel weapon each). Attack: 2.0" }),
     steelShortSwords: new Resource({ name: "steel short swords", storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with short swords (4 steel weapons each). Attack: 4.0" }),
     steelLongSwords:  new Resource({ name: "steel long swords",  storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with long swords (10 steel weapons each). Attack: 10.0" }),
-    shortbowmen:      new Resource({ name: "shortbowmen",        storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with shortbows (1 bow each). Attack: 1.2" }),
-    warbowmen:        new Resource({ name: "warbowmen",          storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with warbows (3 bows each). Attack: 2.5" }),
-    longbowmen:       new Resource({ name: "longbowmen",         storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with longbows (5 bows each). Attack: 4.0" }),
+    shortbowmen:      new Resource({ name: "short bows",         storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with short bows (1 bow each). Attack: 1.2" }),
+    warbowmen:        new Resource({ name: "war bows",           storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with war bows (3 bows each). Attack: 2.5" }),
+    longbowmen:       new Resource({ name: "long bows",          storageMultiplier: null, productionRatio: 1, cumulates: true, description: "Armed with long bows (5 bows each). Attack: 4.0" }),
 };
 
 /**
@@ -217,9 +260,9 @@ export const UNIT_ATTACK_VALUES = {
     'steel spears':       2.0,
     'steel short swords': 4.0,
     'steel long swords':  10.0,
-    'shortbowmen':        1.2,
-    'warbowmen':          2.5,
-    'longbowmen':         4.0,
+    'short bows':         1.2,
+    'war bows':           2.5,
+    'long bows':          4.0,
 };
 
 /**
@@ -234,12 +277,12 @@ export const UNIT_WEAPON_COSTS = {
     'steel spears':       { resourceName: 'steelWeaponry', amount: 1 },
     'steel short swords': { resourceName: 'steelWeaponry', amount: 4 },
     'steel long swords':  { resourceName: 'steelWeaponry', amount: 10 },
-    'shortbowmen':        { resourceName: 'bows',          amount: 1 },
-    'warbowmen':          { resourceName: 'bows',          amount: 3 },
-    'longbowmen':         { resourceName: 'bows',          amount: 5 },
+    'short bows':         { resourceName: 'bows',          amount: 1 },
+    'war bows':           { resourceName: 'bows',          amount: 3 },
+    'long bows':          { resourceName: 'bows',          amount: 5 },
 };
 
 /** All melee unit resource names (for army building). */
 export const MELEE_UNIT_NAMES = ['stone spears','stone swords','iron spears','iron swords','steel spears','steel short swords','steel long swords'];
 /** All bow unit resource names (for army building). */
-export const BOW_UNIT_NAMES = ['shortbowmen','warbowmen','longbowmen'];
+export const BOW_UNIT_NAMES = ['short bows','war bows','long bows'];

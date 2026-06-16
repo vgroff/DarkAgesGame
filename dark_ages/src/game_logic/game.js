@@ -134,7 +134,13 @@ class Game {
 
         this.tradeAgreements = []; // §5 active TradeAgreement instances (max 2)
 
-        this.harvestEvent = new HarvestEvent({settlements: this.settlements, timer: this.gameClock});
+        this.harvestEvent = new HarvestEvent({
+            settlements: this.settlements,
+            timer: this.gameClock,
+            // Force a decent (not amazing) first harvest if the scenario requests it.
+            // This flag is consumed by getBonuses() on the first fire and then cleared.
+            forceGoodNextHarvest: scenario?.goodFirstYearHarvest ?? true,
+        });
         this.globalEvents = [
             this.harvestEvent
         ];
@@ -146,6 +152,10 @@ class Game {
         // This runs after all normal construction is complete so all systems are wired up.
         if (scenario) {
             this._applyScenario(scenario);
+            // Auto-assign workers once so pre-built buildings are staffed before the player
+            // hits Play. Only runs for non-default scenarios (i.e. whenever _applyScenario
+            // is called), since the default new game has no pre-built structures to staff.
+            this.settlements[0].adjustJobs();
         }
 
         // ── Day 1 behaviour ────────────────────────────────────────────────────
@@ -153,26 +163,17 @@ class Game {
         // On day 1 we want two things:
         //
         // 1. Trending variables (happiness, health) snap instantly to any change
-        //    rather than slowly trending. We achieve this by temporarily setting
-        //    trendingUpSpeed and trendingDownSpeed to 1 for the duration of day 1,
-        //    then restoring the original values on day 2.
-        //    This subscription fires at priority 1000 (before the TrendingVariable's
-        //    own timer subscription, which fires at default priority 0).
+        //    rather than slowly trending. We subscribe directly to happiness and
+        //    health and call forceResetTrend() whenever they recalculate, so any
+        //    UI change (rationing, workers, etc.) immediately snaps the displayed
+        //    value to the long-term target. A re-entrancy guard prevents the
+        //    forceResetTrend() call from triggering itself. Subscriptions are
+        //    removed on day 2.
         //
         // 2. No population change on day 1. We add a `min` and `max` modifier to
         //    populationSizeChange that clamps it to exactly 1.0, so the Cumulator
         //    multiplies by 1 and population stays flat. The modifier is removed on
         //    day 2.
-
-        // Store original trending speeds so we can restore them
-        const trendingVarsToSnap = this.settlements.map(s => ({
-            happiness: s.happiness,
-            health: s.health,
-            origHappinessUp: s.happiness.trendingUpSpeed,
-            origHappinessDown: s.happiness.trendingDownSpeed,
-            origHealthUp: s.health.trendingUpSpeed,
-            origHealthDown: s.health.trendingDownSpeed,
-        }));
 
         // Population freeze: one modifier per settlement clamping populationSizeChange to 1
         const popFreezeModifiers = this.settlements.map(s => {
@@ -184,39 +185,66 @@ class Game {
             return { settlement: s, modMin, modMax };
         });
 
-        // Day 1: set trending speeds to 1 AND force-reset the trend baseline so that
-        // currentValue snaps immediately to the target (currentlyTrendingTo).
-        // This fires at priority 1000, before TrendingVariable's own timer subscription
-        // (priority 0), so the speeds are already 1 when storeCurrentValue() runs.
-        // We also call forceResetTrend() to ensure trendingValueAtTurnStart is up to date
-        // before the tick's trend() call, so currentValue == currentlyTrendingTo after day 1.
+        // ── Day 1 instant snap ──────────────────────────────────────────────────
+        //
+        // Subscribe to happiness and health directly. Whenever either recalculates
+        // (triggered by any modifier change — rationing, workers, events, etc.),
+        // call forceResetTrend() to snap trendingValueAtTurnStart to the new target.
+        // This makes the displayed value immediately reflect the new long-term state.
+        //
+        // Re-entrancy guard: forceResetTrend() itself calls recalculate(), which
+        // would re-trigger this subscription. The `snapping` flag prevents that.
+        //
+        // Subscriptions are removed on day 2 (first timer tick after Play is pressed).
+        const snapSubs = [];
+        this.settlements.forEach(s => {
+            let snappingHappiness = false;
+            let snappingHealth = false;
+
+            const snapHappiness = () => {
+                if (snappingHappiness) return;
+                snappingHappiness = true;
+                s.happiness.forceResetTrend();
+                snappingHappiness = false;
+            };
+            const snapHealth = () => {
+                if (snappingHealth) return;
+                snappingHealth = true;
+                s.health.forceResetTrend();
+                snappingHealth = false;
+            };
+
+            s.happiness.subscribe(snapHappiness, 1000, 'day 1: snap happiness trend');
+            s.health.subscribe(snapHealth, 1000, 'day 1: snap health trend');
+
+            // Snap immediately so the UI shows correct values before Play is pressed
+            s.happiness.forceResetTrend();
+            s.health.forceResetTrend();
+
+            snapSubs.push({ happiness: s.happiness, health: s.health, snapHappiness, snapHealth });
+        });
+
+        // Day 1 timer tick: re-snap after all supply/demand calculations have run
+        // (fires at priority 1000, before TrendingVariable's own timer subscription)
         const snapTrendsOnDayOne = () => {
             if (this.gameClock.currentValue !== 1) return;
-            trendingVarsToSnap.forEach(({ happiness, health }) => {
-                happiness.trendingUpSpeed = 1;
-                happiness.trendingDownSpeed = 1;
-                health.trendingUpSpeed = 1;
-                health.trendingDownSpeed = 1;
-                // forceResetTrend snaps trendingValueAtTurnStart to the current target,
-                // so the subsequent storeCurrentValue() call will see no gap to trend across.
+            snapSubs.forEach(({ happiness, health }) => {
                 happiness.forceResetTrend();
                 health.forceResetTrend();
             });
         };
-        this.gameClock.subscribe(snapTrendsOnDayOne, 1000, 'day 1: snap trending speeds');
+        this.gameClock.subscribe(snapTrendsOnDayOne, 1000, 'day 1: snap trending on tick');
 
-        // Day 2: restore original trending speeds and remove population freeze modifiers
+        // Day 2: remove snap subscriptions and population freeze modifiers
         const restoreOnDayTwo = () => {
             if (this.gameClock.currentValue !== 2) return;
             this.gameClock.unsubscribe(restoreOnDayTwo);
             this.gameClock.unsubscribe(snapTrendsOnDayOne);
 
-            // Restore trending speeds
-            trendingVarsToSnap.forEach(({ happiness, health, origHappinessUp, origHappinessDown, origHealthUp, origHealthDown }) => {
-                happiness.trendingUpSpeed = origHappinessUp;
-                happiness.trendingDownSpeed = origHappinessDown;
-                health.trendingUpSpeed = origHealthUp;
-                health.trendingDownSpeed = origHealthDown;
+            // Remove direct snap subscriptions from happiness/health
+            snapSubs.forEach(({ happiness, health, snapHappiness, snapHealth }) => {
+                happiness.unsubscribe(snapHappiness);
+                health.unsubscribe(snapHealth);
             });
 
             // Remove population freeze modifiers
@@ -225,7 +253,7 @@ class Game {
                 settlement.populationSizeChange.removeModifier(modMax);
             });
         };
-        this.gameClock.subscribe(restoreOnDayTwo, 999, 'day 2: restore trending speeds and pop freeze');
+        this.gameClock.subscribe(restoreOnDayTwo, 999, 'day 2: remove snap subs and pop freeze');
     }
 
     /**

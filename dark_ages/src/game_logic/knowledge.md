@@ -33,6 +33,7 @@ There are knowledge.md files like this one at most levels of the repo, read thos
 | `UIUtils.js` | Re-export barrel for the variable system |
 | `utils.js` | `titleCase`, `roundNumber`, `HTMLTooltip`, `CustomTooltip` |
 | `config.js` | Global UI config (`buttonVariant: "outlined"`) |
+| `theme.js` | Theme system: `ThemeContext`, four themes, colour tokens |
 | `gameUI.js` | Top-level 3-column layout component |
 | `hud.js` | HUD: timer, harvest quality, play/pause/next-day, treasury |
 | `mainUI.js` | Main panel: renders Settlement or Character view |
@@ -71,13 +72,17 @@ Constructor signature: `constructor(scenario)` — `scenario` is an optional pla
 12. Sets up day-1 behaviour (see below)
 
 ### Day-1 Behaviour
-Two timer subscriptions are added unconditionally (regardless of scenario):
+Several subscriptions and modifiers are added unconditionally at construction time (regardless of scenario):
 
-**Priority 1000 — `snapTrendsOnDayOne`**: fires on tick 1 only. Sets `trendingUpSpeed` and `trendingDownSpeed` to 1 for all settlements' `happiness` and `health`, then calls `forceResetTrend()` on each. This ensures trending variables snap instantly to any change on day 1 (before `TrendingVariable`'s own subscription at priority 0 runs).
+**Direct snap subscriptions on `happiness` and `health`**: For each settlement, a callback is subscribed directly to `s.happiness` and `s.health` at priority 1000. Whenever either variable recalculates (triggered by any modifier change — rationing, workers, events, etc.), the callback calls `forceResetTrend()` to snap `trendingValueAtTurnStart` to the new target immediately. This means any UI change the player makes before pressing Play is reflected instantly in the displayed health/happiness values, as if the settlement had always been in that state. A re-entrancy guard (`snappingHappiness` / `snappingHealth` boolean flags) prevents `forceResetTrend()` from re-triggering itself. Both subscriptions are removed on day 2.
 
-**Priority 999 — `restoreOnDayTwo`**: fires on tick 2 only, then unsubscribes both itself and `snapTrendsOnDayOne`. Restores original trending speeds and removes the population freeze modifiers.
+**Priority 1000 — `snapTrendsOnDayOne`** (timer subscription): fires on tick 1 only. Calls `forceResetTrend()` on all settlements' `happiness` and `health` after all supply/demand calculations have run for the first tick.
+
+**Priority 999 — `restoreOnDayTwo`** (timer subscription): fires on tick 2 only, then unsubscribes itself, `snapTrendsOnDayOne`, and all direct snap subscriptions from `happiness`/`health`. Also removes the population freeze modifiers.
 
 **Population freeze**: `min` and `max` modifiers (both clamping to 1.0) are added to each settlement's `populationSizeChange` at construction time. This prevents any population change on day 1. Both modifiers are removed by `restoreOnDayTwo` on tick 2.
+
+**`TrendingVariable` is not modified**: the snap behaviour is entirely implemented in `game.js` via subscriptions and `forceResetTrend()`. `TrendingVariable.trend()` behaves normally at all times.
 
 ### `_applyScenario(scenario)`
 Called at the end of the constructor when a scenario is provided. All game systems are fully wired before this runs. Steps (in order):
@@ -94,6 +99,8 @@ Called at the end of the constructor when a scenario is provided. All game syste
 10. **General productivity bonus** — adds a multiplication modifier to `playerSettlement.generalProductivity`
 11. **Legitimacy bonus** — adds an addition modifier to `playerCharacter.legitimacy`
 12. **Event ban until day N** — sets `event.bannedUntil = scenario.eventBanUntilDay` on all player settlement events where the new ban is longer than the existing one
+
+After `_applyScenario` returns, the constructor immediately calls `this.settlements[0].adjustJobs()` to auto-staff any pre-built buildings before the player hits Play. This only runs when a scenario is provided (i.e. never for the bare default new game).
 
 ### `init()` — Post-Load Re-wiring
 Called after `loadGame()`. Order matters:
@@ -395,6 +402,7 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 - `harvestSuccess = rollSuccess(0.7)` — 70% base success chance
 - `harvestModifier = 0.95 + 0.05 * successToNumber(result, 3)` — ranges ~0.8 to ~1.1
 - Applies `SpecificBuildingProductivityBonus` to Farm and `ChangePriceBonus` to food (inverse of harvest modifier)
+- `forceGoodNextHarvest` flag: if true, the next `getBonuses()` call forces `harvestSuccess = successText` and `harvestModifier = 1.0` (decent, not amazing). Flag is cleared after one use. Set via `props.forceGoodNextHarvest` at construction time (used by `goodFirstYearHarvest` scenario field).
 
 ### `EventEffect` subclasses
 - `ChangeEventDuration`: multiplies `eventDuration` by `amount`
@@ -597,6 +605,26 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 
 ## UI Components
 
+### `theme.js` — Theme System
+- Provides a live-switchable theme system for the game UI
+- **Four themes**: `parchment` (soft aged paper), `parchmentDark` (darker parchment), `iron` (dark iron/charcoal), `ironSlate` (cooler slate variant)
+- **`ThemeContext`**: React Context whose value is the current theme object; default value is the `parchment` theme
+- **`THEME_LIST`**: exported array of all theme objects (used to render switcher buttons)
+- **`getTheme(id)`**: returns a theme by its `id` string, falling back to `parchment`
+- **`useTheme()`**: hook for functional components
+- **Class component pattern**: add `static contextType = ThemeContext` (or `ComponentName.contextType = ThemeContext` after the class definition), then access `const c = this.context?.colors` in `childRender()` / `render()`
+- **`App.js` integration**: owns theme state (persisted in `localStorage` key `'darkAgesTheme'`), wraps game in `<ThemeContext.Provider value={theme}>`, renders theme-switcher buttons in the bottom toolbar
+- **Color tokens** (all accessed via `theme.colors.*`):
+  - `pageBg`, `contentBg`, `contentBgAlt`, `contentBgHover` — layered backgrounds
+  - `textPrimary`, `textMuted`, `textAccent` — text colours
+  - `accent` — active/highlight colour (active HUD buttons, selected nav items)
+  - `borderLight`, `borderMid`, `borderStrong` — border intensity levels
+  - `hudBg`, `hudBorder` — HUD and bottom toolbar
+  - `sidePanelBg`, `sidePanelBorder` — left navigation panel
+  - `btnBorder`, `btnText`, `btnHoverBg` — button styling
+  - `warningBg`, `warningBorder`, `warningText` — warning banner
+  - `modalBg`, `modalBorder` — modal overlays
+
 ### `gameUI.js` — `GameUI`
 - Uses `props.game` passed from `App.js` (no longer creates its own `Game` instance)
 - 3-column MUI Grid: SidePanel (xs=2) | HUD+MainUI (xs=8) | Logger (xs=2)
@@ -621,11 +649,12 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 
 ### `hud.js` — `HUD`
 - Subscribes to `treasury` and `gameClock`
-- Shows: `TimerComponent` (translated time text), harvest quality with tooltip
-- Play button: disabled if running or force-stopped
-- Pause button: disabled if not running
-- Next Day button: disabled if running; calls `forceTick()`
-- Treasury: `CumulatorComponent` showing current value and expected change
+- Uses `ThemeContext` (`HUD.contextType = ThemeContext`)
+- Shows: `TimerComponent` (translated time text, 18px bold serif), harvest quality with tooltip (14px bold, stands out)
+- Treasury: 🪙 prefix, 22px bold serif, `CumulatorComponent` showing current value and expected change
+- **Play** button (▶ Play): disabled if running or force-stopped; filled with `accent` colour when active
+- **Pause** button (⏸ Pause): disabled if not running; filled with `accent` colour when active
+- **Next Day** button (🌅 Next Day): disabled if running; calls `forceTick()`; filled with `accent` colour when active
 
 ### `mainUI.js` — `MainUI`
 - Subscribes to `internalTimer` (re-renders on every internal tick)
@@ -634,8 +663,10 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 
 ### `sidePanelUI.js` — `SidePanel`
 - Subscribes to `internalTimer`
-- Shows player character name (clickable)
-- Shows all settlement names (clickable)
+- Uses `ThemeContext` (`SidePanel.contextType = ThemeContext`)
+- Shows section labels: **Characters** (above player character), **Settlements** (above settlement list)
+- All nav items are 16px; selected item highlighted with `accent` colour
+- **Research** nav item (📜 Research) sits between Characters and Settlements; toggles `showResearch` state in `GameUI` via `onToggleResearch` prop; clicking a settlement/character also closes the Research panel
 - Clicking calls `setSelected` to update `GameUI` state
 
 ---

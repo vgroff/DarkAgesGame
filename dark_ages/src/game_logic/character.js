@@ -11,6 +11,7 @@ import { addition, multiplication, Variable, VariableComponent, VariableModifier
 import { CustomTooltip, titleCase } from "./utils";
 import { createResearchTree, ResearchComponent } from "./settlement/research";
 import { Resources } from "./settlement/resource";
+import { ThemeContext } from "./theme";
 
 export class Faction {
     constructor(props) {
@@ -839,10 +840,42 @@ export class CharacterComponent extends UIBase {
     }
     childRender() {
         this.character = this.props.character;
+        const theme = this.context;
+        const c = theme ? theme.colors : null;
+
+        const presetBoxStyle = c ? {
+            marginBottom: '10px',
+            padding: '8px 10px',
+            border: `1px solid ${c.borderMid}`,
+            borderRadius: '4px',
+            backgroundColor: c.contentBgAlt,
+        } : {
+            marginBottom: '8px', padding: '6px',
+            border: '1px solid #ccc', borderRadius: '4px', background: '#f9f9f9',
+        };
+
+        const presetLabelStyle = c ? {
+            fontSize: '12px',
+            fontWeight: 'bold',
+            color: c.textMuted,
+            marginBottom: '6px',
+            display: 'block',
+        } : { fontSize: '12px', fontWeight: 'bold' };
+
+        const presetBtnSx = c ? {
+            mr: 0.5, mb: 0.5,
+            fontSize: '12px',
+            padding: '3px 8px',
+            textTransform: 'none',
+            borderColor: c.btnBorder,
+            color: c.btnText,
+            '&:hover': { borderColor: c.accentHover, backgroundColor: c.contentBgHover },
+        } : { mr: 0.5, mb: 0.5, fontSize: '11px', padding: '2px 6px', textTransform: 'none' };
+
         return <div>
-            {/* Quick presets — only shown for player character before traits are chosen */}
-            {this.character.isPlayer && <div style={{marginBottom: '8px', padding: '6px', border: '1px solid #ccc', borderRadius: '4px', background: '#f9f9f9'}}>
-                <b style={{fontSize: '12px'}}>Quick Presets:</b><br />
+            {/* Quick presets — only shown for player character */}
+            {this.character.isPlayer && <div style={presetBoxStyle}>
+                <span style={presetLabelStyle}>Quick Presets:</span>
                 {LEADER_PRESETS.map(preset =>
                     <CustomTooltip key={preset.name} items={[preset.description]} style={{textAlign: 'center'}}>
                         <Button
@@ -850,7 +883,7 @@ export class CharacterComponent extends UIBase {
                             variant="outlined"
                             size="small"
                             onClick={() => this.applyPreset(preset)}
-                            sx={{ mr: 0.5, mb: 0.5, fontSize: '11px', padding: '2px 6px', textTransform: 'none' }}
+                            sx={presetBtnSx}
                         >{preset.name}</Button>
                     </CustomTooltip>
                 )}
@@ -887,6 +920,7 @@ export class CharacterComponent extends UIBase {
         </div>
     }
 }
+CharacterComponent.contextType = ThemeContext;
 
 // Notes
 // - Link events in with character stats. Make events have temporary effects to support, or more rarely, to legitimacy

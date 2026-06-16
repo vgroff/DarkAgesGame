@@ -1,8 +1,9 @@
 import { Variable, VariableComponent, VariableModifier, addition, division, invLogit, roundTo, multiplication, exponentiation } from "../UIUtils";
-import { Resources } from "./resource";
+import { Resources, RESOURCE_ICONS } from "./resource";
 import UIBase from '../UIBase';
 import Button from '@mui/material/Button';
 import { priority } from "../variable/modifier";
+import { ThemeContext } from '../theme';
 
 
 
@@ -301,14 +302,31 @@ export class RationingComponent extends UIBase {
         this.demandedRation = this.props.demandedRation;
         this.recievedRation = this.props.recievedRation;
         this.idealRation = this.props.idealRation;
+        const theme = this.context;
+        const c = theme ? theme.colors : null;
+
+        const btnSx = c ? {
+            minHeight: '100%', maxHeight: '100%', minWidth: '6px', maxWidth: '6px',
+            borderColor: c.btnBorder,
+            color: c.btnText,
+            '&:hover': { borderColor: c.accentHover, backgroundColor: c.contentBgHover },
+        } : { minHeight: '100%', maxHeight: '100%', minWidth: '6px', maxWidth: '6px' };
+
+        // Extract resource name from variable name (e.g. "food ration (% of ideal)" → "food")
+        const rationName = this.demandedRation.name || '';
+        const resourceName = rationName.replace(/ ration.*$/i, '').toLowerCase();
+        const icon = RESOURCE_ICONS[resourceName] || '';
+
         return <span style={{alignItems: "center", justifyContent: "center"}}>
             <div>
+            {icon && <span style={{ fontSize: '16px', marginRight: '4px' }}>{icon}</span>}
             <VariableComponent variable={this.idealRation} /><br/>
             <VariableComponent variable={this.demandedRation} /><br/>
             <VariableComponent variable={this.recievedRation} /><br/>
             </div>
-            <Button variant={"outlined"} onClick={(e) => this.props.addRations(e, 1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>+</Button>
-            <Button variant={"outlined"} onClick={(e) => this.props.addRations(e, -1)} sx={{minHeight: "100%", maxHeight: "100%", minWidth: "6px", maxWidth: "6px"}}>-</Button>
+            <Button variant={"outlined"} onClick={(e) => this.props.addRations(e, 1)} sx={btnSx}>+</Button>
+            <Button variant={"outlined"} onClick={(e) => this.props.addRations(e, -1)} sx={btnSx}>-</Button>
         </span>
     }
 }
+RationingComponent.contextType = ThemeContext;
