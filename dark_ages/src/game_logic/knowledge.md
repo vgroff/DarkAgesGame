@@ -14,14 +14,14 @@ Core game systems and mechanics. All files in `src/game_logic/`.
 
 There are knowledge.md files like this one at most levels of the repo, read those if you are missing context for a task. Always update all relevant knowledge.md files as you make changes/add features/fix bugs etc...
 
-## File Index (updated for MVP)
-- `diplomacy.js` — `TradeAgreement` class + `npcWillAcceptTrade()` (§5). Kept separate from `game.js` to avoid circular imports.
-
 ## File Index
 
 | File | Purpose |
 |------|---------|
-| `game.js` | `Game` class — top-level orchestrator |
+| `game.js` | `Game` class — top-level orchestrator; accepts optional scenario config |
+| `scenarios.js` | Scenario definitions (plain data objects, no game class imports) |
+| `ScenarioSelectUI.js` | Scenario selection screen shown before game starts |
+| `diplomacy.js` | `TradeAgreement` class + `npcWillAcceptTrade()` (§5). Kept separate from `game.js` to avoid circular imports. |
 | `timer.js` | `Timer` extends `Variable`; drives all ticks via `setInterval` |
 | `seasons.js` | Season constants; `daysInYear = 12` |
 | `rolling.js` | Probabilistic roll helpers |
@@ -42,24 +42,58 @@ There are knowledge.md files like this one at most levels of the repo, read thos
 
 ## `game.js` — Game Class
 
-### Key Properties (MVP additions)
+### Key Properties
+- `this._scenario` — the scenario config object passed to the constructor (or `null`)
 - `this.npcCharacter` — NPC character stored on game instance (for auto-research subscription)
 - `this.warningsShown` — `Set` tracking which first-time warnings have been shown (keyed by `warningType_settlementName`)
 - `this.isGameOver` — boolean; set to `true` when player loses all settlements
 - `this.tradeAgreements` — array of active `TradeAgreement` instances (max 2)
 
+### Module-level constants
+- `EVENT_CLASS_MAP` — maps event class name strings to constructors (for `forceEventsOnDayOne` lookup)
+- `ALL_TRAIT_CLASSES` — flat array of all trait constructors from all 5 trait group arrays (for `playerTraits` name lookup)
+
 ### Construction
+Constructor signature: `constructor(scenario)` — `scenario` is an optional plain config object from `scenarios.js`.
+
 1. Creates `gameClock` (`Timer`, 800ms per tick, `daysInYear=12`)
-2. Creates `playerCharacter` (Celtic culture, `isPlayer: true`)
-3. Creates NPC character with randomized traits
-4. Creates two `Settlement` instances (Village 1 = Marshlands, Village 2 = Farmlands)
+2. Reads `startingPopulation` from scenario (default 37) and `startingTreasury` (default 10)
+3. Creates `playerCharacter` (Celtic culture, `isPlayer: true`)
+4. Creates NPC character with randomized traits
+5. Creates two `Settlement` instances (Village 1 = Marshlands, Village 2 = Farmlands)
    - Village 1 (player) receives `addToTreasury` callback for auto-sell excess goods income
-5. Creates `totalMarketIncome` as a `SumAggModifier` over all settlements' `market.netMarketIncome`
-6. Creates `treasury` as a `Cumulator` with `totalMarketIncome` as modifier; starting value 10
-7. Subscribes to treasury to set `bankrupt` Variable (0 or 1) when `baseValue` crosses zero
-8. Creates `HarvestEvent` as the only global event
-9. Calls `initEvents()` to fire any events that should fire immediately
-10. Initialises `messageLog = []` — permanent log of all game messages (never cleared)
+6. Creates `totalMarketIncome` as a `SumAggModifier` over all settlements' `market.netMarketIncome`
+7. Creates `treasury` as a `Cumulator` with `totalMarketIncome` as modifier; starting value from scenario
+8. Subscribes to treasury to set `bankrupt` Variable (0 or 1) when `baseValue` crosses zero
+9. Creates `HarvestEvent` as the only global event
+10. Calls `initEvents()` to fire any events that should fire immediately
+11. If `scenario` provided, calls `_applyScenario(scenario)`
+12. Sets up day-1 behaviour (see below)
+
+### Day-1 Behaviour
+Two timer subscriptions are added unconditionally (regardless of scenario):
+
+**Priority 1000 — `snapTrendsOnDayOne`**: fires on tick 1 only. Sets `trendingUpSpeed` and `trendingDownSpeed` to 1 for all settlements' `happiness` and `health`, then calls `forceResetTrend()` on each. This ensures trending variables snap instantly to any change on day 1 (before `TrendingVariable`'s own subscription at priority 0 runs).
+
+**Priority 999 — `restoreOnDayTwo`**: fires on tick 2 only, then unsubscribes both itself and `snapTrendsOnDayOne`. Restores original trending speeds and removes the population freeze modifiers.
+
+**Population freeze**: `min` and `max` modifiers (both clamping to 1.0) are added to each settlement's `populationSizeChange` at construction time. This prevents any population change on day 1. Both modifiers are removed by `restoreOnDayTwo` on tick 2.
+
+### `_applyScenario(scenario)`
+Called at the end of the constructor when a scenario is provided. All game systems are fully wired before this runs. Steps (in order):
+
+1. **Starting resources** — for each `[resourceName, amount]` in `scenario.startingResources`, finds the matching `ResourceStorage` and calls `rs.amount.setNewBaseValue(baseValue + amount)`
+2. **Building sizes** — calls `building.forceNewSize(targetSize)` for each entry in `scenario.startingBuildingSizes`; also sets `building.unlocked = true` if size > 0
+3. **Building upgrades** — calls `building.upgrade(resourceStorages, force=true)` sequentially up to the specified upgrade index for each entry in `scenario.startingBuildingUpgrades`
+4. **Pre-research** — for each name in `scenario.preResearched`, sets `item.researched = true` on the faction tree item and calls `settlement.activateBonus()` for each bonus on the matching settlement research item
+5. **Pre-arm soldiers** — calls `settlement.armSoldiers(unitResource, count)` for each entry in `scenario.startingArmy` (weapon resources must already be in storage from step 1)
+6. **Player traits** — if `skipTraitSelection`, fills all 5 trait groups using `scenario.playerTraits` names (looked up case-insensitively) or falls back to first available trait in each group
+7. **Bandit raid ban** — if `scenario.banditRaidBanDays !== null`, sets `banditRaidEvent.bannedUntil`
+8. **Force events on day 1** — adds a priority-998 timer subscription that fires on tick 1, directly calls `event.fire()` for each named event class
+9. **Research rate multiplier** — adds a multiplication modifier to Library `productivity` (if Library exists)
+10. **General productivity bonus** — adds a multiplication modifier to `playerSettlement.generalProductivity`
+11. **Legitimacy bonus** — adds an addition modifier to `playerCharacter.legitimacy`
+12. **Event ban until day N** — sets `event.bannedUntil = scenario.eventBanUntilDay` on all player settlement events where the new ban is longer than the existing one
 
 ### `init()` — Post-Load Re-wiring
 Called after `loadGame()`. Order matters:
@@ -81,11 +115,68 @@ Pushes `message` to both `gameMessages` (transient modal queue) and `messageLog`
 Adds `amount` directly to `treasury.baseValue`. Used by settlements to credit auto-sold excess goods income. Only acts if `amount > 0`.
 
 ### `handleRebellion(settlement)`
-Calls `addGameMessage()` with rebellion text. If `playerCharacter.settlements.length === 0`, calls `addGameMessage()` with game-over text. **Bug**: does not actually stop the game or prevent further play.
+Calls `addGameMessage()` with rebellion text. If `playerCharacter.settlements.length === 0`, calls `addGameMessage()` with game-over text, calls `gameClock.forceStopTimer("game over")`, and sets `isGameOver = true`.
 
 ### Known Issues
-- `handleRebellion` does not stop the game clock or prevent further interaction after game over
 - `init()` re-subscribes the game clock to `triggerChecks()` but the constructor does not — so after load there is a subscription but before load there is none (events only fire via `triggerChecks()` called from `Settlement` constructor indirectly via timer)
+- Day-1 snap/freeze subscriptions are not serialized — after loading a save, they will not be present (this is acceptable since day 1 has already passed)
+
+---
+
+## `scenarios.js` — Scenario Definitions
+
+Plain data objects only — no game class imports. All interpretation happens in `game.js`.
+
+### Exports
+- `SCENARIOS` — object keyed by scenario id (`default`, `intended`, `easy`, `banditRaid`)
+- `SCENARIO_LIST` — `Object.values(SCENARIOS)` array (used by `ScenarioSelectUI`)
+
+### Scenario Shape
+See the top-level `knowledge.md` Scenario System section for the full field reference.
+
+### Building Name Strings
+Building names in `startingBuildingSizes` and `startingBuildingUpgrades` must match the static `.name` property on each building class:
+- `'farm'` (Farm)
+- `'Mud Huts'` (Housing)
+- `"lumberjack's hut"` (LumberjacksHut)
+- `'charcoal kiln'` (CharcoalKiln)
+- `'storage'` (Storage)
+- `'construction site'` (ConstructionSite)
+- `'Stone Weapon Maker'` (WeaponMaker)
+- `'bowyer'` (Bowyer)
+- `'brewery'` (Brewery)
+- `'apothecary'` (Apothecary)
+- `'Roads'` (Roads)
+- `'library'` (Library)
+
+---
+
+## `ScenarioSelectUI.js` — Scenario Selection Screen
+
+React class component shown before the game starts.
+
+### Props
+- `onStart: (scenarioConfig) => void` — called when player clicks "Begin"
+
+### State
+- `selectedId` — id of the currently selected scenario (default: `'default'`)
+- `debugOverrides` — `{ forceEventsOnDayOne: [], banditRaidBanDays: null, skipTraitSelection: false, startingTreasury: null }`
+- `showDebug` — boolean; controls visibility of debug options panel
+
+### Key Methods
+- `getSelectedScenario()` — returns the scenario object for `selectedId`
+- `buildFinalConfig()` — merges selected scenario with debug overrides; `forceEventsOnDayOne` is a union; other overrides take precedence only if non-null/non-false
+- `toggleDebugEvent(eventName)` — adds/removes event name from `debugOverrides.forceEventsOnDayOne`
+- `setDebugOverride(key, value)` — sets a single debug override key
+
+### Debug Panel
+- Force events on day 1: checkboxes for all 8 forceable events; scenario-locked events shown as disabled
+- Skip trait selection: checkbox; disabled if scenario already sets it
+- Bandit raid ban period: slider 0–48 days + Reset button
+- Starting treasury: slider 0–2000 gold (step 10) + Reset button
+
+### `ScenarioTag` helper
+Small coloured pill badge shown in scenario cards for quick summary info.
 
 ---
 

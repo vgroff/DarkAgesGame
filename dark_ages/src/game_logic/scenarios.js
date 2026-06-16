@@ -73,6 +73,53 @@ export const SCENARIOS = {
         playerTraits: {},
         forceEventsOnDayOne: [],
         banditRaidBanDays: null, // null = use default (2 years)
+        // Difficulty modifiers (applied via _applyScenario)
+        researchRateMultiplier: null,       // null = no modifier
+        generalProductivityBonus: null,     // null = no modifier (multiplicative, e.g. 1.05)
+        legitimacyBonus: null,              // null = no modifier (additive, e.g. 0.05)
+        eventBanUntilDay: null,             // null = no ban; number = ban all settlement events until this day
+    },
+
+    intended: {
+        id: 'intended',
+        name: 'Intended Difficulty',
+        description: 'Standard start with a grace period — no events fire in the first year, giving you time to get established.',
+        startingPopulation: 37,
+        startingTreasury: 10,
+        startingResources: {},
+        startingBuildingSizes: {},
+        startingBuildingUpgrades: {},
+        startingArmy: {},
+        preResearched: [],
+        skipTraitSelection: false,
+        playerTraits: {},
+        forceEventsOnDayOne: [],
+        banditRaidBanDays: null,
+        researchRateMultiplier: null,
+        generalProductivityBonus: null,
+        legitimacyBonus: null,
+        eventBanUntilDay: 12, // 1 year = 12 days
+    },
+
+    easy: {
+        id: 'easy',
+        name: 'Easy',
+        description: 'A more forgiving start: extra gold, a research bonus, a small productivity boost, a legitimacy boost, and no events for the first two years.',
+        startingPopulation: 37,
+        startingTreasury: 30,
+        startingResources: {},
+        startingBuildingSizes: {},
+        startingBuildingUpgrades: {},
+        startingArmy: {},
+        preResearched: [],
+        skipTraitSelection: false,
+        playerTraits: {},
+        forceEventsOnDayOne: [],
+        banditRaidBanDays: null,
+        researchRateMultiplier: 1.15,   // +15% research production
+        generalProductivityBonus: 1.05, // +5% general productivity
+        legitimacyBonus: 0.05,          // +5% legitimacy (additive)
+        eventBanUntilDay: 24,           // 2 years = 24 days
     },
 
     banditRaid: {
@@ -151,6 +198,10 @@ export const SCENARIOS = {
         },
         forceEventsOnDayOne: ['BanditRaid'],
         banditRaidBanDays: 0, // Allow bandit raid immediately
+        researchRateMultiplier: null,
+        generalProductivityBonus: null,
+        legitimacyBonus: null,
+        eventBanUntilDay: null,
     },
 };
 

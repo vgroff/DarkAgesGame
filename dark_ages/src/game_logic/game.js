@@ -432,6 +432,58 @@ class Game {
             this.gameClock.subscribe(onDayOne, 998, 'scenario: force events on day 1');
         }
 
+        // ── 9. Research rate multiplier ────────────────────────────────────────
+        // Adds a multiplication modifier to the Library building's productivity,
+        // which increases the rate at which research points are produced.
+        if (scenario.researchRateMultiplier != null) {
+            const library = playerSettlement.getBuildings().find(b => b.name === 'library');
+            if (library) {
+                library.productivity.addModifier(new VariableModifier({
+                    name: 'scenario research rate bonus',
+                    startingValue: scenario.researchRateMultiplier,
+                    type: multiplication,
+                    customPriority: 50
+                }));
+            }
+        }
+
+        // ── 10. General productivity bonus ─────────────────────────────────────
+        // Adds a multiplication modifier to the settlement's generalProductivity.
+        if (scenario.generalProductivityBonus != null) {
+            playerSettlement.generalProductivity.addModifier(new VariableModifier({
+                name: 'scenario difficulty bonus',
+                startingValue: scenario.generalProductivityBonus,
+                type: multiplication,
+                customPriority: 50
+            }));
+        }
+
+        // ── 11. Legitimacy bonus ───────────────────────────────────────────────
+        // Adds an addition modifier to the player character's legitimacy Variable.
+        if (scenario.legitimacyBonus != null) {
+            this.playerCharacter.legitimacy.addModifier(new VariableModifier({
+                name: 'scenario difficulty bonus',
+                startingValue: scenario.legitimacyBonus,
+                type: addition,
+                customPriority: 50
+            }));
+        }
+
+        // ── 12. Event ban until day N ──────────────────────────────────────────
+        // Sets bannedUntil on all player settlement events so they cannot fire
+        // before the specified day. This gives the player a grace period.
+        if (scenario.eventBanUntilDay != null && scenario.eventBanUntilDay > 0) {
+            for (const settlement of this.settlements) {
+                if (!settlement.settlementEvents) continue;
+                for (const event of settlement.settlementEvents) {
+                    // Don't override a ban that's already longer (e.g. BanditRaid default 2yr ban)
+                    if (event.bannedUntil < scenario.eventBanUntilDay) {
+                        event.bannedUntil = scenario.eventBanUntilDay;
+                    }
+                }
+            }
+        }
+
         // Note: we do NOT call forceResetTrend() here. The day-1 snap mechanism
         // (trendingUpSpeed/Down = 1 on day 1) handles instant convergence for all
         // settlements on the first tick, including any scenario-applied changes.

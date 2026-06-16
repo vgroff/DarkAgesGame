@@ -33,11 +33,13 @@ There are knowledge.md files like this one at most levels of the repo, read thos
 ```
 dark_ages/
   src/
-    App.js                        # Root React component; owns game instance, save/load UI
+    App.js                        # Root React component; owns game instance, save/load UI, scenario select
     index.js                      # ReactDOM entry point
     game_logic/
       config.js                   # Global UI config (buttonVariant)
-      game.js                     # Game class: top-level orchestrator
+      game.js                     # Game class: top-level orchestrator; accepts scenario config
+      scenarios.js                # Scenario definitions (plain data objects, no game imports)
+      ScenarioSelectUI.js         # Scenario selection screen shown before game starts
       diplomacy.js                # TradeAgreement class + npcWillAcceptTrade() (§5)
       timer.js                    # Timer extends Variable; drives all ticks
       seasons.js                  # Season constants + daysInYear (= 12!)
@@ -85,12 +87,73 @@ There are two timers:
 ### Game Class
 
 `Game` is the top-level orchestrator:
+- Constructor now accepts an optional `scenario` plain config object (from `scenarios.js`)
 - Creates `gameClock`, `playerCharacter`, two `Settlement` instances
 - Creates `treasury` as a `Cumulator` with `totalMarketIncome` as a modifier
 - Monitors treasury for bankruptcy (`bankrupt` Variable, 0 or 1)
 - Holds `globalEvents` (currently only `HarvestEvent`)
 - `triggerChecks()` is called each tick to fire eligible events
 - `handleRebellion()` handles settlement loss; game-over if all settlements lost
+- `_applyScenario(scenario)` applies scenario overrides after full construction
+- Day 1 behaviour: trending variables (happiness/health) snap instantly; population is frozen via `min`/`max` modifiers on `populationSizeChange` (both removed on day 2)
+
+### Scenario System
+
+Scenarios are plain data objects defined in `scenarios.js`. They are passed to `new Game(scenario)` and interpreted by `_applyScenario()`. No game classes are imported in `scenarios.js`.
+
+**Available scenarios** (`SCENARIOS` object, also exported as `SCENARIO_LIST` array):
+- `default` — standard start, 37 pop, 10 gold, no modifiers
+- `intended` — standard start + no events for first year (`eventBanUntilDay: 12`)
+- `easy` — 30 gold, +15% research rate, +5% productivity, +5% legitimacy, no events for 2 years (`eventBanUntilDay: 24`)
+- `banditRaid` — 80 pop, 500 gold, pre-built mid-game settlement, pre-set traits, army, BanditRaid forced on day 1
+
+**Scenario config fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `startingPopulation` | number | Player settlement starting population (default 37) |
+| `startingTreasury` | number | Starting gold (default 10) |
+| `startingResources` | `{[resourceName]: number}` | Extra resources added to player settlement |
+| `startingBuildingSizes` | `{[buildingName]: number}` | Force building sizes (uses building `.name` static strings) |
+| `startingBuildingUpgrades` | `{[buildingName]: number}` | Force upgrades by index (0 = first upgrade) |
+| `startingArmy` | `{[unitResourceName]: number}` | Pre-arm soldiers (weapon resources must be in `startingResources`) |
+| `preResearched` | `string[]` | Research item names to pre-activate (bypasses cost) |
+| `skipTraitSelection` | boolean | Auto-fill player traits so game doesn't force-stop on day 1 |
+| `playerTraits` | `{childhoodTrait?, abilityTrait?, personalityTrait?, fameTrait?, trinketTrait?}` | Specific trait names per group |
+| `forceEventsOnDayOne` | `string[]` | Event class names to fire on day 1 (e.g. `'BanditRaid'`) |
+| `banditRaidBanDays` | number \| null | Override bandit raid ban period; `null` = use default (2 years) |
+| `researchRateMultiplier` | number \| null | Multiplication modifier on Library productivity (e.g. `1.15`) |
+| `generalProductivityBonus` | number \| null | Multiplication modifier on settlement `generalProductivity` |
+| `legitimacyBonus` | number \| null | Addition modifier on player character `legitimacy` |
+| `eventBanUntilDay` | number \| null | Ban all settlement events until this day (grace period) |
+
+**`_applyScenario(scenario)` steps (in order):**
+1. Starting resources — `rs.amount.setNewBaseValue(baseValue + amount)`
+2. Building sizes — `building.forceNewSize(targetSize)` + unlock if needed
+3. Building upgrades — `building.upgrade(resourceStorages, force=true)` sequentially up to index
+4. Pre-research — sets `item.researched = true` and calls `settlement.activateBonus()` for each bonus
+5. Pre-arm soldiers — calls `settlement.armSoldiers(unitResource, count)` (weapons must already be in storage from step 1)
+6. Player traits — fills all 5 trait groups; uses `playerTraits` names if specified, else first available
+7. Bandit raid ban override — sets `banditRaidEvent.bannedUntil`
+8. Force events on day 1 — timer subscription at priority 998 fires on tick 1
+9. Research rate multiplier — multiplication modifier on Library `productivity`
+10. General productivity bonus — multiplication modifier on `generalProductivity`
+11. Legitimacy bonus — addition modifier on `playerCharacter.legitimacy`
+12. Event ban until day N — sets `event.bannedUntil` on all player settlement events (only if new ban is longer)
+
+**`ScenarioSelectUI`** (React class component):
+- Props: `onStart: (scenarioConfig) => void`
+- Shows scenario cards (clickable), summary tags, collapsible debug options panel
+- Debug options: force events on day 1 checkboxes, skip trait selection, bandit raid ban slider (0–48), starting treasury slider (0–2000)
+- `buildFinalConfig()` merges selected scenario with debug overrides before calling `onStart`
+- Scenario-locked options shown as disabled/italic with "(scenario)" label
+
+**`App.js` flow:**
+- `scenarioChosen` state (boolean) controls whether `ScenarioSelectUI` or `GameUI` is shown
+- `handleScenarioStart(scenarioConfig)` creates `new Game(scenarioConfig)` and sets `scenarioChosen = true`
+- Game clock is NOT started in `handleScenarioStart` — player uses HUD Play button
+- "↩ Scenario Select" button stops game clock and returns to scenario select
+- Loading a save file also sets `scenarioChosen = true` (skips scenario select)
+- Load save file input is shown on both the scenario select screen and the game screen
 
 ### UI Architecture
 
