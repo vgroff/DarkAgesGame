@@ -81,16 +81,23 @@ export class TrendingVariableComponent extends VariableComponent {
     render () {
         let trendingValue = 0;
         let extraStyle = {};
+        let arrowChar = '→';
         if (this.variable) {
             trendingValue = parseFloat(this.variable.currentlyTrendingTo.toFixed(3));
             if (this.variable.trendingChange) {
                 let eps = Math.abs(this.variable.currentValue) * 0.0001;
-                extraStyle.color = this.variable.trendingChange < - eps  ? 'red' : this.variable.trendingChange > eps ? 'green' : 'black';
+                if (this.variable.trendingChange < -eps) {
+                    extraStyle.color = 'red';
+                    arrowChar = '↓';
+                } else if (this.variable.trendingChange > eps) {
+                    extraStyle.color = 'green';
+                    arrowChar = '↑';
+                }
             }
         }
         return super.render([
             <span key={1}>{this.props.showMax && this.props.variable.max ? `/${this.props.variable.max.currentValue}` : ''}</span>,
-            <span key={2}>{this.props.showTrending ? ` (${trendingValue})` : ''}</span>,
+            <span key={2} style={{ opacity: 0.7, fontSize: '0.85em' }}>{this.props.showTrending ? ` (${arrowChar}${trendingValue})` : ''}</span>,
         ], extraStyle);
     }
 }
@@ -98,7 +105,7 @@ export class TrendingVariableComponent extends VariableComponent {
 TrendingVariableComponent.defaultProps = {
     showTrending: true,
     showMax: true,
-    // Variable props 
+    // Variable props
     showName: true,
     showOwner: true,
     showBase: false,

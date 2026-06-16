@@ -417,6 +417,7 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 - Subscribes to `event.timer`
 - Shows event name in red until read, black after
 - Opens a Modal with event text, choice buttons, and applied choice display
+- **Auto-opens modal on fire**: tracks `_lastAutoOpenedTrigger` (the `lastTriggered` timestamp). In `childRender()`, if `event.isActive() && !event.read && lastTriggered !== _lastAutoOpenedTrigger && !modalOpen`, calls `setTimeout(() => setModalOpen(true), 0)` to auto-open. The `setTimeout` avoids setState-during-render. Only fires for events rendered in the settlement header (player settlements only, since NPC settlements have no `settlementEvents`).
 
 ### Known Issues
 - `TemporaryEventDisabled.deactivate()` is a no-op — the ban is set but never cleared on deactivate
@@ -584,6 +585,7 @@ Uppercases first character only. Does not handle multi-word strings.
 
 ### `HTMLTooltip`
 MUI `Tooltip` styled with white background, right-aligned text, max-width 400px, border.
+**Always passes `PopperProps={{ disablePortal: true }}`** — this prevents nested tooltips (a `VariableComponent` inside another tooltip's `title`) from flashing to `(0,0)` before Popper measures the anchor. Rendering inline (not via portal) means positioning is correct on first render. Any caller-supplied `PopperProps` are merged in after the default.
 
 ### `CustomTooltip`
 Wraps `HTMLTooltip`. Accepts `items` array where each item can be:
@@ -628,10 +630,12 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 ### `gameUI.js` — `GameUI`
 - Uses `props.game` passed from `App.js` (no longer creates its own `Game` instance)
 - 3-column MUI Grid: SidePanel (xs=2) | HUD+MainUI (xs=8) | Logger (xs=2)
-- Below the 3-column grid: `MessageLogPanel` — a collapsible scrollable panel showing the full permanent message history
+- **Main content column** (`xs=8`) has `height: 100vh; overflow-y: auto` — its own scroll container so that `position: sticky` children work correctly within it. Has `paddingBottom` to reserve space for the fixed message log + bottom toolbar.
+- **Sticky header block**: a single `position: sticky; top: 0; zIndex: 100` div contains the HUD, `WarningBanner`, and back/forward nav buttons — all three stick together at the top when scrolling. No `marginBottom` on this block (prevents a see-through gap). Settlement sticky header uses `top: 165` to clear this block.
+- **`MessageLogPanel`**: rendered outside the main grid as `position: fixed; bottom: 40px; left: 0; right: 0; zIndex: 190` — always visible just above the App.js bottom toolbar. Shown by default (`showMessageLog` defaults to `true`).
 - `setSelected(selected)`: pushes to `_navHistory`, truncates forward history, updates `this.state.selected`; also clears `showResearch` state
 - Shows `GameMessage` modal when `game.gameMessages.length > 0`
-- **Back/Forward navigation**: `_navHistory` array + `_navIndex` pointer. `navBack()` / `navForward()` move the index and call `setState`. Two MUI `Button` components (← →) rendered above `MainUI`; disabled when at history boundaries or when Research panel is open. Initial history entry is `game.playerCharacter`.
+- **Back/Forward navigation**: `_navHistory` array + `_navIndex` pointer. `navBack()` / `navForward()` move the index and call `setState`. Two MUI `Button` components (← →) rendered inside the sticky header block; disabled when at history boundaries or when Research panel is open. Initial history entry is `game.playerCharacter`.
 - **Research panel**: "Research" button toggles `showResearch` state. When true, renders `FactionResearchComponent` (from `character.js`) instead of `MainUI`. Imports `FactionResearchComponent` from `./character`. Passes `faction = game.playerCharacter.faction` and `internalTimer` as props.
 
 ### `GameMessage`
@@ -643,14 +647,14 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 - Pure React component (not UIBase)
 - Props: `messageLog` (array of `{text, day}` objects), `show` (boolean), `onToggle` (callback)
 - Toggle button shows/hides the panel; button label shows message count when hidden
-- When shown: scrollable div (max-height 200px) showing all messages newest-first
+- When shown: scrollable div (**max-height 120px** — ~4 rows before scrolling) showing all messages newest-first
 - Each entry shows the day number and message text
-- Rendered by `GameUI.childRender()` below the main grid
+- Rendered by `GameUI.childRender()` as a `position: fixed; bottom: 40px` element outside the main grid
 
 ### `hud.js` — `HUD`
 - Subscribes to `treasury` and `gameClock`
 - Uses `ThemeContext` (`HUD.contextType = ThemeContext`)
-- Shows: `TimerComponent` (translated time text, 18px bold serif), harvest quality with tooltip (14px bold, stands out)
+- Shows: `TimerComponent` (translated time text, 18px bold serif), harvest quality with tooltip (**18px bold**, opacity 0.9 — increased from 14px for visibility)
 - Treasury: 🪙 prefix, 22px bold serif, `CumulatorComponent` showing current value and expected change
 - **Play** button (▶ Play): disabled if running or force-stopped; filled with `accent` colour when active
 - **Pause** button (⏸ Pause): disabled if not running; filled with `accent` colour when active

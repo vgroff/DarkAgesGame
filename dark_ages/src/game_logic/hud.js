@@ -58,10 +58,10 @@ class HUD extends UIBase {
 
         const harvestStyle = {
             color: c ? c.hudText : '#888',
-            fontSize: '14px',
+            fontSize: '18px',
             fontWeight: 'bold',
             cursor: 'pointer',
-            opacity: 0.85,
+            opacity: 0.9,
         };
 
         const treasuryStyle = {

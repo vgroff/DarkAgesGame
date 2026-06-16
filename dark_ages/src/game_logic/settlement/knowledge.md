@@ -98,7 +98,7 @@ Health modifiers:
 
 ```
 support = happiness + localLegitimacy + diplomacyEffect - 1
-rebellionSupport = -support  (i.e. positive when support < 0)
+rebellionSupport = max(0, -support)  (floored at 0 — never negative)
 totalRebellionSupport (Cumulator, min=0) += rebellionSupport each tick
 ```
 
@@ -160,20 +160,23 @@ Note: there is also a duplicate subscription in the rationing loop (lines 180-18
 | Tab | Label | Content |
 |-----|-------|---------|
 | 0 | **Production** | Key stats with `CustomTooltip` descriptions, auto-assign checkbox, all unlocked buildings |
-| 1 | **Distribution** | Rationing controls + resource storage levels (player settlements only) |
-| 2 | **Trading** | Market buy/sell controls; gated behind Roads size > 0 (player settlements only) |
+| 1 | **Trading** | Market buy/sell controls; gated behind Roads size > 0 (player settlements only) |
+| 2 | **Military** | Army strength, weapon stockpiles, unit conversion |
 
 - Research tab removed — research is now faction-level, accessed via the "Research" button in `GameUI`
+- **Sticky settlement header**: in `childRender()`, the header + stats bar + tabs row are wrapped in a single `position: sticky; top: 165; zIndex: 90` block. This sticks just below the sticky HUD block in `gameUI.js` (HUD + `WarningBanner` + nav buttons, all at `top: 0`). The `165px` offset ≈ HUD (~90px) + nav bar (~32px) + borders/padding (~10px). Warning banner is variable height (only shown when warnings exist) — when warnings are present the settlement header may overlap slightly, which is acceptable.
 - Header (always visible): settlement name, leader name (clickable → `setSelected`), terrain, active events
-- NPC settlement tabs 1–2 show a grey "managed by NPC leader" message
+- Stats bar (always visible, part of sticky block): support | happiness | health | generalProductivity
+- NPC settlement Trading tab shows a grey "managed by NPC leader" message
 - Tab state stored in `this.state.tab` (default 0); clamped to max 2 in `childRender`
 - Trading tab: if `getBuildingByName(Roads.name).size.currentValue === 0`, shows "Build Roads to unlock trading"
 - All key stat variables in Production tab wrapped in `CustomTooltip` with plain-English descriptions
 - Imports `Tab`, `Tabs` from `@mui/material`; `CustomTooltip` from `../utils.js`
+- **Military tab**: unit names and weapon stockpile names are title-cased using `.replace(/\b\w/g, c => c.toUpperCase())`. Group labels are also title-cased ("Stone Weapon Soldiers", etc.)
 
 **Production tab — Legitimacy group** includes (in order):
 1. `s.localLegitimacy` — the smoothed legitimacy value
-2. `s.rebellionSupport` — instantaneous rebellion pressure this tick (positive = support is negative); shown so the player can see what is accumulating each tick
+2. `s.rebellionSupport` — instantaneous rebellion pressure this tick (positive = support is negative, **floored at 0**); shown so the player can see what is accumulating each tick
 3. `s.totalRebellionSupport` — cumulated total rebellion support (shown as `CumulatorComponent`)
 
 ### Known Issues
@@ -396,6 +399,14 @@ Exported constants:
 - Used by `ResourceStorageComponent`, `RationingComponent`, and `MarketResourceComponent` to prefix resource names with an icon
 - Also used by `BuildingComponent` via a local `BUILDING_ICONS` map (keyed by `titleCase(displayName)`)
 - To add a new resource icon, add an entry to `RESOURCE_ICONS` in `resource.js`
+
+### `BUILDING_ICONS` (in `BuildingComponent.childRender()`)
+
+- Local constant inside `BuildingComponent.childRender()` in `building.js`
+- Keyed by `titleCase(building.displayName)` — note `titleCase` only uppercases the first character, so multi-word names must match exactly as they appear after `titleCase` is applied
+- Covers all buildings including upgrade display names (e.g. `'Wooden Huts'`, `'Brick Houses'`, `'Gravel Paths'`, `'Brick Roads'`, `'Military Blacksmith (Iron)'`, `'Military Blacksmith (Steel)'`, `'Blacksmith (Iron)'`, `'Blacksmith (Steel)'`)
+- Roads base display name is `'Dirt Paths'` (set in `Roads` constructor via `displayName` prop), not `'Roads'`
+- `Stonecutters` static name is `"stonecutter's workshop"` → `titleCase` → `"Stonecutter's workshop"`
 
 ### `ResourceStorageComponent`
 

@@ -455,7 +455,16 @@ Calls `super.recalculate` quietly to get the true current value, then sets `tren
 
 ### `TrendingVariableComponent`
 
-Extends `VariableComponent`. Shows `(trendingValue)` suffix and colors value green/red based on `trendingChange`.
+Extends `VariableComponent`. Shows an arrow + target suffix and colours the value green/red based on `trendingChange`.
+
+**Display format:** `43 (↑62)` — main value followed by a dimmed `(↑target)` suffix at `0.85em` / `opacity: 0.7`.
+
+**Arrow logic:**
+- `trendingChange < -eps` → red text, `↓` arrow
+- `trendingChange > eps` → green text, `↑` arrow
+- otherwise → default colour, `→` arrow
+
+**Note:** The stats bar (`renderStatsBar` in `settlement.js`) does **not** apply `fontWeight: 'bold'` to these components; font size is `1.05em`.
 
 Default props: `showTrending: true`, `showMax: true`.
 

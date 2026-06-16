@@ -42,7 +42,7 @@ class GameUI extends UIBase {
         const theme = this.context;
         const c = theme.colors;
 
-        const showLog = this.state.showMessageLog || false;
+        const showLog = this.state.showMessageLog !== undefined ? this.state.showMessageLog : true;
         const showResearch = this.state.showResearch || false;
         const canBack = this._navIndex > 0;
         const canForward = this._navIndex < this._navHistory.length - 1;
@@ -59,6 +59,12 @@ class GameUI extends UIBase {
             '&:hover': { borderColor: c.accentHover, backgroundColor: c.contentBgHover },
             '&.Mui-disabled': { borderColor: c.borderLight, color: c.textMuted },
         };
+
+        // Bottom toolbar height (App.js fixed bar) ≈ 40px; message log panel sits above it.
+        // We add paddingBottom to the main scroll column so content isn't hidden behind the fixed bars.
+        const msgLogMaxHeight = showLog ? 200 : 0;
+        const bottomBarHeight = 40; // approximate height of App.js fixed toolbar
+        const fixedBottomHeight = bottomBarHeight + (showLog ? msgLogMaxHeight + 40 : 40); // rough total
 
         return (
             <div style={{ backgroundColor: c.contentBg, minHeight: '100vh', color: c.textPrimary }}>
@@ -116,43 +122,49 @@ class GameUI extends UIBase {
                         />
                     </Grid>
 
-                    {/* Main content */}
-                    <Grid item xs={8} style={{ padding: '0 8px' }}>
+                    {/* Main content — uses its own scroll container so sticky children work correctly.
+                        paddingBottom reserves space for the fixed message log + bottom toolbar. */}
+                    <Grid item xs={8} style={{ padding: '0 8px', height: '100vh', overflowY: 'auto', position: 'relative', paddingBottom: `${fixedBottomHeight}px` }}>
+                        {/* Sticky header block: HUD + warning banner + back/forward nav.
+                            All three stick together at the top when scrolling.
+                            Settlement sticky header uses top: 165 to clear this block. */}
                         <div style={{
-                            borderBottom: `1px solid ${c.hudBorder}`,
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 100,
                             backgroundColor: c.hudBg,
-                            padding: '4px 8px',
-                            marginBottom: '4px',
+                            borderBottom: `1px solid ${c.hudBorder}`,
                         }}>
-                            <HUD gameClock={this.gameClock} treasury={this.game.treasury} harvestEvent={this.game.harvestEvent}/>
-                        </div>
+                            <div style={{ padding: '4px 8px' }}>
+                                <HUD gameClock={this.gameClock} treasury={this.game.treasury} harvestEvent={this.game.harvestEvent}/>
+                            </div>
 
-                        {/* §2 Warning banner */}
-                        <WarningBanner game={this.game} selected={selected} />
+                            {/* §2 Warning banner — inside sticky block so it stays visible */}
+                            <WarningBanner game={this.game} selected={selected} />
 
-                        {/* Nav bar: back/forward only (Research moved to side panel) */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            marginBottom: '6px',
-                            padding: '2px 0',
-                            borderBottom: `1px solid ${c.borderLight}`,
-                        }}>
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                disabled={!canBack || showResearch}
-                                onClick={() => this.navBack()}
-                                sx={navBtnSx}
-                            >←</Button>
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                disabled={!canForward || showResearch}
-                                onClick={() => this.navForward()}
-                                sx={navBtnSx}
-                            >→</Button>
+                            {/* Nav bar: back/forward — inside sticky block */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 8px 4px',
+                                borderTop: `1px solid ${c.borderLight}`,
+                            }}>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    disabled={!canBack || showResearch}
+                                    onClick={() => this.navBack()}
+                                    sx={navBtnSx}
+                                >←</Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    disabled={!canForward || showResearch}
+                                    onClick={() => this.navForward()}
+                                    sx={navBtnSx}
+                                >→</Button>
+                            </div>
                         </div>
 
                         <div>
@@ -178,15 +190,26 @@ class GameUI extends UIBase {
                     }}>
                         <LoggerComponent logger={Logger.getLogger()}/>
                     </Grid>
-                </Grid>
-
-                <MessageLogPanel
-                    messageLog={this.game.messageLog}
-                    show={showLog}
-                    onToggle={() => this.setState({ showMessageLog: !showLog })}
-                />
-            </div>
-        );
+                    </Grid>
+    
+                    {/* Message log — fixed just above the App.js bottom toolbar (bottom: 40px) */}
+                    <div style={{
+                        position: 'fixed',
+                        bottom: 40,
+                        left: 0,
+                        right: 0,
+                        zIndex: 190,
+                        backgroundColor: c.contentBgAlt,
+                        borderTop: `1px solid ${c.hudBorder}`,
+                    }}>
+                        <MessageLogPanel
+                            messageLog={this.game.messageLog}
+                            show={showLog}
+                            onToggle={() => this.setState({ showMessageLog: !showLog })}
+                        />
+                    </div>
+                </div>
+            );
     }
 }
 
@@ -319,7 +342,7 @@ export class MessageLogPanel extends React.Component {
         };
 
         const panelStyle = {
-            maxHeight: '200px',
+            maxHeight: '120px',
             overflowY: 'auto',
             border: `1px solid ${c ? c.msgLogBorder : '#ddd'}`,
             borderRadius: '4px',

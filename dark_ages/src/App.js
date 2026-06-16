@@ -185,8 +185,13 @@ function App() {
                     onScroll={handleScroll}
                     onPanelToggle={togglePanel}
                 />
-                {/* Bottom toolbar: save/load, scenario select, theme switcher */}
+                {/* Bottom toolbar: save/load, scenario select, theme switcher — fixed to bottom of viewport */}
                 <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    zIndex: 200,
                     margin: '0',
                     padding: '6px 12px',
                     display: 'flex',

@@ -24,8 +24,11 @@ export function randomRange(low, high) {
 }
 
 // Keep these out of UIUtils.js or it creates circular dependencies
+// disablePortal: true prevents nested tooltips from flashing to (0,0) before positioning.
+// Without it, inner tooltips inside an outer tooltip's portal content briefly render at the
+// document body origin before the Popper measures the anchor, causing a visible flash.
 export const HTMLTooltip = styled(({ className, ...props }) => (
-    <Tooltip {...props} classes={{ popper: className }} />
+    <Tooltip {...props} classes={{ popper: className }} PopperProps={{ disablePortal: true, ...props.PopperProps }} />
 ))(({ theme }) => ({
     [`& .${tooltipClasses.tooltip}`]: {
         backgroundColor: '#f5f5f9',

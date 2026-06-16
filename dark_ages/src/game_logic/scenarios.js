@@ -181,7 +181,7 @@ export const SCENARIOS = {
             food: 800,
             coal: 300,
             stoneWeaponry: 30,
-            ironWeaponry: 20,
+            ironWeaponry: 25,
             bows: 15,
         },
         startingBuildingSizes: {

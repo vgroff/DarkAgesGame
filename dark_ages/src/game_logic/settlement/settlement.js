@@ -336,7 +336,7 @@ export class Settlement {
             new VariableModifier({variable: this.localLegitimacy, type: addition}),
             new VariableModifier({variable: diplomacySupport, type: addition})
         ]});
-        this.rebellionSupport = new Variable({startingValue: 0, name: "rebellion support", modifiers: [
+        this.rebellionSupport = new Variable({startingValue: 0, name: "rebellion support", min: new Variable({startingValue: 0}), modifiers: [
             new VariableModifier({variable: this.support, type: addition}),
             new VariableModifier({startingValue: -1, type: multiplication})
         ]});
@@ -700,7 +700,9 @@ export class SettlementComponent extends UIBase {
             <TerrainComponent terrain={s.terrain} prefix={true} />
             <br />
             {s.settlementEvents.filter(ev => ev.isActive()).map((ev, i) =>
-                <EventComponent key={`${ev.name}_${i}`} event={ev}/>
+                <span key={`${ev.name}_${i}`} style={{ fontSize: '1.05em', fontWeight: 'bold', marginRight: '8px' }}>
+                    <EventComponent event={ev}/>
+                </span>
             )}
         </Grid>;
     }
@@ -710,7 +712,7 @@ export class SettlementComponent extends UIBase {
         const s = this.settlement;
         const theme = this.context;
         const c = theme ? theme.colors : null;
-        const statStyle = { fontWeight: 'bold', color: c ? c.textPrimary : 'inherit' };
+        const statStyle = { fontSize: '1.05em', color: c ? c.textPrimary : 'inherit' };
         const sepStyle = { color: c ? c.textMuted : '#aaa', margin: '0 8px' };
         const barStyle = {
             borderBottom: `1px solid ${c ? c.borderMid : '#ddd'}`,
@@ -751,7 +753,6 @@ export class SettlementComponent extends UIBase {
         }}>{text}</div>;
 
         return <Grid container justifyContent="center" alignItems="center" spacing={1}>
-            {this.renderStatsBar()}
             <Grid item xs={12}>
                 {/* Group 1: Population */}
                 {groupLabel('Population')}
@@ -853,14 +854,13 @@ export class SettlementComponent extends UIBase {
     renderTradingTab() {
         const s = this.settlement;
         if (!s.leader.isPlayer) {
-            return <Grid container spacing={1}>{this.renderStatsBar()}<Grid item xs={12}><span style={{color:'#888'}}>Trading is managed by the NPC leader.</span></Grid></Grid>;
+            return <Grid container spacing={1}><Grid item xs={12}><span style={{color:'#888'}}>Trading is managed by the NPC leader.</span></Grid></Grid>;
         }
         const roadsBuilding = s.getBuildingByName(Roads.name);
         if (!roadsBuilding || roadsBuilding.size.currentValue === 0) {
-            return <Grid container spacing={1}>{this.renderStatsBar()}<Grid item xs={12}><span style={{color:'#888'}}>Build Roads to unlock trading.</span></Grid></Grid>;
+            return <Grid container spacing={1}><Grid item xs={12}><span style={{color:'#888'}}>Build Roads to unlock trading.</span></Grid></Grid>;
         }
         return <Grid container justifyContent="center" alignItems="center" spacing={1}>
-            {this.renderStatsBar()}
             {s.market.marketResources.filter(mr =>
                 s.resourceBuildings.find(b => b.outputResource === mr.resource && b.unlocked)
             ).map((mr, i) =>
@@ -1029,16 +1029,15 @@ export class SettlementComponent extends UIBase {
 
         // All unit types grouped by weapon source
         const unitGroups = [
-            { label: 'Stone weapon soldiers', units: [Resources.stoneSpears, Resources.stoneSwords] },
-            { label: 'Iron weapon soldiers',  units: [Resources.ironSpears,  Resources.ironSwords]  },
-            { label: 'Steel weapon soldiers', units: [Resources.steelSpears, Resources.steelShortSwords, Resources.steelLongSwords] },
-            { label: 'Bow soldiers',          units: [Resources.shortbowmen, Resources.warbowmen, Resources.longbowmen] },
+            { label: 'Stone Weapon Soldiers', units: [Resources.stoneSpears, Resources.stoneSwords] },
+            { label: 'Iron Weapon Soldiers',  units: [Resources.ironSpears,  Resources.ironSwords]  },
+            { label: 'Steel Weapon Soldiers', units: [Resources.steelSpears, Resources.steelShortSwords, Resources.steelLongSwords] },
+            { label: 'Bow Soldiers',          units: [Resources.shortbowmen, Resources.warbowmen, Resources.longbowmen] },
         ];
 
         const getStorage = (resource) => s.resourceStorages.find(rs => rs.resource === resource);
 
         return <Grid container justifyContent="center" alignItems="flex-start" spacing={1} style={{ padding: '4px' }}>
-            {this.renderStatsBar()}
             {/* Army strength */}
             <Grid item xs={12}>
                 <span style={{ fontWeight: 'bold', color: '#555' }}>Army</span><br />
@@ -1053,7 +1052,7 @@ export class SettlementComponent extends UIBase {
                 const storage = getStorage(wr);
                 if (!storage) return null;
                 return <Grid item xs={3} key={wr.name} style={{ textAlign: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#555' }}>{wr.name}</span><br />
+                    <span style={{ fontSize: '0.75rem', color: '#555' }}>{wr.name.replace(/\b\w/g, c => c.toUpperCase())}</span><br />
                     <span style={{ fontWeight: 'bold' }}>{Math.floor(storage.amount.currentValue)}</span>
                 </Grid>;
             })}
@@ -1086,7 +1085,7 @@ export class SettlementComponent extends UIBase {
                             const armed = Math.floor(unitStorage.amount.currentValue);
                             const attackVal = UNIT_ATTACK_VALUES[unitResource.name];
                             return <Grid item xs={4} key={unitResource.name} style={{ textAlign: 'center', fontSize: '0.75rem' }}>
-                                <span style={{ color: '#333' }}>{unitResource.name}</span><br />
+                                <span style={{ color: '#333' }}>{unitResource.name.replace(/\b\w/g, c => c.toUpperCase())}</span><br />
                                 <span style={{ color: '#888' }}>atk {attackVal} · cost {weaponCost ? weaponCost.amount : '?'}</span><br />
                                 <span style={{ fontWeight: 'bold' }}>{armed} armed</span><br />
                                 <button
@@ -1122,11 +1121,25 @@ export class SettlementComponent extends UIBase {
     childRender() {
         this.settlement = this.props.settlement;
         const isPlayer = this.settlement.leader.isPlayer;
+        const theme = this.context;
+        const c = theme ? theme.colors : null;
         // Clamp tab to valid range (3 tabs: Production, Trading, Military)
         const tab = Math.min(this.state.tab || 0, 2);
         return <Grid container justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
-            {this.renderHeader()}
-            <Grid item xs={12}>
+            {/* Sticky settlement header: name/leader/terrain/events + stats bar + tabs.
+                Sits below the sticky HUD block (HUD + warning banner + nav buttons).
+                The main column has its own scroll container (overflow-y: auto in gameUI.js).
+                top: 165 ≈ HUD (~90px) + nav bar (~32px) + borders/padding (~10px).
+                Warning banner is variable height but only appears when warnings exist. */}
+            <Grid item xs={12} style={{
+                position: 'sticky',
+                top: 165,
+                zIndex: 90,
+                backgroundColor: c ? c.contentBg : '#fff',
+                paddingBottom: '2px',
+            }}>
+                {this.renderHeader()}
+                {this.renderStatsBar()}
                 <Tabs
                     value={tab}
                     onChange={(e, newVal) => this.setState({ tab: newVal })}

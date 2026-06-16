@@ -95,7 +95,7 @@ There are two timers:
 - `triggerChecks()` is called each tick to fire eligible events
 - `handleRebellion()` handles settlement loss; game-over if all settlements lost
 - `_applyScenario(scenario)` applies scenario overrides after full construction
-- Day 1 behaviour: trending variables (happiness/health) snap instantly to their long-term values on day 1 and continue to snap whenever the player changes anything (rationing, workers, etc.) before pressing Play. This is achieved by setting `trendingUpSpeed = trendingDownSpeed = 1` immediately at construction time (not just on tick 1). The `TrendingVariable.trend()` method also updates `trendingValueAtTurnStart` when speed=1, so each recalculation snaps independently. Speeds are restored on day 2. Population is frozen via `min`/`max` modifiers on `populationSizeChange` (both removed on day 2).
+- Day 1 behaviour: trending variables (happiness/health) snap instantly to their long-term values on day 1 and continue to snap whenever the player changes anything (rationing, workers, etc.) before pressing Play. Direct subscriptions to `happiness` and `health` call `forceResetTrend()` on any change. At construction time, `recalculate()` is called explicitly on both before `forceResetTrend()` to ensure all modifier chains have propagated, so displayed values are correct from game load. Subscriptions are removed on day 2. Population is frozen via `min`/`max` modifiers on `populationSizeChange` (both removed on day 2).
 
 ### Scenario System
 
@@ -105,7 +105,7 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 - `default` — standard start, 37 pop, 10 gold, no modifiers
 - `intended` — standard start + no events for first year (`eventBanUntilDay: 12`)
 - `easy` — 30 gold, +15% research rate, +5% productivity, +5% legitimacy, no events for 2 years (`eventBanUntilDay: 24`)
-- `banditRaid` — 80 pop, 500 gold, pre-built mid-game settlement, pre-set traits, army, BanditRaid forced on day 1
+- `banditRaid` — 80 pop, 500 gold, pre-built mid-game settlement, pre-set traits, army (10 iron spears, 5 stone swords, 8 short bows), BanditRaid forced on day 1; starts with 25 iron weaponry (increased from 20)
 
 **Scenario config fields:**
 | Field | Type | Description |
@@ -418,6 +418,32 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 
 ### Minor
 *(all minor bugs fixed — see below)*
+
+### Fixed (this session) — UI polish round 3
+
+- **`gameUI.js` sticky header block**: `WarningBanner` and back/forward nav buttons moved inside the `position: sticky; top: 0` block alongside the HUD. All three now stick together at the top when scrolling. No `marginBottom` on the sticky block (prevents see-through gap). Settlement sticky header uses `top: 165` to clear the full sticky block height.
+- **`settlement.js` sticky settlement header offset**: `top` set to `165` ≈ HUD (~90px) + nav bar (~32px) + borders/padding (~10px). Warning banner is variable height (only shown when warnings exist).
+- **`gameUI.js` message log max height**: `MessageLogPanel` panel `maxHeight` reduced from `200px` to `120px` (~4 rows before scrolling).
+- **`utils.js` nested tooltip flashing**: `HTMLTooltip` now passes `PopperProps={{ disablePortal: true }}` to MUI `Tooltip`. This prevents inner `VariableComponent` tooltips (rendered inside an outer tooltip's `title`) from briefly flashing to `(0,0)` before Popper measures the anchor position. `disablePortal` renders the Popper inline rather than teleporting to `document.body`, so positioning is correct on first render.
+- **`game.js` day-1 snap**: Added explicit `s.happiness.recalculate()` and `s.health.recalculate()` calls before `forceResetTrend()` in the day-1 setup block. This ensures all modifier chains have propagated before the snap, so the displayed values are correct from the moment the game loads (not just after the player makes a change).
+
+### Fixed (this session) — UI polish round 2
+
+- **`trendingVariable.js` `TrendingVariableComponent`**: now shows `↑`/`↓` arrows (green/red) when trending up/down, and `→` when stable. Target value shown as `(↑0.62)` style suffix at 0.85em opacity 0.7. Bold removed from stats bar (`renderStatsBar` in `settlement.js`); font size increased to `1.05em`.
+- **`App.js` bottom toolbar**: now `position: fixed; bottom: 0; zIndex: 200` — always visible at the bottom of the viewport regardless of scroll position.
+- **`gameUI.js` message log**: `MessageLogPanel` moved outside the main scroll container and rendered as `position: fixed; bottom: 40px; zIndex: 190` (sits above the App.js toolbar). Shown by default (`showMessageLog` defaults to `true` when state is undefined). Main scroll column has `paddingBottom` to avoid content being hidden behind the fixed bars.
+- **`events.js` `EventComponent`**: auto-opens the event modal when an event fires and hasn't been read yet. Tracks `_lastAutoOpenedTrigger` (the `lastTriggered` timestamp) to avoid re-opening on every render. Uses `setTimeout(..., 0)` to avoid setState-during-render. Only fires for events rendered in the settlement header (player settlements only).
+- **`settlement.js` event names**: active event names in the settlement header are now wrapped in a `1.05em bold` span for better visibility.
+
+### Fixed (this session) — UI polish & balance
+
+- **`hud.js` harvest text size**: increased from 14px to 18px (opacity 0.9) so the harvest quality is more prominent
+- **`gameUI.js` sticky HUD**: main content column (`xs=8`) now has `height: 100vh; overflow-y: auto` creating its own scroll container. The HUD wrapper has `position: sticky; top: 0; zIndex: 100` so it always stays visible at the top when scrolling
+- **`settlement.js` sticky settlement header**: in `SettlementComponent.childRender()`, the header + stats bar + tabs row are wrapped in a `position: sticky; top: 130; zIndex: 90` block, sticking just below the HUD when scrolling through a settlement's content. `renderStatsBar()` is now called once in `childRender()` rather than at the top of each tab render method
+- **`building.js` building icons**: `BUILDING_ICONS` map in `BuildingComponent.childRender()` now covers all buildings including upgrade display names (`'Wooden Huts'`, `'Brick Houses'`, `'Dirt Paths'`, `'Gravel Paths'`, `'Brick Roads'`, `'Military Blacksmith (Iron)'`, `'Military Blacksmith (Steel)'`, `'Blacksmith (Iron)'`, `'Blacksmith (Steel)'`). Keys match `titleCase(displayName)` exactly
+- **`settlement.js` rebellion support floor**: `rebellionSupport` Variable now has `min: new Variable({startingValue: 0})` so it never goes negative. This is a cosmetic/clarity change — `totalRebellionSupport` already has `min=0` so game behaviour is unchanged
+- **`scenarios.js` bandit raid iron weaponry**: `ironWeaponry` starting resource increased from 20 to 25
+- **`settlement.js` military tab capitalisation**: weapon stockpile names and unit names now title-cased via `.replace(/\b\w/g, c => c.toUpperCase())`. Unit group labels changed to title case ("Stone Weapon Soldiers", "Iron Weapon Soldiers", etc.)
 
 ### Fixed (this session) — MVP implementation
 - **`events.js` all settlement events uncommented + 8 new events added**: WarmSpell, MerchantBoom, HuntingGameSurplus, DryHuntingLands, Blizzard, RatsInStorage, NomadsArrive, BanditRaid. WarmSpell/Blizzard use `fire_()`/`end_()` overrides to directly manipulate `popDemands.coal.idealAmount` and `tradeFactor`.

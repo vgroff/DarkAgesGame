@@ -477,28 +477,52 @@ export class BuildingComponent extends UIBase {
         const nameStyle = c ? { color: c.textPrimary, ...extraStyle } : extraStyle;
 
         const BUILDING_ICONS = {
+            // Farm / food
             'Farm': '🌾',
-            'Hunting Cabin': '🍖',
-            'Housing': '🏠',
-            "Lumberjack's Hut": '🪵',
-            'Charcoal Kiln': '🔥',
+            'Hunting cabin': '🍖',
+            // Housing (base + upgrades use displayName)
+            'Mud Huts': '🏚️',
+            'Wooden Huts': '🏠',
+            'Brick Houses': '🏛️',
+            // Lumber / wood
+            "Lumberjack's hut": '🪵',
+            // Coal / fire
+            'Charcoal kiln': '🔥',
+            'Coal mine': '🔥',
+            'Coal pit': '🔥',
+            'Peat bog': '🔥',
+            // Drinks
             'Brewery': '🍺',
+            // Health
             'Apothecary': '🌿',
+            // Knowledge
             'Library': '📚',
-            'Construction Site': '🏗️',
+            // Construction
+            'Construction site': '🏗️',
+            // Religion / entertainment
             'Church': '⛪',
             'Tavern': '🎭',
-            'Roads': '🛤️',
-            'Quarry': '🪨',       // produces stone → stone icon
-            'Stonecutters': '🧱',
-            'Iron Mine': '⛏️',
-            'Bog Iron Pit': '⛏️', // produces iron → iron icon
-            'Coal Mine': '🔥',    // produces coal → coal icon
-            'Coal Pit': '🔥',     // produces coal → coal icon
-            'Peat Bog': '🔥',     // produces coal → coal icon
+            // Roads (base + upgrades)
+            'Dirt Paths': '🛤️',
+            'Gravel Paths': '🛤️',
+            'Brick Roads': '🛤️',
+            // Stone
+            'Quarry': '🪨',
+            "Stonecutter's workshop": '🧱',
+            // Iron
+            'Iron mine': '⛏️',
+            'Bog iron pit': '⛏️',
+            // Tools
             'Toolmaker': '🔨',
+            'Blacksmith (Iron)': '🔨',
+            'Blacksmith (Steel)': '🔨',
+            // Bows
             'Bowyer': '🏹',
-            'Weapon Maker': '⚔️',
+            // Weapons (base + upgrades)
+            'Stone Weapon Maker': '⚔️',
+            'Military Blacksmith (Iron)': '⚔️',
+            'Military Blacksmith (Steel)': '⚔️',
+            // Storage
             'Storage': '📦',
         };
         const buildingIcon = BUILDING_ICONS[titleCase(this.building.displayName)] || '';

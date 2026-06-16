@@ -217,7 +217,13 @@ class Game {
             s.happiness.subscribe(snapHappiness, 1000, 'day 1: snap happiness trend');
             s.health.subscribe(snapHealth, 1000, 'day 1: snap health trend');
 
-            // Snap immediately so the UI shows correct values before Play is pressed
+            // Snap immediately so the UI shows correct values before Play is pressed.
+            // We call recalculate() first to ensure all modifier chains have propagated
+            // (some modifiers may not have fired their initial callbacks yet at this point
+            // in the constructor), then forceResetTrend() snaps trendingValueAtTurnStart
+            // to the fully-settled target value.
+            s.happiness.recalculate('day 1 initial snap', 0);
+            s.health.recalculate('day 1 initial snap', 0);
             s.happiness.forceResetTrend();
             s.health.forceResetTrend();
 

@@ -1543,6 +1543,7 @@ export class EventComponent extends UIBase {
     constructor(props) {
         super(props);
         this.event = props.event;
+        this._lastAutoOpenedTrigger = null; // track which fire we last auto-opened for
         this.addVariables([this.event.timer]);
     }
     setModalOpen(modalOpen) {
@@ -1553,6 +1554,17 @@ export class EventComponent extends UIBase {
     }
     childRender() {
         this.event = this.props.event;
+        // Auto-open modal when event fires (player settlements only — event is active and unread)
+        if (
+            this.event.isActive() &&
+            !this.event.read &&
+            this.event.lastTriggered !== this._lastAutoOpenedTrigger &&
+            !this.state.modalOpen
+        ) {
+            this._lastAutoOpenedTrigger = this.event.lastTriggered;
+            // Use setTimeout to avoid setState-during-render
+            setTimeout(() => this.setModalOpen(true), 0);
+        }
         // For BanditRaid in battle phase, show battle UI instead of normal event modal
         if (this.event instanceof BanditRaid && this.event._battleState && !this.event._battleState.ended) {
             return <BattleUI event={this.event} />;
