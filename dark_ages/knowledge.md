@@ -252,6 +252,7 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 - Group related UI elements into tabs (production, distribution, trading, research)
 - `HTMLTooltip` for explanatory hover text (white background, right-aligned text)
 - `CustomTooltip` wraps `HTMLTooltip` and accepts `Variable` instances, strings, or `{text, style}` objects
+- **If a number can be displayed as a `Variable` (i.e. it is or can be wrapped in a `Variable` instance), it almost always should be.** This gives the player tooltip breakdowns for free. Examples: melee strength on the skirmish screen, bow strength, strategy skill, ground advantage — all should be `VariableComponent`, not plain text.
 
 ### Theme System (`theme.js`)
 - Four themes selectable live during playtesting: **Parchment**, **Parchment Dark**, **Iron**, **Iron Slate**
@@ -420,6 +421,18 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 
 ### Minor
 *(all minor bugs fixed — see below)*
+
+### Fixed (this session) — battle system, Variable UI, tooltip depth
+
+- **`events.js` battle bug — enemy with 0 fighters still dealing damage**: `BattleArmy` strength Variables had addition modifiers added during build (one per unit type). When `setNewBaseValue(currentValue * scale)` was called to apply casualties, the modifiers still added back the original values, so `currentValue` never reached 0. Fixed by redesigning `BattleArmy.finalise()`: after all units are added, `finalise()` records `startingBowStrength` / `startingMeleeStrength`, then calls `setModifiers([])` to remove all build-time modifiers and bakes the total into `baseValue`. Subsequent `applyBowCasualties(dead)` / `applyMeleeCasualties(dead)` calls use `setNewBaseValue(startingStrength * survivingFraction)` — with no modifiers present, this correctly scales to 0 when all fighters are dead.
+- **`events.js` `BattleArmy` constructor cleanup**: removed dead intermediate code (a first `bowStrength` with multiplication modifiers that was immediately overwritten by a second plain one).
+- **`events.js` `BattleUI` — Variable UI on skirmish screen**: replaced all plain `Typography` text for bow strength, melee strength, total strength, strategy skill, and ground advantage with `VariableComponent` wrapped in `CustomTooltip`. Players now see full tooltip breakdowns (unit contributions, casualty history) for all numeric battle values.
+- **`events.js` `BattleUI` — strategy roll info panel**: after each skirmish round or manoeuvre, a "Last strategy roll" panel shows the player's and enemy's roll result (colour-coded by outcome) and the success chance used. Manoeuvre rolls show "Last manoeuvre roll" with only the player's roll (no enemy roll for manoeuvres).
+- **`events.js` `BattleUI` — action button tooltips**: "Continue skirmishing", "Move in (melee)", "Hold the line", and "Attempt a manoeuvre" buttons now have `HTMLTooltip` explanations showing what each action does and the relevant strategy chances.
+- **`events.js` `advanceBattle` manoeuvre**: stores roll info in `state.lastSkirmishRoll` with `isManoeuvre: true` flag so the UI can display it correctly.
+- **`events.js` `resolveSkirmishRound`**: stores `lastSkirmishRoll` on state with `{ playerStratRoll, enemyStratRoll, playerStratChance, enemyStratChance, groundDelta }` for UI display.
+- **`events.js` `resolveMeleeRound`**: stores `lastMeleeRound` on state with attack breakdown for potential future UI use.
+- **`utils.js` `HTMLTooltip` — depth-aware tooltip placement**: converted from a `styled` component to a function component that reads `TooltipDepthContext`. Depth 0 (top-level) is identical to the original — no explicit placement (MUI defaults to bottom), flip/preventOverflow disabled. Depth ≥ 1 (nested, e.g. a `VariableComponent` inside a `CustomTooltip` title) opens rightward (`placement="right-start"`) with **all repositioning disabled** (flip off, preventOverflow off, adaptive off) — clips at the viewport edge rather than stuttering. Any enabled repositioning modifier causes a recalculate loop near the viewport edge. `TooltipDepthContext` is exported from `utils.js`. The tooltip `title` content is automatically wrapped in `TooltipDepthContext.Provider value={depth+1}` so nested tooltips know their depth.
 
 ### Fixed (this session) — scenario bugs & log level improvements
 

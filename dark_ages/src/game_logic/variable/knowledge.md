@@ -182,6 +182,7 @@ When `expanded=true`: renders explanation list inline instead of in tooltip.
 - Description prop span uses `color: #666`, italic.
 - All explanation spans use `display: block` for consistent line breaks.
 - **`= finalValue` footer**: when `abridgedExplanations` contains at least one modifier entry (detected by `typeof e === 'object' && e.type`), a bold `= {displayValue}` line is appended at the bottom, separated by `borderTop: '1px solid #e0e0e8'`. Matches the tutorial demo's `= 0.82` line. Not shown for variables with no modifiers (base value only).
+- **Depth-aware placement**: `VariableComponent` uses `HTMLTooltip` from `utils.js`. `HTMLTooltip` reads `TooltipDepthContext` — when a `VariableComponent` is rendered inside another tooltip's `title` (depth ≥ 1), its tooltip opens rightward instead of downward. This is automatic — no changes needed in `VariableComponent` itself.
 
 ---
 

@@ -374,14 +374,17 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 - `BanditRaid` — forcePause; choices: pay tribute / fight (multi-stage battle) / do nothing; banned for first 2 years
 
 ### Battle System (§4.4+4.5)
-- `BattleArmy` — holds `bowStrength`, `meleeStrength`, `totalStrength`, `strategySkill` Variables + `bowCount`/`meleeCount` plain numbers
-- `buildPlayerArmy(settlement)` — builds player army from unit resource storages + mobilised civilians
-- `buildBanditArmy(settlement)` — builds bandit army scaled to player unit count / population
-- `resolveSkirmishRound(state)` — strategy check → ground advantage → bow casualties
-- `resolveMeleeRound(state, firstRoundPenalty)` — bow support + melee → casualties
+- `BattleArmy` — holds `bowStrength`, `meleeStrength`, `totalStrength`, `strategySkill` Variables + `bowCount`/`meleeCount` plain numbers. Also tracks `startingBowStrength`, `startingMeleeStrength`, `startingBowCount`, `startingMeleeCount` for fraction-based casualty scaling.
+  - **`finalise()`**: called after all units added. Records starting strengths, then calls `setModifiers([])` on `bowStrength`/`meleeStrength` to remove build-time addition modifiers and bakes the total into `baseValue`. This is critical — without it, `setNewBaseValue` calls during combat would be overridden by the still-present modifiers.
+  - **`applyBowCasualties(dead)`**: scales `bowStrength` to `startingBowStrength * (survivingCount / startingBowCount)`.
+  - **`applyMeleeCasualties(dead)`**: scales `meleeStrength` to `startingMeleeStrength * (survivingCount / startingMeleeCount)`.
+- `buildPlayerArmy(settlement)` — builds player army from unit resource storages + mobilised civilians; calls `finalise()` at end
+- `buildBanditArmy(settlement)` — builds bandit army scaled to player unit count / population; calls `finalise()` at end
+- `resolveSkirmishRound(state)` — strategy check → ground advantage → bow casualties; stores `state.lastSkirmishRoll = { playerStratRoll, enemyStratRoll, playerStratChance, enemyStratChance, groundDelta }`
+- `resolveMeleeRound(state, firstRoundPenalty)` — bow support + melee → casualties; stores `state.lastMeleeRound = { playerTotalAttack, enemyTotalAttack, playerBowVsMelee, enemyBowVsMelee, ga }`
 - `applyBattleAftermath(settlement, playerWon, playerFled, totalPlayerDead, timer)` — happiness/legitimacy/health bonuses/penalties
-- `BattleUI` — React component showing battle state and player choices (skirmish/clash/flee/manoeuvre)
-- `BanditRaid.advanceBattle(choice)` — drives battle phase transitions; stores state in `this._battleState`
+- `BattleUI` — React component showing battle state and player choices (skirmish/clash/flee/manoeuvre). Uses `VariableComponent` for all numeric values (bow/melee/total strength, strategy skill, ground advantage). Shows a "Last strategy roll" panel after each skirmish/manoeuvre with colour-coded roll results and success chances. Action buttons have `HTMLTooltip` explanations.
+- `BanditRaid.advanceBattle(choice)` — drives battle phase transitions; stores state in `this._battleState`. Manoeuvre stores `state.lastSkirmishRoll` with `isManoeuvre: true`.
 
 ### Concrete Events
 
@@ -611,10 +614,18 @@ Uppercases first character only. Does not handle multi-word strings.
 ### `randomRange(low, high)`
 `low + (high - low) * Math.random()`
 
+### `TooltipDepthContext`
+`React.createContext(0)` — exported from `utils.js`. Tracks how many tooltip layers deep the current render is. `HTMLTooltip` reads this and wraps its `title` content in `<TooltipDepthContext.Provider value={depth+1}>` so nested tooltips know their depth automatically.
+
 ### `HTMLTooltip`
-MUI `Tooltip` styled to match the tutorial demo aesthetic: pure white `#ffffff` background, `#333` text, `13px` font size, `line-height: 1.7`, `#c8c8d0` border, `border-radius: 4px`, `box-shadow: 0 2px 8px rgba(0,0,0,0.18)`, `padding: 8px 12px`, max-width 560px, **min-width 220px**.
-The `minWidth: '220px'` ensures the tooltip is never squeezed to the width of a small anchor element (e.g. a short number like "0.82" would otherwise produce a ~30px wide tooltip).
-**Always passes `PopperProps={{ disablePortal: true }}`** — this prevents nested tooltips (a `VariableComponent` inside another tooltip's `title`) from flashing to `(0,0)` before Popper measures the anchor. Rendering inline (not via portal) means positioning is correct on first render. Any caller-supplied `PopperProps` are merged in after the default.
+Depth-aware MUI `Tooltip` function component (converted from `styled` component). Reads `TooltipDepthContext`:
+
+- **Depth 0 (top-level)**: No explicit placement (MUI defaults to bottom). Flip and preventOverflow **disabled** — identical to the original `HTMLTooltip` behaviour. Prevents the outer tooltip from jumping when inner tooltip content changes height. `disablePortal: true` prevents flash-to-(0,0).
+- **Depth ≥ 1 (nested)**: `placement="right-start"`. **All repositioning disabled** (flip off, preventOverflow off, adaptive off). The tooltip opens to the right and clips at the viewport edge rather than stuttering. Any enabled repositioning modifier (flip or preventOverflow) causes a recalculate loop near the viewport edge. `disablePortal: true`.
+
+The `title` content is always wrapped in `<TooltipDepthContext.Provider value={depth+1}>` so any `HTMLTooltip` rendered inside the title (e.g. a `VariableComponent`'s own tooltip) automatically knows it is nested and opens rightward.
+
+Styles (applied at all depths via `StyledTooltipBase`): white `#ffffff` background, `#333` text, `13px` font, `line-height: 1.7`, `#c8c8d0` border, `border-radius: 4px`, `box-shadow: 0 2px 8px rgba(0,0,0,0.18)`, `padding: 8px 12px`, max-width 560px, **min-width 220px**.
 
 ### `CustomTooltip`
 Wraps `HTMLTooltip`. Accepts `items` array where each item can be:

@@ -23,32 +23,15 @@ export function randomRange(low, high) {
     return low + (high - low) * Math.random();
 }
 
-// Keep these out of UIUtils.js or it creates circular dependencies
-// disablePortal: true prevents nested tooltips from flashing to (0,0) before positioning.
-// Without it, inner tooltips inside an outer tooltip's portal content briefly render at the
-// document body origin before the Popper measures the anchor, causing a visible flash.
-export const HTMLTooltip = styled(({ className, ...props }) => (
-    <Tooltip
-        {...props}
-        classes={{ popper: className }}
-        PopperProps={{
-            disablePortal: true,
-            // Use 'fixed' strategy so the tooltip position is not recalculated
-            // when inner content (nested VariableComponent tooltips) changes the
-            // height of the tooltip body. Without this, Popper repositions the
-            // outer tooltip every time an inner tooltip opens, causing a visible jump.
-            modifiers: [
-                { name: 'computeStyles', options: { adaptive: false } },
-                { name: 'flip', enabled: false },
-                { name: 'preventOverflow', enabled: false },
-            ],
-            ...props.PopperProps,
-        }}
-        TransitionProps={{ timeout: 0 }}
-        enterDelay={0}
-        enterNextDelay={0}
-        leaveDelay={0}
-    />
+// ── Tooltip depth context ──────────────────────────────────────────────────────
+// Tracks how many tooltip layers deep we are. Depth 0 = top-level tooltip
+// (opens downward, same behaviour as before). Depth ≥ 1 = nested tooltip
+// (opens rightward, no repositioning so it never stutters).
+export const TooltipDepthContext = React.createContext(0);
+
+// ── Shared tooltip styles (applied at all depths) ─────────────────────────────
+const StyledTooltipBase = styled(({ className, ...props }) => (
+    <Tooltip {...props} classes={{ popper: className }} />
 ))(({ theme }) => ({
     [`& .${tooltipClasses.tooltip}`]: {
         backgroundColor: '#ffffff',
@@ -68,7 +51,6 @@ export const HTMLTooltip = styled(({ className, ...props }) => (
         textAlign: 'right',
         padding: '8px 12px',
     },
-    // Override the arrow if present
     [`& .${tooltipClasses.arrow}`]: {
         color: '#ffffff',
         '&::before': {
@@ -77,11 +59,89 @@ export const HTMLTooltip = styled(({ className, ...props }) => (
     },
 }));
 
+/**
+ * HTMLTooltip — depth-aware tooltip component.
+ *
+ * Depth 0 (top-level): identical behaviour to the original HTMLTooltip —
+ * no explicit placement (MUI defaults to bottom), flip and preventOverflow
+ * disabled so the outer tooltip doesn't jump when inner tooltips open/close.
+ *
+ * Depth ≥ 1 (nested): placement="right-start". All repositioning disabled
+ * (flip off, preventOverflow off, adaptive off) — the tooltip simply opens
+ * to the right and clips if it goes off-screen. This is the only way to
+ * guarantee no stutter: any enabled repositioning modifier can cause a
+ * recalculate loop when the tooltip is near the viewport edge.
+ *
+ * The tooltip's `title` content is automatically wrapped in a
+ * TooltipDepthContext.Provider that increments the depth, so any HTMLTooltip
+ * rendered inside the title will know it is nested.
+ */
+export const HTMLTooltip = (props) => {
+    const depth = React.useContext(TooltipDepthContext);
+    const isNested = depth > 0;
+
+    // Wrap the title content in a depth-incrementing provider so nested
+    // tooltips know they are inside another tooltip.
+    const wrappedTitle = props.title
+        ? <TooltipDepthContext.Provider value={depth + 1}>{props.title}</TooltipDepthContext.Provider>
+        : props.title;
+
+    if (isNested) {
+        // Nested tooltip: opens rightward, all repositioning disabled.
+        // No flip, no preventOverflow — clips at viewport edge rather than
+        // stuttering. disablePortal keeps it inline (no flash-to-origin).
+        return (
+            <StyledTooltipBase
+                placement="right-start"
+                {...props}
+                title={wrappedTitle}
+                PopperProps={{
+                    disablePortal: true,
+                    modifiers: [
+                        { name: 'computeStyles', options: { adaptive: false } },
+                        { name: 'flip', enabled: false },
+                        { name: 'preventOverflow', enabled: false },
+                    ],
+                    ...props.PopperProps,
+                }}
+                TransitionProps={{ timeout: 0 }}
+                enterDelay={0}
+                enterNextDelay={0}
+                leaveDelay={0}
+            />
+        );
+    } else {
+        // Top-level tooltip: identical to the original HTMLTooltip behaviour.
+        // No explicit placement (MUI defaults to bottom). Flip and
+        // preventOverflow disabled so the outer tooltip doesn't jump when
+        // inner content changes height.
+        return (
+            <StyledTooltipBase
+                {...props}
+                title={wrappedTitle}
+                PopperProps={{
+                    disablePortal: true,
+                    modifiers: [
+                        { name: 'computeStyles', options: { adaptive: false } },
+                        { name: 'flip', enabled: false },
+                        { name: 'preventOverflow', enabled: false },
+                    ],
+                    ...props.PopperProps,
+                }}
+                TransitionProps={{ timeout: 0 }}
+                enterDelay={0}
+                enterNextDelay={0}
+                leaveDelay={0}
+            />
+        );
+    }
+};
+
 export const CustomTooltip = (props) => {
     return <HTMLTooltip {...props} title={
         props.items.map((item, i) => {
             if (item instanceof Variable) {
-                return <span  key={i}><VariableComponent variable={item}/><br /></span>
+                return <span key={i}><VariableComponent variable={item}/><br /></span>
             } else if (typeof(item) === 'string') {
                 return <span key={i} style={{fontStyle: 'italics'}}>{item}<br /></span>
             } else if (item.text) {
