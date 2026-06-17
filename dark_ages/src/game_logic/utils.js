@@ -28,15 +28,52 @@ export function randomRange(low, high) {
 // Without it, inner tooltips inside an outer tooltip's portal content briefly render at the
 // document body origin before the Popper measures the anchor, causing a visible flash.
 export const HTMLTooltip = styled(({ className, ...props }) => (
-    <Tooltip {...props} classes={{ popper: className }} PopperProps={{ disablePortal: true, ...props.PopperProps }} />
+    <Tooltip
+        {...props}
+        classes={{ popper: className }}
+        PopperProps={{
+            disablePortal: true,
+            // Use 'fixed' strategy so the tooltip position is not recalculated
+            // when inner content (nested VariableComponent tooltips) changes the
+            // height of the tooltip body. Without this, Popper repositions the
+            // outer tooltip every time an inner tooltip opens, causing a visible jump.
+            modifiers: [
+                { name: 'computeStyles', options: { adaptive: false } },
+                { name: 'flip', enabled: false },
+                { name: 'preventOverflow', enabled: false },
+            ],
+            ...props.PopperProps,
+        }}
+        TransitionProps={{ timeout: 0 }}
+        enterDelay={0}
+        enterNextDelay={0}
+        leaveDelay={0}
+    />
 ))(({ theme }) => ({
     [`& .${tooltipClasses.tooltip}`]: {
-        backgroundColor: '#f5f5f9',
-        color: 'rgba(0, 0, 0, 0.87)',
-        maxWidth: 400,
-        fontSize: theme.typography.pxToRem(12),
-        border: '1px solid #dadde9',
-        textAlign: 'right'
+        backgroundColor: '#ffffff',
+        color: '#333333',
+        maxWidth: 560,
+        // minWidth ensures the tooltip is never squeezed to the width of a small anchor element.
+        // Without this, a tooltip on a short number like "0.82" would be only ~30px wide.
+        minWidth: '220px',
+        // Override MUI typography — use explicit px so it matches the tutorial demo exactly
+        fontSize: '13px',
+        fontFamily: '"Segoe UI", system-ui, -apple-system, sans-serif',
+        fontWeight: 400,
+        lineHeight: 1.7,
+        border: '1px solid #c8c8d0',
+        borderRadius: '4px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+        textAlign: 'right',
+        padding: '8px 12px',
+    },
+    // Override the arrow if present
+    [`& .${tooltipClasses.arrow}`]: {
+        color: '#ffffff',
+        '&::before': {
+            border: '1px solid #c8c8d0',
+        },
     },
 }));
 

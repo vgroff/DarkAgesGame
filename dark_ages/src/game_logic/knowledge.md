@@ -38,6 +38,7 @@ There are knowledge.md files like this one at most levels of the repo, read thos
 | `hud.js` | HUD: timer, harvest quality, play/pause/next-day, treasury |
 | `mainUI.js` | Main panel: renders Settlement or Character view |
 | `sidePanelUI.js` | Side panel: navigation list |
+| `TutorialUI.js` | In-game tutorial / how-to-play page (📖 How to Play in side panel) |
 
 ---
 
@@ -611,7 +612,8 @@ Uppercases first character only. Does not handle multi-word strings.
 `low + (high - low) * Math.random()`
 
 ### `HTMLTooltip`
-MUI `Tooltip` styled with white background, right-aligned text, max-width 400px, border.
+MUI `Tooltip` styled to match the tutorial demo aesthetic: pure white `#ffffff` background, `#333` text, `13px` font size, `line-height: 1.7`, `#c8c8d0` border, `border-radius: 4px`, `box-shadow: 0 2px 8px rgba(0,0,0,0.18)`, `padding: 8px 12px`, max-width 560px, **min-width 220px**.
+The `minWidth: '220px'` ensures the tooltip is never squeezed to the width of a small anchor element (e.g. a short number like "0.82" would otherwise produce a ~30px wide tooltip).
 **Always passes `PopperProps={{ disablePortal: true }}`** — this prevents nested tooltips (a `VariableComponent` inside another tooltip's `title`) from flashing to `(0,0)` before Popper measures the anchor. Rendering inline (not via portal) means positioning is correct on first render. Any caller-supplied `PopperProps` are merged in after the default.
 
 ### `CustomTooltip`
@@ -662,8 +664,9 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 - **`MessageLogPanel` (updated)**: rendered outside the main grid as `position: fixed; bottom: 40px; left: 0; right: 0; zIndex: 190` — always visible just above the App.js bottom toolbar. Shown by default (`showMessageLog` defaults to `true`). Now receives a `logger` prop (the singleton `Logger`) instead of `messageLog`. Subscribes to the logger in `componentDidMount` and reads from `logger.inGameLog` — so the log level selector in `LoggerComponent` directly controls what appears here. Entry format: `{ ts, level, levelName, message, context }`. Day is shown from `entry.context?.day` when present. Entries are colour-coded by level (DEBUG=grey, INFO=default, WARN=dark yellow, ERROR=red).
 - `setSelected(selected)`: pushes to `_navHistory`, truncates forward history, updates `this.state.selected`; also clears `showResearch` state
 - Shows `GameMessage` modal when `game.gameMessages.length > 0`
-- **Back/Forward navigation**: `_navHistory` array + `_navIndex` pointer. `navBack()` / `navForward()` move the index and call `setState`. Two MUI `Button` components (← →) rendered inside the sticky header block; disabled when at history boundaries or when Research panel is open. Initial history entry is `game.playerCharacter`.
+- **Back/Forward navigation**: `_navHistory` array + `_navIndex` pointer. `navBack()` / `navForward()` move the index and call `setState`. Two MUI `Button` components (← →) rendered inside the sticky header block; disabled when at history boundaries or when Research or Tutorial panel is open. Initial history entry is `game.playerCharacter`.
 - **Research panel**: "Research" button toggles `showResearch` state. When true, renders `FactionResearchComponent` (from `character.js`) instead of `MainUI`. Imports `FactionResearchComponent` from `./character`. Passes `faction = game.playerCharacter.faction` and `internalTimer` as props.
+- **Tutorial panel**: `showTutorial` state boolean. When true, renders `TutorialUI` (from `./TutorialUI`) instead of `MainUI` or Research. Opening tutorial closes Research; opening Research closes tutorial. Back/forward nav disabled while tutorial is open. `TutorialUI` is a pure React component (no Variable subscriptions) with interactive demos.
 
 ### `GameMessage`
 - Subscribes to timer (so it re-renders)
@@ -692,12 +695,32 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 - Renders `SettlementComponent` if selected is a `Settlement`
 - Renders `CharacterComponent` if selected is a `Character`
 
+### `TutorialUI.js` — Tutorial / How to Play Page
+
+Pure React component (no Variable subscriptions). Accessed via 📖 How to Play in the side panel.
+
+**Sections:**
+1. **UI & Principles** — tooltips (with interactive nested tooltip demo), circular variable connections (diagram), trending variables (live animated demo with target buttons)
+2. **Gameplay** — character creation, job assignment, buildings, research, trading, rationing
+3. **Starter tips** — noble privileges, 0.6 rations, wooden huts, other early-game advice
+
+**Interactive demos:**
+- `TooltipDemo` — React class component; hover the outer value to see a breakdown tooltip, hover inner values to see their breakdowns (3 levels deep). Simulates the real in-game tooltip nesting behaviour.
+- `TrendingDemo` — React class component with `setInterval` (800ms). Shows happiness and health drifting toward a target. Buttons let the player set the target to 0.20/0.45/0.65/0.85. Cleans up interval in `componentWillUnmount`.
+
+**Helper components** (all pure functions): `SectionHeader`, `SubHeader`, `Para`, `Callout` (info/tip/warning variants), `BulletList`, `ConnectionDiagram`.
+
+Uses `ThemeContext` (`TutorialUI.contextType = ThemeContext`). Falls back to hardcoded colours if context is unavailable.
+
+---
+
 ### `sidePanelUI.js` — `SidePanel`
 - Subscribes to `internalTimer`
 - Uses `ThemeContext` (`SidePanel.contextType = ThemeContext`)
 - Shows section labels: **Characters** (above player character), **Settlements** (above settlement list)
 - All nav items are 16px; selected item highlighted with `accent` colour
 - **Research** nav item (📜 Research) sits between Characters and Settlements; toggles `showResearch` state in `GameUI` via `onToggleResearch` prop; clicking a settlement/character also closes the Research panel
+- **Tutorial** nav item (📖 How to Play) pinned at the bottom of the side panel via `marginTop: auto` on a flex container; toggles `showTutorial` state in `GameUI` via `onToggleTutorial` prop; opening tutorial closes Research and vice versa; clicking a settlement/character also closes the Tutorial panel
 - Clicking calls `setSelected` to update `GameUI` state
 
 ---

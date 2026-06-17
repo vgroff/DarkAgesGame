@@ -8,6 +8,7 @@ import { Box, Button, Modal, Typography } from '@mui/material';
 import React from 'react';
 import { FactionResearchComponent } from './character';
 import { ThemeContext } from './theme';
+import { TutorialUI } from './TutorialUI';
 
 class GameUI extends UIBase {
     constructor(props) {
@@ -48,6 +49,7 @@ class GameUI extends UIBase {
 
         const showLog = this.state.showMessageLog !== undefined ? this.state.showMessageLog : true;
         const showResearch = this.state.showResearch || false;
+        const showTutorial = this.state.showTutorial || false;
         const canBack = this._navIndex > 0;
         const canForward = this._navIndex < this._navHistory.length - 1;
         const faction = this.game.playerCharacter.faction;
@@ -116,13 +118,19 @@ class GameUI extends UIBase {
                         backgroundColor: c.sidePanelBg,
                         borderRight: `1px solid ${c.sidePanelBorder}`,
                         minHeight: '100vh',
+                        height: '100vh',
+                        position: 'sticky',
+                        top: 0,
+                        overflowY: 'auto',
                     }}>
                         <SidePanel
                             setSelected={(selected) => this.setSelected(selected)}
                             game={this.game}
                             internalTimer={this.props.internalTimer}
                             showResearch={showResearch}
-                            onToggleResearch={() => this.setState({ showResearch: !showResearch })}
+                            onToggleResearch={() => this.setState({ showResearch: !showResearch, showTutorial: false })}
+                            showTutorial={showTutorial}
+                            onToggleTutorial={() => this.setState({ showTutorial: !showTutorial, showResearch: false })}
                         />
                     </Grid>
 
@@ -157,14 +165,14 @@ class GameUI extends UIBase {
                                 <Button
                                     variant="outlined"
                                     size="small"
-                                    disabled={!canBack || showResearch}
+                                    disabled={!canBack || showResearch || showTutorial}
                                     onClick={() => this.navBack()}
                                     sx={navBtnSx}
                                 >←</Button>
                                 <Button
                                     variant="outlined"
                                     size="small"
-                                    disabled={!canForward || showResearch}
+                                    disabled={!canForward || showResearch || showTutorial}
                                     onClick={() => this.navForward()}
                                     sx={navBtnSx}
                                 >→</Button>
@@ -172,16 +180,18 @@ class GameUI extends UIBase {
                         </div>
 
                         <div>
-                            {showResearch
-                                ? <FactionResearchComponent faction={faction} internalTimer={this.props.internalTimer} />
-                                : <MainUI
-                                    selected={selected}
-                                    setSelected={(selected) => this.setSelected(selected)}
-                                    gameClock={this.gameClock}
-                                    internalTimer={this.props.internalTimer}
-                                    game={this.game}
-                                    stickyHeaderHeight={this._stickyHeaderRef.current ? this._stickyHeaderRef.current.offsetHeight : 165}
-                                  />
+                            {showTutorial
+                                ? <TutorialUI />
+                                : showResearch
+                                    ? <FactionResearchComponent faction={faction} internalTimer={this.props.internalTimer} />
+                                    : <MainUI
+                                        selected={selected}
+                                        setSelected={(selected) => this.setSelected(selected)}
+                                        gameClock={this.gameClock}
+                                        internalTimer={this.props.internalTimer}
+                                        game={this.game}
+                                        stickyHeaderHeight={this._stickyHeaderRef.current ? this._stickyHeaderRef.current.offsetHeight : 165}
+                                      />
                             }
                         </div>
                     </Grid>

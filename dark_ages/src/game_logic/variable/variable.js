@@ -455,15 +455,59 @@ export class VariableComponent extends React.Component {
         let nameText = (this.props.showName && this.variable.name !== unnamedVariableName) ? <span>{ownerText ? this.variable.name : titleCase(this.variable.name)}: </span> : '';
         let displayValue = roundNumber(this.props.showBase ? this.variable.baseValue : this.variable.currentValue, this.variable.displayRound);
         let maxText = (this.props.showMax && this.variable.max) ? `/${roundNumber(this.variable.max.currentValue, this.variable.displayRound)}` : null;
+        // Pill style for nested VariableComponent values inside tooltips.
+        // The outer span uses position:relative + overflow:visible so the inner
+        // MUI Tooltip (which uses disablePortal and renders inline) does NOT push
+        // surrounding content down when it appears — it floats absolutely over the top.
+        const innerPillWrapStyle = {
+            display: 'inline-block',
+            position: 'relative',
+            verticalAlign: 'baseline',
+        };
+        const innerPillStyle = {
+            display: 'inline-block',
+            padding: '0px 5px',
+            borderRadius: '3px',
+            border: '1px solid #c8c8d0',
+            backgroundColor: '#f7f7f9',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            color: '#333',
+            cursor: 'pointer',
+        };
         function mapExplanationToHTML(explanation, i) {
             if (explanation.variable && explanation.textPriority) {
-                return <span style={{textAlign: "right"}} key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.text)}<br /></span> 
+                return (
+                    <span style={{ textAlign: 'right', display: 'block', color: '#444' }} key={i}
+                        onClick={() => { Logger.setInspect(explanation.variable); }}>
+                        {titleCase(explanation.text)}<br />
+                    </span>
+                );
             } else if (explanation.variable) {
-                return <span style={{textAlign: "right"}} key={i} onClick={() => {Logger.setInspect(explanation.variable)}}>{titleCase(explanation.type)} with <VariableComponent variable={explanation.variable}/><br /></span>
+                return (
+                    <span style={{ textAlign: 'right', display: 'block', color: '#444' }} key={i}
+                        onClick={() => { Logger.setInspect(explanation.variable); }}>
+                        {titleCase(explanation.type)} with{' '}
+                        <span style={innerPillWrapStyle}>
+                            <span style={innerPillStyle}>
+                                <VariableComponent variable={explanation.variable} showName={true} showOwner={false} />
+                            </span>
+                        </span>
+                        <br />
+                    </span>
+                );
             } else if (explanation.text) {
-                return <span style={{textAlign: "right"}} key={i} >{titleCase(explanation.text)}<br /></span>
+                return (
+                    <span style={{ textAlign: 'right', display: 'block', color: '#555' }} key={i}>
+                        {titleCase(explanation.text)}<br />
+                    </span>
+                );
             } else if (typeof(explanation) === 'string') {
-                return <span style={{textAlign: "right"}} key={i} >{titleCase(explanation)}<br /></span>;
+                return (
+                    <span style={{ textAlign: 'right', display: 'block', color: '#555' }} key={i}>
+                        {titleCase(explanation)}<br />
+                    </span>
+                );
             } else if (explanation === null) {
                 return null;
             } else {
@@ -482,8 +526,39 @@ export class VariableComponent extends React.Component {
         // If a description prop is provided, prepend it to the tooltip so callers don't need
         // a separate outer CustomTooltip wrapper (which would create two overlapping tooltips).
         if (this.props.description) {
-            const descSpan = <span style={{textAlign: "right", fontStyle: "italic"}} key="desc">{this.props.description}<br /></span>;
+            const descSpan = <span style={{textAlign: "right", display: 'block', fontStyle: "italic", color: '#666'}} key="desc">{this.props.description}<br /></span>;
             abridgedExplanations = [descSpan, ...abridgedExplanations];
+        }
+        // Prepend a bold variable name header to the tooltip, matching the tutorial demo style.
+        const varName = this.variable.name !== unnamedVariableName ? this.variable.name : null;
+        if (varName && abridgedExplanations.length > 0) {
+            const headerSpan = (
+                <span key="header" style={{
+                    display: 'block', textAlign: 'left', fontWeight: 'bold',
+                    color: '#444', marginBottom: '3px',
+                    borderBottom: '1px solid #e0e0e8', paddingBottom: '3px',
+                }}>
+                    {titleCase(varName)}
+                </span>
+            );
+            abridgedExplanations = [headerSpan, ...abridgedExplanations];
+        }
+        // Append a "= finalValue" footer line at the bottom of the tooltip, matching the
+        // tutorial demo style. Only shown when there are modifier explanations (i.e. the
+        // value is not just the base value with no modifiers applied).
+        // Modifier entries are objects with a `type` field; base value entries are plain strings.
+        const hasModifierExplanations = this.variable.abridgedExplanations.some(e => e && typeof e === 'object' && e.type);
+        if (hasModifierExplanations && abridgedExplanations.length > 0) {
+            const footerSpan = (
+                <span key="footer" style={{
+                    display: 'block', textAlign: 'right', fontWeight: 'bold',
+                    color: '#333', marginTop: '4px',
+                    borderTop: '1px solid #e0e0e8', paddingTop: '4px',
+                }}>
+                    = {displayValue}
+                </span>
+            );
+            abridgedExplanations = [...abridgedExplanations, footerSpan];
         }
         if (!this.props.expanded) {
             return <HTMLTooltip title={abridgedExplanations} style={{textAlign: "right"}}>

@@ -165,7 +165,7 @@ React component that subscribes to a `Variable` and re-renders when it changes.
 
 Renders:
 1. `HTMLTooltip` wrapping the value display (when not expanded)
-2. Tooltip content: `abridgedExplanations` mapped to HTML spans
+2. Tooltip content: bold variable name header + `abridgedExplanations` mapped to HTML spans
 3. Value display: `ownerText + nameText + preText + displayValue + maxText + children + extraChildren`
 4. Clicking owner text: `Logger.setInspect(variable.owner)`
 5. Clicking value: `Logger.setInspect(variable)`
@@ -174,6 +174,14 @@ Renders:
 When `expanded=true`: renders explanation list inline instead of in tooltip.
 
 `visualAlerts`: if `variable.visualAlerts(variable)` returns strings, they are appended to explanations and the value is rendered in red.
+
+**Tooltip styling (updated):**
+- A bold variable name header is prepended to `abridgedExplanations` when the variable has a non-unnamed name and there are explanations to show. Styled with `textAlign: left`, `color: #444`, bottom border `#e0e0e8`.
+- Explanation spans with a nested `variable` use an `innerPillStyle` — monospace, `#f7f7f9` background, `#c8c8d0` border, `border-radius: 3px` — to visually distinguish hoverable sub-values.
+- Plain text explanations use `color: #555`; variable-linked explanations use `color: #444`.
+- Description prop span uses `color: #666`, italic.
+- All explanation spans use `display: block` for consistent line breaks.
+- **`= finalValue` footer**: when `abridgedExplanations` contains at least one modifier entry (detected by `typeof e === 'object' && e.type`), a bold `= {displayValue}` line is appended at the bottom, separated by `borderTop: '1px solid #e0e0e8'`. Matches the tutorial demo's `= 0.82` line. Not shown for variables with no modifiers (base value only).
 
 ---
 

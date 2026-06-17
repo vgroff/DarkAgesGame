@@ -55,6 +55,7 @@ dark_ages/
       hud.js                      # HUD: timer display, play/pause/next-day, treasury
       mainUI.js                   # Main panel: renders Settlement or Character view
       sidePanelUI.js              # Side panel: settlement/character navigation list
+      TutorialUI.js               # In-game tutorial / how-to-play page
       variable/                   # Core reactive state system
       settlement/                 # Settlement, buildings, resources, market, research
 ```
@@ -162,8 +163,9 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 - `GameUI` renders a 3-column layout: SidePanel | MainUI+HUD | Logger
 - `UIBase` is the base class for all class-based UI components; it subscribes to a list of Variables and calls `setState` on change
 - `MainUI` renders either `SettlementComponent` or `CharacterComponent` depending on what is selected
-- `SidePanel` lists player character and all settlements as clickable nav items
+- `SidePanel` lists player character and all settlements as clickable nav items; also has 📜 Research and 📖 How to Play (tutorial) nav items
 - `HUD` shows timer, harvest quality, play/pause/next-day buttons, treasury
+- `TutorialUI` is a pure React component (no Variable subscriptions) shown when the player clicks 📖 How to Play in the side panel; contains interactive tooltip and trending-variable demos
 
 ## Key Concepts
 
