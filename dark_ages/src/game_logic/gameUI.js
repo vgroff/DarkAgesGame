@@ -18,6 +18,10 @@ class GameUI extends UIBase {
         // Navigation history: array of selected items, index into it
         this._navHistory = [props.game.playerCharacter];
         this._navIndex = 0;
+        // Ref to the sticky header block — used to measure its actual rendered height
+        // so the settlement sticky header can use the exact offset to avoid overlap.
+        this._stickyHeaderRef = React.createRef();
+        this._stickyHeaderHeight = 0;
     }
     setSelected(selected) {
         // Truncate forward history when navigating to a new item
@@ -127,8 +131,9 @@ class GameUI extends UIBase {
                     <Grid item xs={8} style={{ padding: '0 8px', height: '100vh', overflowY: 'auto', position: 'relative', paddingBottom: `${fixedBottomHeight}px` }}>
                         {/* Sticky header block: HUD + warning banner + back/forward nav.
                             All three stick together at the top when scrolling.
-                            Settlement sticky header uses top: 165 to clear this block. */}
-                        <div style={{
+                            A ref measures the actual rendered height so SettlementComponent
+                            can use the exact offset for its own sticky header. */}
+                        <div ref={this._stickyHeaderRef} style={{
                             position: 'sticky',
                             top: 0,
                             zIndex: 100,
@@ -148,7 +153,6 @@ class GameUI extends UIBase {
                                 alignItems: 'center',
                                 gap: '4px',
                                 padding: '2px 8px 4px',
-                                borderTop: `1px solid ${c.borderLight}`,
                             }}>
                                 <Button
                                     variant="outlined"
@@ -176,6 +180,7 @@ class GameUI extends UIBase {
                                     gameClock={this.gameClock}
                                     internalTimer={this.props.internalTimer}
                                     game={this.game}
+                                    stickyHeaderHeight={this._stickyHeaderRef.current ? this._stickyHeaderRef.current.offsetHeight : 165}
                                   />
                             }
                         </div>

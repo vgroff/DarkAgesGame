@@ -164,7 +164,7 @@ Note: there is also a duplicate subscription in the rationing loop (lines 180-18
 | 2 | **Military** | Army strength, weapon stockpiles, unit conversion |
 
 - Research tab removed — research is now faction-level, accessed via the "Research" button in `GameUI`
-- **Sticky settlement header**: in `childRender()`, the header + stats bar + tabs row are wrapped in a single `position: sticky; top: 165; zIndex: 90` block. This sticks just below the sticky HUD block in `gameUI.js` (HUD + `WarningBanner` + nav buttons, all at `top: 0`). The `165px` offset ≈ HUD (~90px) + nav bar (~32px) + borders/padding (~10px). Warning banner is variable height (only shown when warnings exist) — when warnings are present the settlement header may overlap slightly, which is acceptable.
+- **Sticky settlement header**: in `childRender()`, the header + stats bar + tabs row are wrapped in a single `position: sticky; top: (stickyHeaderHeight || 165); zIndex: 90` block. `stickyHeaderHeight` is passed as a prop from `GameUI` (via `MainUI`), measured from the actual DOM ref on the sticky HUD block, so it always clears the block exactly regardless of warning banner presence.
 - Header (always visible): settlement name, leader name (clickable → `setSelected`), terrain, active events
 - Stats bar (always visible, part of sticky block): support | happiness | health | generalProductivity
 - NPC settlement Trading tab shows a grey "managed by NPC leader" message

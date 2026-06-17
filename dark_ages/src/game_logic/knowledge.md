@@ -631,7 +631,7 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 - Uses `props.game` passed from `App.js` (no longer creates its own `Game` instance)
 - 3-column MUI Grid: SidePanel (xs=2) | HUD+MainUI (xs=8) | Logger (xs=2)
 - **Main content column** (`xs=8`) has `height: 100vh; overflow-y: auto` — its own scroll container so that `position: sticky` children work correctly within it. Has `paddingBottom` to reserve space for the fixed message log + bottom toolbar.
-- **Sticky header block**: a single `position: sticky; top: 0; zIndex: 100` div contains the HUD, `WarningBanner`, and back/forward nav buttons — all three stick together at the top when scrolling. No `marginBottom` on this block (prevents a see-through gap). Settlement sticky header uses `top: 165` to clear this block.
+- **Sticky header block**: a single `position: sticky; top: 0; zIndex: 100` div (with `ref={this._stickyHeaderRef}`) contains the HUD, `WarningBanner`, and back/forward nav buttons — all three stick together at the top when scrolling. `_stickyHeaderRef.current.offsetHeight` is measured on each render and passed as `stickyHeaderHeight` prop to `MainUI` → `SettlementComponent`, so the settlement sticky header always clears the block exactly.
 - **`MessageLogPanel`**: rendered outside the main grid as `position: fixed; bottom: 40px; left: 0; right: 0; zIndex: 190` — always visible just above the App.js bottom toolbar. Shown by default (`showMessageLog` defaults to `true`).
 - `setSelected(selected)`: pushes to `_navHistory`, truncates forward history, updates `this.state.selected`; also clears `showResearch` state
 - Shows `GameMessage` modal when `game.gameMessages.length > 0`

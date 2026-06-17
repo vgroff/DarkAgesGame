@@ -1128,12 +1128,11 @@ export class SettlementComponent extends UIBase {
         return <Grid container justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
             {/* Sticky settlement header: name/leader/terrain/events + stats bar + tabs.
                 Sits below the sticky HUD block (HUD + warning banner + nav buttons).
-                The main column has its own scroll container (overflow-y: auto in gameUI.js).
-                top: 165 ≈ HUD (~90px) + nav bar (~32px) + borders/padding (~10px).
-                Warning banner is variable height but only appears when warnings exist. */}
+                stickyHeaderHeight is measured from the actual DOM ref in GameUI and passed
+                down via MainUI, so this always clears the sticky block exactly. */}
             <Grid item xs={12} style={{
                 position: 'sticky',
-                top: 165,
+                top: this.props.stickyHeaderHeight || 165,
                 zIndex: 90,
                 backgroundColor: c ? c.contentBg : '#fff',
                 paddingBottom: '2px',
