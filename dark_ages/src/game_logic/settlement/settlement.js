@@ -308,7 +308,6 @@ export class Settlement {
         });
     }
     addBuilding(building) {
-        console.log(`Adding ${building.name}`);
         if (building instanceof ResourceBuilding) {
             this.resourceBuildings.push(building);
             building.productivity.addModifier(this.generalProductivityModifier);
@@ -592,10 +591,23 @@ export class Settlement {
      */
     armSoldiers(unitResource, count) {
         const weaponCostEntry = UNIT_WEAPON_COSTS[unitResource.name];
-        if (!weaponCostEntry) return false;
+        if (!weaponCostEntry) {
+            Logger.warn(`armSoldiers: no weapon cost entry for "${unitResource.name}"`);
+            return false;
+        }
         const weaponResource = Resources[weaponCostEntry.resourceName];
         const weaponStorage = this.resourceStorages.find(rs => rs.resource === weaponResource);
-        if (!weaponStorage || weaponStorage.amount.baseValue < weaponCostEntry.amount * count) return false;
+        if (!weaponStorage) {
+            Logger.warn(`armSoldiers: weapon storage not found for "${weaponCostEntry.resourceName}"`);
+            return false;
+        }
+        const needed = weaponCostEntry.amount * count;
+        const have = weaponStorage.amount.baseValue;
+        const haveCurrentValue = weaponStorage.amount.currentValue;
+        if (have < needed) {
+            Logger.warn(`armSoldiers: insufficient ${weaponCostEntry.resourceName} — need ${needed}, have baseValue=${have} currentValue=${haveCurrentValue}`, { unit: unitResource.name });
+            return false;
+        }
         weaponStorage.oneOffDemand(weaponCostEntry.amount * count, `arm ${unitResource.name}`);
         const unitStorage = this.resourceStorages.find(rs => rs.resource === unitResource);
         if (!unitStorage) return false;

@@ -194,6 +194,25 @@ class Game {
             return { settlement: s, modMin, modMax };
         });
 
+        // The pop freeze modifiers clamp populationSizeChange to 1, which causes
+        // populationSizeInternal to recalculate to its startingValue (e.g. 80.65 for
+        // banditRaid). This may increase populationSizeExternal above what it was when
+        // adjustJobs() ran in _applyScenario, leaving some workers unemployed.
+        // Re-run adjustJobs() for all player settlements to fill any new vacancies.
+        if (scenario) {
+            this.settlements.forEach(s => {
+                if (s.unemployed?.currentValue > 0) {
+                    let prevU = null;
+                    for (let i = 0; i < 5; i++) {
+                        s.adjustJobs();
+                        const u = s.unemployed?.currentValue ?? 0;
+                        if (u === prevU) break;
+                        prevU = u;
+                    }
+                }
+            });
+        }
+
         // ── Day 1 instant snap ──────────────────────────────────────────────────
         //
         // Subscribe to happiness and health directly. Whenever either recalculates
@@ -284,26 +303,8 @@ class Game {
     _applyScenario(scenario) {
         const playerSettlement = this.settlements[0];
 
-        // ── 1. Starting resources ──────────────────────────────────────────────
-        if (scenario.startingResources) {
-            for (const [resourceName, amount] of Object.entries(scenario.startingResources)) {
-                const rs = playerSettlement.resourceStorages.find(
-                    s => s.resource.name === resourceName
-                );
-                if (rs && rs.amount && amount > 0) {
-                    rs.amount.setNewBaseValue(
-                        rs.amount.baseValue + amount,
-                        `scenario starting resource: ${resourceName}`
-                    );
-                    Logger.debug('Scenario: added starting resource', { resource: resourceName, amount });
-                } else if (!rs) {
-                    Logger.warn(`Scenario: unknown resource name "${resourceName}"`);
-                    console.warn(`[Scenario] Unknown resource name: "${resourceName}"`);
-                }
-            }
-        }
-
-        // ── 2. Building sizes ──────────────────────────────────────────────────
+        // ── 1. Building sizes ──────────────────────────────────────────────────
+        // Applied first so storage capacity is correct before resources are added.
         // We use forceNewSize() to bypass resource cost checks.
         if (scenario.startingBuildingSizes) {
             for (const [buildingName, targetSize] of Object.entries(scenario.startingBuildingSizes)) {
@@ -321,13 +322,11 @@ class Game {
             }
         }
 
-        // ── 3. Building upgrades ───────────────────────────────────────────────
-        // Apply upgrades by index, bypassing resource cost checks (force=true).
-        // We must also mark the upgrade as unlocked before forcing it, since
-        // BuildingUpgrade.upgrade(force=true) still checks canUpgrade() for the
-        // unlocked flag... actually force=true bypasses canUpgrade() entirely.
-        // We call Building.upgrade(resourceStorages, force=true) which increments
-        // currentUpgradeIndex and updates displayName correctly.
+        // ── 2. Building upgrades ───────────────────────────────────────────────
+        // Applied before resources so that upgrade side-effects (e.g. destroying
+        // the old output resource via changeOutputResource(destroyOld=true)) don't
+        // wipe out resources we've already added. E.g. upgrading WeaponMaker from
+        // stone→iron destroys all stone weaponry in storage — we add weapons after.
         if (scenario.startingBuildingUpgrades) {
             for (const [buildingName, upgradeIndex] of Object.entries(scenario.startingBuildingUpgrades)) {
                 const building = playerSettlement.getBuildings().find(b => b.name === buildingName);
@@ -341,6 +340,27 @@ class Game {
                     // Mark unlocked so the upgrade is visible in UI after the fact
                     building.upgrades[building.currentUpgradeIndex].unlocked = true;
                     building.upgrade(playerSettlement.resourceStorages, true);
+                }
+            }
+        }
+
+        // ── 3. Starting resources ──────────────────────────────────────────────
+        // Applied after building upgrades so upgrade side-effects (e.g. destroying
+        // old output resource) don't wipe out resources we've just added.
+        if (scenario.startingResources) {
+            for (const [resourceName, amount] of Object.entries(scenario.startingResources)) {
+                const rs = playerSettlement.resourceStorages.find(
+                    s => s.resource.name === resourceName
+                );
+                if (rs && rs.amount && amount > 0) {
+                    rs.amount.setNewBaseValue(
+                        rs.amount.baseValue + amount,
+                        `scenario starting resource: ${resourceName}`
+                    );
+                    Logger.debug('Scenario: added starting resource', { resource: resourceName, amount });
+                } else if (!rs) {
+                    Logger.warn(`Scenario: unknown resource name "${resourceName}"`);
+                    console.warn(`[Scenario] Unknown resource name: "${resourceName}"`);
                 }
             }
         }
@@ -547,10 +567,16 @@ class Game {
         // settlements on the first tick, including any scenario-applied changes.
 
         // ── 13. Auto-assign workers ────────────────────────────────────────────
-        // Run adjustJobs() once so the scenario starts with workers assigned.
-        // This prevents the player from seeing a large "unemployed" count on load
-        // when the scenario has pre-built buildings with empty job slots.
-        playerSettlement.adjustJobs();
+        // Run adjustJobs() in a loop until stable (unemployed unchanged between passes).
+        // Multiple passes are needed because the Variable cascade may not have fully
+        // settled after the first pass (e.g. building size modifiers propagating).
+        let prevUnemployed = null;
+        for (let i = 0; i < 5; i++) {
+            playerSettlement.adjustJobs();
+            const u = playerSettlement.unemployed?.currentValue ?? 0;
+            if (u === prevUnemployed) break;
+            prevUnemployed = u;
+        }
         Logger.debug('Scenario: auto-assigned workers after scenario apply', {
             unemployed: playerSettlement.unemployed?.currentValue,
         });
