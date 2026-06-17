@@ -1,4 +1,5 @@
 import {VariableModifier, multiplication, subtraction, division, makeTextFile, priority, roundTo, scaledAddition, UnaryModifier, scaledMultiplication, invLogit, min, Variable, castInt, addition, TrendingVariable, TrendingVariableComponent, VariableComponent, CumulatorComponent, Cumulator} from '../UIUtils.js';
+import { Logger } from '../logger.js';
 import Grid from  '@mui/material/Grid';
 import Checkbox from '@mui/material/Checkbox';
 import {FormControlLabel, Tab, Tabs, Modal, Box, Typography} from '@mui/material';
@@ -358,6 +359,15 @@ export class Settlement {
             return;
         }
         this.rebellionOngoing = true;
+        const oldLeaderName = this.leader ? this.leader.name : 'unknown';
+        const wasPlayer = this.leader ? this.leader.isPlayer : false;
+        Logger.warn(`Rebellion in ${this.name}`, {
+            settlement: this.name,
+            oldLeader: oldLeaderName,
+            isPlayer: wasPlayer,
+            rebellionSupport: this.totalRebellionSupport?.currentValue,
+            day: this.gameClock?.currentValue,
+        });
         let newLeader = new Character({name:"random npc", culture: copyCulture(this.leader), gameClock: this.gameClock});
         let oldLeader = this.leader;
         this.setLeader(newLeader);
@@ -405,6 +415,12 @@ export class Settlement {
             // Sell at the current market sell price
             const income = excess * marketResource.marketSellPrice.currentValue;
             if (income > 0) {
+                Logger.debug(`Auto-sold excess ${resourceStorage.resource.name}`, {
+                    settlement: this.name,
+                    excess,
+                    income,
+                    day: this.gameClock?.currentValue,
+                });
                 this.addToTreasury(income, `auto-sold excess ${resourceStorage.resource.name}`);
             }
         }
@@ -595,6 +611,13 @@ export class Settlement {
         // Store modifier reference for disarming
         if (!this._unitModifiers[unitResource.name]) this._unitModifiers[unitResource.name] = [];
         this._unitModifiers[unitResource.name].push({ modifier, count });
+        Logger.debug(`Armed soldiers: ${count}× ${unitResource.name}`, {
+            settlement: this.name,
+            unit: unitResource.name,
+            count,
+            newArmyStrength: this.armyStrength?.currentValue,
+            day: this.gameClock?.currentValue,
+        });
         return true;
     }
 
@@ -607,6 +630,12 @@ export class Settlement {
     disarmSoldiers(unitResource, count) {
         const unitStorage = this.resourceStorages.find(rs => rs.resource === unitResource);
         if (!unitStorage || unitStorage.amount.baseValue < count) return false;
+        Logger.debug(`Disarmed soldiers: ${count}× ${unitResource.name}`, {
+            settlement: this.name,
+            unit: unitResource.name,
+            count,
+            day: this.gameClock?.currentValue,
+        });
         unitStorage.amount.setNewBaseValue(unitStorage.amount.baseValue - count, `disarm ${unitResource.name}`);
         // Return weapons to storage
         const weaponCostEntry = UNIT_WEAPON_COSTS[unitResource.name];
@@ -690,6 +719,9 @@ export class SettlementComponent extends UIBase {
     /** Render the settlement header: name, leader, terrain, key stats, events */
     renderHeader() {
         const s = this.settlement;
+        const theme = this.context;
+        const c = theme ? theme.colors : null;
+        const activeEvents = s.settlementEvents.filter(ev => ev.isActive());
         return <Grid item xs={12}>
             <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>{s.name}</span>
             {' · '}
@@ -698,12 +730,21 @@ export class SettlementComponent extends UIBase {
             </span>
             {' · '}
             <TerrainComponent terrain={s.terrain} prefix={true} />
-            <br />
-            {s.settlementEvents.filter(ev => ev.isActive()).map((ev, i) =>
-                <span key={`${ev.name}_${i}`} style={{ fontSize: '1.05em', fontWeight: 'bold', marginRight: '8px' }}>
-                    <EventComponent event={ev}/>
-                </span>
-            )}
+            {activeEvents.length > 0 && <div style={{ marginTop: '4px' }}>
+                <div style={{
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.07em',
+                    color: c ? c.textMuted : '#aaa',
+                    marginBottom: '2px',
+                }}>Active Events</div>
+                {activeEvents.map((ev, i) =>
+                    <span key={`${ev.name}_${i}`} style={{ fontSize: '1.05em', fontWeight: 'bold', marginRight: '8px' }}>
+                        <EventComponent event={ev}/>
+                    </span>
+                )}
+            </div>}
         </Grid>;
     }
     /** Tab 0 — Production: key stats + buildings */
@@ -779,7 +820,7 @@ export class SettlementComponent extends UIBase {
                 {divider}
 
                 {/* Controls */}
-                <a href={s.logHref}>{Variable.logging ? 'Calculation Log' : 'logging is off'}</a><br />
+                {Variable.logging && <><a href={s.logHref}>Calculation Log</a><br /></>}
                 {isPlayer ? <FormControlLabel control={<Checkbox onChange={(e, value) => {
                     s.autoManageUnemployed = value;
                     if (s.autoManageUnemployed) s.adjustJobs();

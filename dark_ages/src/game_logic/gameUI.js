@@ -208,7 +208,7 @@ class GameUI extends UIBase {
                         borderTop: `1px solid ${c.hudBorder}`,
                     }}>
                         <MessageLogPanel
-                            messageLog={this.game.messageLog}
+                            logger={Logger.getLogger()}
                             show={showLog}
                             onToggle={() => this.setState({ showMessageLog: !showLog })}
                         />
@@ -331,13 +331,40 @@ WarningBanner.contextType = ThemeContext;
  * A collapsible panel shown below the main 3-column layout.
  * Displays the full permanent message history (newest first).
  */
+/**
+ * §3 Message log panel — reads from logger.inGameLog so the log level selector
+ * in LoggerComponent actually controls what appears here.
+ *
+ * Entries in inGameLog have shape: { ts, level, levelName, message, context }
+ * Day is stored in context.day when logged via addGameMessage / Logger.info etc.
+ */
 export class MessageLogPanel extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { inGameLog: props.logger ? [...props.logger.inGameLog] : [] };
+        this._loggerSub = null;
+    }
+
+    componentDidMount() {
+        const logger = this.props.logger;
+        if (!logger) return;
+        this._loggerSub = logger.subscribe(() => {
+            this.setState({ inGameLog: [...logger.inGameLog] });
+        }, 'MessageLogPanel');
+    }
+
+    componentWillUnmount() {
+        if (this.props.logger && this._loggerSub) {
+            this.props.logger.unsubscribe(this._loggerSub);
+        }
+    }
+
     render() {
-        const { messageLog, show, onToggle } = this.props;
+        const { show, onToggle } = this.props;
         const theme = this.context;
         const c = theme ? theme.colors : null;
 
-        const reversedLog = messageLog ? [...messageLog].reverse() : [];
+        const reversedLog = [...this.state.inGameLog].reverse();
 
         const wrapStyle = {
             borderTop: `1px solid ${c ? c.divider : '#ccc'}`,
@@ -364,6 +391,9 @@ export class MessageLogPanel extends React.Component {
             '&:hover': { borderColor: c.accentHover, backgroundColor: c.contentBgHover },
         } : {};
 
+        // Level colours for the log entries
+        const levelColors = { 0: '#888', 1: 'inherit', 2: '#b8860b', 3: '#cc0000' };
+
         return (
             <div style={wrapStyle}>
                 <Button
@@ -373,24 +403,31 @@ export class MessageLogPanel extends React.Component {
                     sx={btnSx}
                     style={{ marginBottom: show ? '8px' : 0 }}
                 >
-                    {show ? 'Hide Message Log' : `Show Message Log (${messageLog ? messageLog.length : 0})`}
+                    {show ? 'Hide Message Log' : `Show Message Log (${reversedLog.length})`}
                 </Button>
                 {show && (
                     <div style={panelStyle}>
                         {reversedLog.length === 0
                             ? <span style={{ color: c ? c.textMuted : '#888' }}>No messages yet.</span>
-                            : reversedLog.map((entry, i) => (
-                                <div key={i} style={{
-                                    marginBottom: '4px',
-                                    borderBottom: `1px solid ${c ? c.msgLogEntryBorder : '#eee'}`,
-                                    paddingBottom: '4px',
-                                }}>
-                                    <span style={{ color: c ? c.msgLogDayColor : '#888', marginRight: '8px', fontSize: '11px' }}>
-                                        Day {entry.day}
-                                    </span>
-                                    <span style={{ color: c ? c.textPrimary : 'inherit' }}>{entry.text}</span>
-                                </div>
-                            ))
+                            : reversedLog.map((entry, i) => {
+                                const day = entry.context?.day;
+                                return (
+                                    <div key={i} style={{
+                                        marginBottom: '4px',
+                                        borderBottom: `1px solid ${c ? c.msgLogEntryBorder : '#eee'}`,
+                                        paddingBottom: '4px',
+                                    }}>
+                                        {day != null && (
+                                            <span style={{ color: c ? c.msgLogDayColor : '#888', marginRight: '8px', fontSize: '11px' }}>
+                                                Day {day}
+                                            </span>
+                                        )}
+                                        <span style={{ color: levelColors[entry.level] ?? 'inherit' }}>
+                                            {entry.message}
+                                        </span>
+                                    </div>
+                                );
+                            })
                         }
                     </div>
                 )}

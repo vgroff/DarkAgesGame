@@ -1,4 +1,5 @@
 import { Variable } from './variable/variable';
+import { Logger } from './logger';
 import Game from './game';
 import { Settlement } from './settlement/settlement';
 import { Character } from './character';
@@ -180,8 +181,10 @@ const SPECIAL_PROPS = new Set([
 
 export function saveGame(game) {
     try {
+        Logger.info('Game saved', { day: game?.gameClock?.currentValue });
         return serializeObject(game);
     } catch (error) {
+        Logger.error('Failed to save game', { error: error.message });
         console.error('Error saving game:', error);
         throw new Error('Failed to save game: ' + error.message);
     }
@@ -189,8 +192,11 @@ export function saveGame(game) {
 
 export function loadGame(gameState) {
     try {
-        return deserializeObject(gameState);
+        const result = deserializeObject(gameState);
+        Logger.info('Game loaded', { day: result?.gameClock?.currentValue });
+        return result;
     } catch (error) {
+        Logger.error('Failed to load game', { error: error.message });
         console.error('Error loading game:', error);
         throw new Error('Failed to load game: ' + error.message);
     }

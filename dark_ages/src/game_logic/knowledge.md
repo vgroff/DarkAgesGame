@@ -452,13 +452,40 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 ## `logger.js` — Debug Inspector
 
 ### `Logger` (singleton)
+
+**Log level constants** (exported):
+```js
+LOG_LEVELS = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, GAME_MSG: 4 }
+```
+`GAME_MSG` (4) is the highest level — used exclusively by `addGameMessage()` for player-facing messages. Setting `inGameLogLevel = GAME_MSG` shows only those messages in the panel.
+
+**Two log stores:**
+- `fileLog`: array of all entries ever logged — never trimmed. Shape: `{ ts, level, levelName, message, context }`. Used for download.
+- `inGameLog`: filtered subset of `fileLog` where `entry.level >= inGameLogLevel`. Default `inGameLogLevel` is `INFO` (1).
+
+**Core API:**
 - `Logger.getLogger()` / `Logger.constructLogger()` — lazy singleton
-- `addLine(line)`: appends to `lines` array, notifies subscribers
+- `Logger.debug(message, context)` / `Logger.info(...)` / `Logger.warn(...)` / `Logger.error(...)` — static convenience methods
+- `log(level, message, context)` — core method; pushes to `fileLog`, conditionally to `inGameLog`, notifies subscribers
+- `setInGameLogLevel(level)` — changes the filter level and rebuilds `inGameLog` from `fileLog`
+- `getFileLogBlobUrl()` — returns a blob URL for the full `fileLog` as a `.txt` file (used as fallback)
+
+**Legacy API (preserved):**
+- `addLine(line)`: appends to `lines` array (legacy in-game log), notifies subscribers
 - `setInspect(inspect)`: sets the current inspected object, pushes to history (max 35)
 - `backOne()`: pops history and re-inspects previous object
 - `subscribe(callback)` / `unsubscribe(callback)`: standard pub/sub
 
+**Log calls in codebase (42 total):**
+- `game.js`: game construction, treasury bankruptcy/recovery, NPC research, scenario application, day-2 cleanup, treasury additions, global event firing, rebellion, game over
+- `events.js`: event fire/end/choice applied, harvest result, crop blight, pestilence severity, nomads choices, bandit tribute, battle win/loss
+- `settlement.js`: rebellion, auto-sell excess goods, arm/disarm soldiers
+- `character.js`: privilege confirmation, research activation, trait add/remove
+- `save_load.js`: save success/failure, load success/failure
+
 ### `LoggerComponent`
+- Log level selector buttons (DEBUG / INFO / WARN / ERROR) — calls `setInGameLogLevel`
+- File log download link — calls `getFileLogBlobUrl()`
 - Renders the current `inspect` object
 - If `inspect instanceof Variable`: renders `VariableComponent` in expanded mode
 - Otherwise: renders `renderObject()` which shows all properties
@@ -632,7 +659,7 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 - 3-column MUI Grid: SidePanel (xs=2) | HUD+MainUI (xs=8) | Logger (xs=2)
 - **Main content column** (`xs=8`) has `height: 100vh; overflow-y: auto` — its own scroll container so that `position: sticky` children work correctly within it. Has `paddingBottom` to reserve space for the fixed message log + bottom toolbar.
 - **Sticky header block**: a single `position: sticky; top: 0; zIndex: 100` div (with `ref={this._stickyHeaderRef}`) contains the HUD, `WarningBanner`, and back/forward nav buttons — all three stick together at the top when scrolling. `_stickyHeaderRef.current.offsetHeight` is measured on each render and passed as `stickyHeaderHeight` prop to `MainUI` → `SettlementComponent`, so the settlement sticky header always clears the block exactly.
-- **`MessageLogPanel`**: rendered outside the main grid as `position: fixed; bottom: 40px; left: 0; right: 0; zIndex: 190` — always visible just above the App.js bottom toolbar. Shown by default (`showMessageLog` defaults to `true`).
+- **`MessageLogPanel` (updated)**: rendered outside the main grid as `position: fixed; bottom: 40px; left: 0; right: 0; zIndex: 190` — always visible just above the App.js bottom toolbar. Shown by default (`showMessageLog` defaults to `true`). Now receives a `logger` prop (the singleton `Logger`) instead of `messageLog`. Subscribes to the logger in `componentDidMount` and reads from `logger.inGameLog` — so the log level selector in `LoggerComponent` directly controls what appears here. Entry format: `{ ts, level, levelName, message, context }`. Day is shown from `entry.context?.day` when present. Entries are colour-coded by level (DEBUG=grey, INFO=default, WARN=dark yellow, ERROR=red).
 - `setSelected(selected)`: pushes to `_navHistory`, truncates forward history, updates `this.state.selected`; also clears `showResearch` state
 - Shows `GameMessage` modal when `game.gameMessages.length > 0`
 - **Back/Forward navigation**: `_navHistory` array + `_navIndex` pointer. `navBack()` / `navForward()` move the index and call `setState`. Two MUI `Button` components (← →) rendered inside the sticky header block; disabled when at history boundaries or when Research panel is open. Initial history entry is `game.playerCharacter`.
@@ -643,7 +670,7 @@ Used in `hud.js` for Play/Pause/Next Day buttons.
 - Calls `timer.stopTimer()` in `childRender()` — stops the game while message is shown
 - "Close" button calls `readGameMessage()` which shifts the first message
 
-### `MessageLogPanel`
+### `MessageLogPanel` (updated)
 - Pure React component (not UIBase)
 - Props: `messageLog` (array of `{text, day}` objects), `show` (boolean), `onToggle` (callback)
 - Toggle button shows/hides the panel; button label shows message count when hidden

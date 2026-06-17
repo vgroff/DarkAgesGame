@@ -581,11 +581,13 @@ This is a design idea — the implementation approach is not specified. Ask befo
 
 ### Moderate
 
-1. **`variable.js` epsilon check with zero** (line 256): `absChange / Math.abs(this.currentValue)` when `currentValue = 0` produces `Infinity`, which is always `> 2e-5`. This means any change from 0 always triggers subscribers — probably correct but unintentional.
-
-2. **`TrendingVariable.recalculate()` depth tracking**: `trend()` calls `callSubscribers` directly without going through the depth guard in `recalculate`. If a subscriber triggers another `recalculate`, the depth guard in the parent will not prevent it from calling subscribers again via `trend()`.
+1. **`variable.js` epsilon check with zero** (line 256): `absChange / Math.abs(this.currentValue)` when `currentValue = 0` produces `Infinity`, which is always `> 2e-5`. This means any change from 0 always triggers subscribers — probably correct but unintentional. *(Fixed in top-level knowledge.md Bug 10 — epsilon check now guards against zero)*
 
 6. **`VariableModifier` with `object`/`keys`**: calls `resubscribeToVariable()` on every `modify()` call. If the variable hasn't changed, it returns early — but this still does a property traversal on every tick for every such modifier.
+
+### Fixed
+
+- **Bug 2** (`trendingVariable.js`): `trend()` was calling `callSubscribers` directly without going through the `currentDepth < 2` depth guard. Fixed by adding `if (this.currentDepth < 2)` check before `callSubscribers(indent+1)` in `trend()`.
 
 ### Minor
 

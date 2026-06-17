@@ -12,6 +12,7 @@ import { CustomTooltip, titleCase } from "./utils";
 import { createResearchTree, ResearchComponent } from "./settlement/research";
 import { Resources } from "./settlement/resource";
 import { ThemeContext } from "./theme";
+import { Logger } from "./logger";
 
 export class Faction {
     constructor(props) {
@@ -92,9 +93,10 @@ export class Faction {
         this.updatePrivileges();
     }
     confirmPrivilegeChanges() {
-        if (!this.tentativelyChanged) { 
+        if (!this.tentativelyChanged) {
             return;
         }
+        Logger.info('Faction privilege changes confirmed', { faction: this.name, privileges: this.privileges.map(p => ({ name: p.name, num: p.num })) });
         let legitimacyMalus = new TemporaryLegitimacyBonus({name: "Changed privileges recently", amount: -0.05, duration:daysInYear*5, timer: this.gameClock, type: addition});
         legitimacyMalus.activate(this.leader);
         this.tentativelyChanged = false;
@@ -181,6 +183,8 @@ export class Faction {
         const settlements = this.getPlayerSettlements();
         const totalResearch = this.getTotalResearch();
         const cost = research.researchCost;
+
+        Logger.info(`Research activated: ${research.name}`, { cost, totalResearch, faction: this.name });
 
         // Deduct proportionally from each settlement's research storage
         settlements.forEach(settlement => {
@@ -620,6 +624,7 @@ export class Character {
         this.culture.getTraits().forEach(lastTrait => this.addTrait(lastTrait));
     }
     addTrait(trait) {
+        Logger.debug(`Trait added: ${trait.name} to ${this.name}`, { character: this.name, trait: trait.name, isPlayer: this.isPlayer });
         trait.activate(this);
         this.traits.push(trait);
         Object.entries(this.traitGroups).forEach(([key, traitGroup]) => {
@@ -633,6 +638,7 @@ export class Character {
         this.checkTraitsComplete();
     }
     removeTrait(trait) {
+        Logger.debug(`Trait removed: ${trait.name} from ${this.name}`, { character: this.name, trait: trait.name, isPlayer: this.isPlayer });
         trait.deactivate(this);
         const index = this.traits.indexOf(trait);
         if (index > -1) { // only splice array when item is found

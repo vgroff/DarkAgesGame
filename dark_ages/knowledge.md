@@ -414,10 +414,27 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 *(all critical bugs fixed — see below)*
 
 ### Moderate
-9. **`TemporaryModifierBonus.deactivate()`**: does nothing — relies on timer callback to remove modifier. If the event ends before the timer fires, the modifier may persist
+*(all moderate bugs fixed — see below)*
 
 ### Minor
 *(all minor bugs fixed — see below)*
+
+### Fixed (this session) — scenario bugs & log level improvements
+
+- **`scenarios.js` banditRaid `startingResources`**: keys `stoneWeaponry` and `ironWeaponry` were camelCase but resource names are `"stone weaponry"` / `"iron weaponry"` (with spaces). Fixed to use quoted string keys. This also fixes the downstream `armSoldiers` failures for "stone swords" and "iron spears" (which failed because no weapons had been added).
+- **`game.js` `_applyScenario` auto-assign workers**: added `playerSettlement.adjustJobs()` call at the end of `_applyScenario` (step 13) so scenarios start with workers assigned. Prevents the player seeing a large "unemployed" count on load when the scenario has pre-built buildings.
+- **`logger.js` `GAME_MSG` level**: added `GAME_MSG = 4` as a new log level above ERROR. `addGameMessage()` now logs at this level. Setting `inGameLogLevel = GAME_MSG` in the `LoggerComponent` shows only player-facing game messages in the message log panel. `LOG_LEVEL_NAMES` updated to include `'GAME'` as the display name for level 4.
+- **`logger.js` download button**: replaced static `<a href>` (stale blob URL) with a `<button onClick>` that generates a fresh blob URL and triggers download programmatically at click time.
+- **`gameUI.js` `MessageLogPanel`**: now receives `logger` prop and reads from `logger.inGameLog` (subscribes in `componentDidMount`). Log level selector in `LoggerComponent` now directly controls what appears in the player-facing message log. Entry format: `{ ts, level, levelName, message, context }`. Day shown from `entry.context?.day`. Entries colour-coded by level.
+- **`settlement.js` "logging is off"**: removed the "logging is off" text — the calculation log link now only renders when `Variable.logging === true`.
+
+### Fixed (this session) — logging, bug fixes & UI polish
+
+- **`settlement.js` events div**: `renderHeader()` now only renders the events section when `activeEvents.length > 0`. Removed the unconditional `<br />` that caused empty space when no events were active. Added an "Active Events" group label with the same style as "Population" / "Jobs & Homes" labels in the production tab (10px, bold, uppercase, `textMuted` color).
+- **`trendingVariable.js` depth guard in `trend()`**: `trend()` was calling `callSubscribers` directly without going through the `currentDepth < 2` guard. Fixed by adding the guard check before `callSubscribers(indent+1)` in `trend()`.
+- **`bonus.js` `TemporaryModifierBonus.deactivate()`**: was a no-op — if an event ended before the timer fired, the modifier persisted. Fixed by adding `_activeSettlement` and `_modifierRemoved` tracking fields in `activate()`, a `_removeModifier(settlement)` helper with a double-removal guard, and making `deactivate(settlement)` call `_removeModifier`. The timer callback also now calls `_removeModifier` instead of directly removing.
+- **Logging system** (`logger.js`): complete rewrite. `LOG_LEVELS = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 }`. `Logger` class now has `fileLog` (all entries, never trimmed) and `inGameLog` (filtered by `inGameLogLevel`, default INFO). Static convenience methods: `Logger.debug()`, `Logger.info()`, `Logger.warn()`, `Logger.error()`. `setInGameLogLevel(level)` rebuilds `inGameLog` from `fileLog`. `getFileLogBlobUrl()` downloads full log as text file. `LoggerComponent` updated with log level selector buttons and download link. Legacy API (`addLine`, `setInspect`, etc.) preserved.
+- **Log calls added** (42 total across `game.js`, `events.js`, `settlement.js`, `character.js`, `save_load.js`): game construction, treasury bankruptcy/recovery, NPC research, scenario application, day-2 cleanup, treasury additions, global event firing, rebellion, game over, event fire/end/choice, harvest/blight/pestilence/nomads/bandit events, auto-sell, arm/disarm soldiers, privilege confirmation, research activation, trait add/remove, save/load success/failure.
 
 ### Fixed (this session) — UI polish round 3
 

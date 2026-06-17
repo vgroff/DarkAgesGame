@@ -60,7 +60,10 @@ export class TrendingVariable extends Variable {
         if (Math.abs(this.currentValue - this.currentlyTrendingTo) < this.smallestTrend) {
             this.currentValue = this.currentlyTrendingTo;
         }
-        this.callSubscribers(indent+1);
+        // Respect the depth guard: don't call subscribers if we're already deep in a recalculation chain
+        if (this.currentDepth < 2) {
+            this.callSubscribers(indent+1);
+        }
     }
     storeCurrentValue() {
         this.trendingValueAtTurnStart = this.currentValue;

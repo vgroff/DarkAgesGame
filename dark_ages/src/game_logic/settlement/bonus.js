@@ -292,7 +292,9 @@ export class TemporaryModifierBonus extends SettlementBonus {
         // current change is startingValue amount*(1 - diff/duration) - this is if we interpolate between 0 and amount for the sake of addition,
         // but what if we interpolate between amount and 1 for the sake of multiplication?
         // durationFactor is diff/duration i.e. goes from 0 to 1
-        this.durationFactor = new Variable({name: "duration factor", startingValue: -1*this.timer.currentValue, max: new Variable({startingValue: 1}), 
+        this._activeSettlement = settlement; // track for deactivate()
+        this._modifierRemoved = false;       // guard against double-removal
+        this.durationFactor = new Variable({name: "duration factor", startingValue: -1*this.timer.currentValue, max: new Variable({startingValue: 1}),
             modifiers: [
                 new VariableModifier({variable: this.timer, type: addition}),
                 new VariableModifier({startingValue: this.duration, type: division})
@@ -319,13 +321,24 @@ export class TemporaryModifierBonus extends SettlementBonus {
         this.variableName = settlement[this.variableAccessor].name;
         this.timer.subscribe(() => {
             if (this.durationFactor.currentValue >= 1) {
-                settlement[this.variableAccessor].removeModifier(this.modifier);
+                this._removeModifier(settlement);
                 return false; // return false to unsub
             }
         })
     }
+    _removeModifier(settlement) {
+        if (!this._modifierRemoved && this.modifier) {
+            try {
+                settlement[this.variableAccessor].removeModifier(this.modifier);
+            } catch(e) {
+                // modifier may already have been removed; ignore
+            }
+            this._modifierRemoved = true;
+        }
+    }
     deactivate(settlement) {
-        // This effect is deactivated separately by the timer callback
+        // If the event ends before the timer fires, remove the modifier immediately
+        this._removeModifier(settlement);
     }
     getEffectText() {
         let name = this.variableHumanReadable || this.variableAccessor;

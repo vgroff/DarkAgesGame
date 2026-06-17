@@ -59,6 +59,7 @@ class Event {
             let notBanned = this.timer.currentValue > this.bannedUntil;
             if ((forceFireEvents || this.eventShouldFire()) && notBanned) {
                 this.lastTriggered = this.timer.currentValue;
+                Logger.info(`Event fired: ${this.name}`, { day: this.timer.currentValue, duration: this.eventDuration?.currentValue });
                 this.fire();
                 if (this.forcePause) {
                     this.timer.forceStopTimer("Event: " + this.name); // it's up to the subclasses to unpause
@@ -71,7 +72,7 @@ class Event {
     }
     endIfShouldEnd() {
         if (this.eventDuration && this.isActive() && this.daysLeft() <= 0) {
-            console.log("event ended");
+            Logger.debug(`Event ended: ${this.name}`, { day: this.timer.currentValue });
             this.lastEnded = this.timer.currentValue;
             this.end();
         }
@@ -303,6 +304,7 @@ class SettlementEvent extends Event {
             throw Error("shouldn't apply choice twice");
         }
         this.choiceApplied = true;
+        Logger.info(`Event choice applied: ${this.name} → "${eventChoice.name}"`, { day: this.timer.currentValue });
         eventChoice.getEffects().forEach(effect => {
             this.activateEventEffect(effect);
         });
@@ -397,6 +399,7 @@ export class CropBlight extends RegularSettlementEvent {
     }
     getBonuses() {
         this.cropBlightModifier = 0.9 - 0.2*Math.random();
+        Logger.info(`Crop blight: farm productivity modifier ${this.cropBlightModifier.toFixed(3)}`, { day: this.timer.currentValue });
         return [new SpecificBuildingProductivityBonus({name: "effect of crop blight", building: Farm.name, amount: this.cropBlightModifier})];
     }
 }
@@ -601,6 +604,8 @@ export class Pestilence extends RegularSettlementEvent {
         ];
         this.bonusFlavourText = severityTexts[this.severity - 1];
 
+        Logger.info(`Pestilence: severity ${this.severity}, health damage ${healthDamage.toFixed(3)}, duration ${this.eventDuration.currentValue} days`, { day: this.timer.currentValue, severity: this.severity, healthDamage });
+
         return [new HealthBonus({
             name: "pestilence",
             amount: 1 - healthDamage,
@@ -800,6 +805,7 @@ export class HarvestEvent extends SettlementEvent {
             let harvestSuccess  = successToNumber(this.harvestSuccess, 3);
             this.harvestModifier = 0.95 + 0.05*harvestSuccess; // varies between ~0.75 and ~1.15
         }
+        Logger.info(`Harvest result: ${this.harvestSuccess}`, { modifier: this.harvestModifier, day: this.timer.currentValue });
         return [
             new SpecificBuildingProductivityBonus({name: "effect of weather on the harvest", building: Farm.name, amount: this.harvestModifier}),
             new ChangePriceBonus({name: "effect of weather on the harvest", resource: Resources.food, amount: 1/this.harvestModifier})
@@ -1098,10 +1104,15 @@ export class NomadsArrive extends RegularSettlementEvent {
     applyChoice(eventChoice) {
         super.applyChoice(eventChoice);
         if (eventChoice.name.startsWith("Rob them")) {
+            Logger.info(`Nomads robbed: gained ${this._robGold} gold`, { day: this.timer.currentValue, gold: this._robGold });
             if (this.addToTreasury && this._robGold > 0) {
                 this.addToTreasury(this._robGold, 'robbed nomads');
             }
             this.setEventBan(daysInYear * 2);
+        } else if (eventChoice.name.startsWith("Take them in")) {
+            Logger.info(`Nomads taken in: +${this.nomadGroupSize} population`, { day: this.timer.currentValue, groupSize: this.nomadGroupSize });
+        } else {
+            Logger.debug('Nomads sent away', { day: this.timer.currentValue });
         }
     }
 }
@@ -1147,6 +1158,7 @@ export class BanditRaid extends RegularSettlementEvent {
         if (eventChoice.name.startsWith("Pay tribute")) {
             const pop = settlement.populationSizeExternal.currentValue;
             const tributeCost = Math.round(pop * 0.8);
+            Logger.info(`Bandit raid: tribute paid`, { cost: tributeCost, day: this.timer.currentValue });
             if (this.addToTreasury) {
                 // Deduct from treasury — negative amount
                 this.addToTreasury(-tributeCost, 'paid tribute to bandits');
@@ -1270,6 +1282,7 @@ export class BanditRaid extends RegularSettlementEvent {
 
         if (enemyTotal <= 0 || enemyFled) {
             // Player wins
+            Logger.info('Battle won vs bandits', { round: state.round, playerStrength: playerTotal, day: this.timer.currentValue });
             applyBattleAftermath(settlement, true, false, 0, this.timer);
             state.log.push(enemyFled ? "The bandits flee! Victory!" : "The bandits are defeated! Victory!");
             state.ended = true;
@@ -1277,6 +1290,7 @@ export class BanditRaid extends RegularSettlementEvent {
             this.timer.unforceStopTimer("Event: " + this.name);
         } else if (playerTotal <= 0 || state.round > maxRounds) {
             // Player loses
+            Logger.info('Battle lost vs bandits', { round: state.round, playerStrength: playerTotal, enemyStrength: enemyTotal, day: this.timer.currentValue });
             this._applyRaid(settlement, false, true);
             state.log.push(playerTotal <= 0 ? "Your forces are overwhelmed!" : "The battle drags on — your forces are exhausted and retreat.");
             state.ended = true;

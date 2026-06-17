@@ -743,8 +743,12 @@ Called on all bonuses when they are added to a `Trait` or `Event`. Appends `" fr
 ### Known Issues
 
 1. **`SpecificBuildingEfficiencyBonus`**: adds modifier to `building.productivity` instead of `building.efficiency` — efficiency system is not functional
-2. **`TemporaryModifierBonus.deactivate()`**: no-op — relies on timer callback; if settlement is destroyed or event ends early, modifier may persist
-3. **`TemporaryCharacterBonus`**: identical implementation to `TemporaryModifierBonus` but for characters — code duplication that could be unified
+2. **`TemporaryCharacterBonus`**: identical implementation to `TemporaryModifierBonus` but for characters — code duplication that could be unified
+
+### Fixed
+
+- **`TemporaryModifierBonus.deactivate()`**: was a no-op — if an event ended before the timer fired, the modifier persisted. Fixed by adding `_activeSettlement` and `_modifierRemoved` tracking fields in `activate()`, a `_removeModifier(settlement)` helper with a try/catch and double-removal guard (`_modifierRemoved` flag), and making `deactivate(settlement)` call `_removeModifier`. The timer callback also now calls `_removeModifier` instead of directly removing.
+- **`SettlementComponent.renderHeader()` events div**: now only renders the events section when `activeEvents.length > 0`. Removed the unconditional `<br />` that caused empty space when no events were active. Added an "Active Events" group label (`<div>` with 10px, bold, uppercase, `textMuted` color, `letterSpacing: '0.07em'`) matching the style of "Population" / "Jobs & Homes" labels in the production tab.
 
 ---
 

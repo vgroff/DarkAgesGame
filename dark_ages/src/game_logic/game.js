@@ -9,6 +9,7 @@ import { HarvestEvent, BanditRaid, CropBlight, Pestilence, WarmSpell, Blizzard, 
 import { Character, Cultures, ChildhoodTraits, AbilityTraits, PersonalityTraits, FameTraits, TrinketTraits } from "./character";
 import { TradeAgreement, npcWillAcceptTrade } from "./diplomacy";
 import { Resources } from "./settlement/resource";
+import { Logger, LOG_LEVELS } from "./logger";
 export { TradeAgreement, npcWillAcceptTrade };
 
 // Map event class names (as strings) to their constructors, for scenario forceEventsOnDayOne
@@ -37,6 +38,8 @@ class Game {
         // scenario is an optional plain config object from scenarios.js.
         // If omitted, the default (vanilla) game is constructed.
         this._scenario = scenario || null;
+
+        Logger.info('Game constructed', { scenario: scenario ? scenario.id || 'custom' : 'default' });
 
         this.gameClock = new Timer({name: 'Game timer', meaning: "Current day", every: 800, timeTranslator:(value) => {
             let year = parseInt(value/daysInYear) + 1;
@@ -82,13 +85,14 @@ class Game {
         );
 
         const startingTreasury = scenario?.startingTreasury ?? 10;
+        Logger.debug('Starting treasury', { amount: startingTreasury });
         this.treasury = new Cumulator({name: 'Treasury', startingValue: startingTreasury, timer:this.gameClock, modifiers:[this.totalMarketIncome]});
         this.treasury.subscribe(() => {
             if (this.treasury.baseValue < 0 && this.bankrupt.currentValue === 0) {
-                console.log("user bankrupt");
+                Logger.warn('Player went bankrupt', { treasury: this.treasury.baseValue });
                 this.bankrupt.setNewBaseValue(1, 'user bankrupt');
             } else if (this.treasury.baseValue > 0 && this.bankrupt.currentValue !== 0){
-                console.log("user liquid");
+                Logger.info('Player recovered from bankruptcy', { treasury: this.treasury.baseValue });
                 this.bankrupt.setNewBaseValue(0, 'user liquid');
             }
         });
@@ -127,8 +131,12 @@ class Game {
             if (!npcFaction) return;
             const allItems = Object.values(npcFaction.researchTree).flat();
             const available = allItems.filter(item => npcFaction.canResearch(item));
-            if (available.length === 0) return;
+            if (available.length === 0) {
+                Logger.debug('NPC auto-research: nothing available', { day: this.gameClock.currentValue });
+                return;
+            }
             available.sort((a, b) => a.researchCost - b.researchCost);
+            Logger.debug('NPC auto-research activated', { item: available[0].name, day: this.gameClock.currentValue });
             npcFaction.activateResearch(available[0]);
         });
 
@@ -151,6 +159,7 @@ class Game {
         // Apply scenario overrides (building sizes, resources, research, traits, forced events).
         // This runs after all normal construction is complete so all systems are wired up.
         if (scenario) {
+            Logger.info('Applying scenario', { id: scenario.id || 'custom' });
             this._applyScenario(scenario);
             // Auto-assign workers once so pre-built buildings are staffed before the player
             // hits Play. Only runs for non-default scenarios (i.e. whenever _applyScenario
@@ -244,6 +253,7 @@ class Game {
         // Day 2: remove snap subscriptions and population freeze modifiers
         const restoreOnDayTwo = () => {
             if (this.gameClock.currentValue !== 2) return;
+            Logger.debug('Day 2: removing day-1 snap subscriptions and population freeze');
             this.gameClock.unsubscribe(restoreOnDayTwo);
             this.gameClock.unsubscribe(snapTrendsOnDayOne);
 
@@ -285,7 +295,9 @@ class Game {
                         rs.amount.baseValue + amount,
                         `scenario starting resource: ${resourceName}`
                     );
+                    Logger.debug('Scenario: added starting resource', { resource: resourceName, amount });
                 } else if (!rs) {
+                    Logger.warn(`Scenario: unknown resource name "${resourceName}"`);
                     console.warn(`[Scenario] Unknown resource name: "${resourceName}"`);
                 }
             }
@@ -372,12 +384,16 @@ class Game {
             for (const [unitName, count] of Object.entries(scenario.startingArmy)) {
                 const unitResource = Object.values(Resources).find(r => r.name === unitName);
                 if (!unitResource) {
+                    Logger.warn(`Scenario: unit resource not found "${unitName}"`);
                     console.warn(`[Scenario] Unit resource not found: "${unitName}"`);
                     continue;
                 }
                 const success = playerSettlement.armSoldiers(unitResource, count);
                 if (!success) {
+                    Logger.warn(`Scenario: armSoldiers failed for "${unitName}" × ${count}`);
                     console.warn(`[Scenario] armSoldiers failed for "${unitName}" × ${count} — check weapon resources in startingResources`);
+                } else {
+                    Logger.debug('Scenario: armed soldiers', { unit: unitName, count });
                 }
             }
         }
@@ -529,6 +545,15 @@ class Game {
         // Note: we do NOT call forceResetTrend() here. The day-1 snap mechanism
         // (trendingUpSpeed/Down = 1 on day 1) handles instant convergence for all
         // settlements on the first tick, including any scenario-applied changes.
+
+        // ── 13. Auto-assign workers ────────────────────────────────────────────
+        // Run adjustJobs() once so the scenario starts with workers assigned.
+        // This prevents the player from seeing a large "unemployed" count on load
+        // when the scenario has pre-built buildings with empty job slots.
+        playerSettlement.adjustJobs();
+        Logger.debug('Scenario: auto-assigned workers after scenario apply', {
+            unemployed: playerSettlement.unemployed?.currentValue,
+        });
     }
 
     initEvents() {
@@ -542,6 +567,7 @@ class Game {
     }
 
     init() {
+        Logger.info('Game.init() called — re-wiring subscriptions after load');
         // Store current UI state before initializing
         const uiState = {
             selectedSettlement: this.selectedSettlement,
@@ -626,18 +652,23 @@ class Game {
 
     /**
      * Push a message to both the transient queue (shown as modal) and the permanent log.
+     * Also logs at INFO level via the Logger singleton.
      * @param {string} message
      */
     addGameMessage(message) {
         this.gameMessages.push(message);
-        this.messageLog.push({ text: message, day: this.gameClock ? this.gameClock.currentValue : 0 });
+        const day = this.gameClock ? this.gameClock.currentValue : 0;
+        this.messageLog.push({ text: message, day });
+        // Log at GAME_MSG level so the "GAME" filter in the message log shows only these
+        Logger.getLogger().log(LOG_LEVELS.GAME_MSG, message, { day });
     }
 
     handleRebellion(settlement) {
-        console.log("handleRebellion")
+        const day = this.gameClock ? this.gameClock.currentValue : 0;
+        Logger.warn(`Rebellion in ${settlement.name}`, { settlement: settlement.name, day });
         this.addGameMessage(`${settlement.name} has rebelled! You have lost control of this settlement.`);
         if (this.playerCharacter.settlements.length === 0) {
-            console.log("game over");
+            Logger.error('Game over — all settlements lost', { day });
             this.addGameMessage(`You have lost control of all your settlements! Game over.`);
             this.gameClock.forceStopTimer("game over");
             this.isGameOver = true;
@@ -652,6 +683,7 @@ class Game {
      */
     addToTreasury(amount, reason) {
         if (!this.treasury || amount <= 0) return;
+        Logger.debug('Treasury: one-off addition', { amount, reason, day: this.gameClock?.currentValue });
         this.treasury.setNewBaseValue(
             this.treasury.baseValue + amount,
             reason || 'treasury addition'
@@ -666,6 +698,7 @@ class Game {
         if (this.globalEvents) {
             this.globalEvents.forEach(event => {
                 if (event && event.eventShouldFire && event.eventShouldFire()) {
+                    Logger.debug('Global event fired', { event: event.name, day: this.gameClock?.currentValue });
                     event.fire();
                 }
             });
