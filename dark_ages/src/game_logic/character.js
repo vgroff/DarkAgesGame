@@ -849,6 +849,22 @@ export class CharacterComponent extends UIBase {
         const theme = this.context;
         const c = theme ? theme.colors : null;
 
+        // ── Shared style helpers ──────────────────────────────────────────────
+        const sectionDivider = <div style={{
+            borderTop: `1px solid ${c ? c.borderLight : '#e0e0e0'}`,
+            margin: '10px 0 6px',
+        }} />;
+
+        const sectionLabel = (text) => <div style={{
+            fontSize: '10px',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: '0.07em',
+            color: c ? c.textMuted : '#aaa',
+            marginBottom: '4px',
+            marginTop: '2px',
+        }}>{text}</div>;
+
         const presetBoxStyle = c ? {
             marginBottom: '10px',
             padding: '8px 10px',
@@ -878,51 +894,92 @@ export class CharacterComponent extends UIBase {
             '&:hover': { borderColor: c.accentHover, backgroundColor: c.contentBgHover },
         } : { mr: 0.5, mb: 0.5, fontSize: '11px', padding: '2px 6px', textTransform: 'none' };
 
-        return <div>
+        const statRowStyle = { marginBottom: '3px' };
+
+        return <div style={{ padding: '4px 2px' }}>
+
+            {/* ── Identity ─────────────────────────────────────────────────── */}
+            {sectionLabel('Identity')}
+            <div style={{ marginBottom: '4px' }}>
+                <span style={{ fontSize: '13px', color: c ? c.textMuted : '#888', marginRight: '6px' }}>Name:</span>
+                <span onClick={() => !this.state.editName ? this.setState({editName: !this.state.editName}) : null}
+                      style={{ cursor: this.character.isPlayer ? 'pointer' : 'default' }}>
+                    {this.state.editName
+                        ? <TextField id="outlined-basic" label="Name" variant="outlined" size="small"
+                            defaultValue={this.character.name}
+                            onChange={(e) => { this.character.name = e.target.value; }}
+                            onKeyUp={(event) => event.key === "Enter" ? this.setState({editName: false}) : null} />
+                        : <span style={{ fontWeight: 'bold' }}>{this.character.name}</span>
+                    }
+                </span>
+            </div>
+            <div style={statRowStyle}>
+                <ChoiceComponent key="culture" editable={this.character.isPlayer}
+                    chosen={this.character.culture}
+                    choices={Object.values(Cultures).map(choice => new choice())}
+                    groupName="Culture"
+                    handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)} />
+            </div>
+
+            {/* ── Cultural Traits ───────────────────────────────────────────── */}
+            {sectionDivider}
+            {sectionLabel('Cultural Traits')}
+            {this.character.culture.lastTraits && this.character.culture.lastTraits.length > 0
+                ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
+                    {this.character.culture.lastTraits.map((trait, i) =>
+                        <span key={`cultural_trait_${trait.name}_${i}`}
+                              style={{ fontSize: '12px', padding: '2px 6px',
+                                       border: `1px solid ${c ? c.borderLight : '#ddd'}`,
+                                       borderRadius: '3px', backgroundColor: c ? c.contentBgAlt : '#f5f5f5' }}>
+                            <ChoiceComponent chosen={trait} />
+                        </span>
+                    )}
+                  </div>
+                : <span style={{ fontSize: '12px', color: c ? c.textMuted : '#aaa' }}>None</span>
+            }
+
+            {/* ── Personal Traits ───────────────────────────────────────────── */}
+            {sectionDivider}
+            {sectionLabel('Personal Traits')}
             {/* Quick presets — only shown for player character */}
             {this.character.isPlayer && <div style={presetBoxStyle}>
                 <span style={presetLabelStyle}>Quick Presets:</span>
                 {LEADER_PRESETS.map(preset =>
                     <CustomTooltip key={preset.name} items={[preset.description]} style={{textAlign: 'center'}}>
-                        <Button
-                            key={preset.name}
-                            variant="outlined"
-                            size="small"
-                            onClick={() => this.applyPreset(preset)}
-                            sx={presetBtnSx}
-                        >{preset.name}</Button>
+                        <Button variant="outlined" size="small" onClick={() => this.applyPreset(preset)} sx={presetBtnSx}>
+                            {preset.name}
+                        </Button>
                     </CustomTooltip>
                 )}
             </div>}
-            <div onClick = {() => !this.state.editName ? this.setState({editName: !this.state.editName}) : null}>
-                {this.state.editName ?
-                    <TextField id="outlined-basic" label="Name" variant="outlined" defaultValue={this.character.name}
-                        onChange={(e) => {this.character.name = e.target.value}} onKeyUp={(event) => event.key==="Enter" ? this.setState({editName: false}) : null}/>
-                    : this.character.name}<br />
-            </div>
-            <ChoiceComponent key={`culture`} editable={this.character.isPlayer} chosen={this.character.culture} choices={Object.values(Cultures).map(choice => new choice())} groupName={"Culture"} handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)}/>
-            Cultural Traits:
-            <ul>{this.character.culture.lastTraits ? this.character.culture.lastTraits.map((trait, i) =>
-                <li key={`cultural_trait_${trait.name}_${i}`}><ChoiceComponent chosen={trait} /></li>)
-             : null}</ul>
             {Object.entries(this.character.traitGroups).map(([key, traitGroup], i) =>
-                (this.character.isPlayer || traitGroup.trait) ?
-                <ChoiceComponent key={`trait_group_${key}_${i}`} editable={this.character.isPlayer} chosen={traitGroup.trait}
-                    choices={traitGroup.choices.map(choice => new choice())} groupName={traitGroup.name}
-                    handleChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)}/> : null)
-            }
-            <br />
-            <b>Skills</b> <br />
-            <VariableComponent showOwner={false} variable={this.character.diplomacy} description="Affects popular support in settlements and trade negotiations. Higher diplomacy reduces rebellion risk." /><br />
-            <VariableComponent showOwner={false} variable={this.character.strategy} description="Military skill. Affects combat outcomes and raid defence (not yet fully implemented)." /><br />
-            <VariableComponent showOwner={false} variable={this.character.administration} description="Organisational skill. Directly multiplies settlement general productivity via administrative efficiency." /><br />
-            <br />
-            <b>Attributes</b> <br />
-            <VariableComponent showOwner={false} variable={this.character.legitimacy} description="How much the population accepts this character as their ruler. Contributes to local legitimacy in all settlements." /><br />
-            <VariableComponent showOwner={false} variable={this.character.administrativeEfficiency} description="Productivity multiplier applied to all settlements. Equals 0.9 + 0.3 × administration." /><br />
-            <br />
-            <b>Faction</b> <br />
-            <FactionComponent faction={this.character.faction} /><br />
+                (this.character.isPlayer || traitGroup.trait)
+                    ? <div key={`trait_group_${key}_${i}`} style={statRowStyle}>
+                        <ChoiceComponent editable={this.character.isPlayer} chosen={traitGroup.trait}
+                            choices={traitGroup.choices.map(choice => new choice())} groupName={traitGroup.name}
+                            handleChange={(newTrait, oldTrait) => this.handleTraitChange(newTrait, oldTrait)} />
+                      </div>
+                    : null
+            )}
+
+            {/* ── Skills ───────────────────────────────────────────────────── */}
+            {sectionDivider}
+            {sectionLabel('Skills')}
+            <div style={statRowStyle}><VariableComponent showOwner={false} variable={this.character.diplomacy} description="Affects popular support in settlements and trade negotiations. Higher diplomacy reduces rebellion risk." /></div>
+            <div style={statRowStyle}><VariableComponent showOwner={false} variable={this.character.strategy} description="Military skill. Affects combat outcomes and raid defence." /></div>
+            <div style={statRowStyle}><VariableComponent showOwner={false} variable={this.character.administration} description="Organisational skill. Directly multiplies settlement general productivity via administrative efficiency." /></div>
+
+            {/* ── Attributes ───────────────────────────────────────────────── */}
+            {sectionDivider}
+            {sectionLabel('Attributes')}
+            <div style={statRowStyle}><VariableComponent showOwner={false} variable={this.character.legitimacy} description="How much the population accepts this character as their ruler. Contributes to local legitimacy in all settlements." /></div>
+            <div style={statRowStyle}><VariableComponent showOwner={false} variable={this.character.administrativeEfficiency} description="Productivity multiplier applied to all settlements. Equals 0.9 + 0.3 × administration." /></div>
+
+            {/* ── Faction ──────────────────────────────────────────────────── */}
+            {sectionDivider}
+            {sectionLabel('Faction')}
+            <FactionComponent faction={this.character.faction} />
+
         </div>
     }
 }

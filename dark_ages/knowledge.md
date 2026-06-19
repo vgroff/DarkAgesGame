@@ -244,6 +244,18 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 
 ## Development Guidelines
 
+### Variable Display Philosophy
+
+**`Variable` and its subclasses (`Cumulator`, `TrendingVariable`) are core to how the player understands the game.** Every `Variable` carries a full tooltip breakdown showing its base value, all modifiers, and their sources. This is the primary mechanism by which the player learns cause and effect.
+
+**Rule: any number shown to the player should be a `VariableComponent` (or subclass) unless there is a specific reason it cannot be.**
+
+- If a value is already a `Variable`, always render it with `VariableComponent` / `CumulatorComponent` / `TrendingVariableComponent`. Never extract `.currentValue` and display it as plain text.
+- If a value is derived from Variables but is not itself a Variable, consider wrapping it in a `Variable` with appropriate modifiers so it can be displayed with a tooltip.
+- Plain text numbers (e.g. `{someVar.currentValue}`) are only acceptable for ephemeral UI state that has no meaningful breakdown (e.g. a button label showing a count that the player already understands).
+- `CumulatorComponent` additionally shows the expected change per tick (`(+N)` / `(-N)`) — always prefer it over `VariableComponent` for `Cumulator` instances.
+- **Never wrap a `VariableComponent` in a `CustomTooltip`.** This creates two overlapping tooltips. Instead, pass a `description` prop to `VariableComponent` — it is prepended (in italic) to the Variable's own tooltip.
+
 ### UI Style
 - Use grey color for supporting text on white backgrounds
 - Use alpha channel for supporting text on colored backgrounds
@@ -253,6 +265,9 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 - `HTMLTooltip` for explanatory hover text (white background, right-aligned text)
 - `CustomTooltip` wraps `HTMLTooltip` and accepts `Variable` instances, strings, or `{text, style}` objects
 - **If a number can be displayed as a `Variable` (i.e. it is or can be wrapped in a `Variable` instance), it almost always should be.** This gives the player tooltip breakdowns for free. Examples: melee strength on the skirmish screen, bow strength, strategy skill, ground advantage — all should be `VariableComponent`, not plain text.
+- **Never wrap a `VariableComponent` in a `CustomTooltip`.** This creates two overlapping tooltips. Instead, pass a `description` prop to `VariableComponent` — it is prepended (in italic) to the Variable's own tooltip. Use `CustomTooltip` only for things that are NOT already `VariableComponent`s.
+- **Inline Variables in text**: when a log entry or message contains numbers that should be hoverable, use the `{ text: string, vars: { [key]: Variable } }` pattern. Put `{key}` tokens in the text string; the renderer replaces them with inline `VariableComponent`s. See `BattleUI.renderLogEntry(entry)` for the reference implementation.
+- **Draggable modals**: add a `data-drag-handle` attribute to the title bar element. In the component, track `_dragState` and `_modalPos = { x, y }` (pixel offset from center). On `mousedown` on the drag handle, attach `mousemove`/`mouseup` to `window`. Store position and call `forceUpdate()`. Pass `top: calc(50% + ${pos.y}px), left: calc(50% + ${pos.x}px)` to the `Box` sx prop. Add `resize: both; overflow: auto` for resizability. See `EventComponent` and `BattleUI` for the reference implementation.
 
 ### Theme System (`theme.js`)
 - Four themes selectable live during playtesting: **Parchment**, **Parchment Dark**, **Iron**, **Iron Slate**
@@ -421,6 +436,35 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 
 ### Minor
 *(all minor bugs fixed — see below)*
+
+### Fixed (this session) — playtest fixes round 1
+
+- **`settlement.js` rationing index bug**: `rationsDemanded.filter(...).map((ration, i) => ...)` — after filtering, index `i` no longer matched the original `rationsAchieved[i]`, `idealRations[i]`, `rationResources[i]` arrays. This caused the Apothecary (medicinalHerbs) to display as "beer" in the rationing UI. Fixed by replacing `.filter().map()` with `.map()` + conditional return to preserve original indices.
+- **`settlement.js` active events line breaks**: Active event names in the settlement header were wrapped in block-level `<span>` elements, causing a large gap between each event. Fixed by wrapping all event spans in a `display: flex; flexWrap: wrap; gap: 8px` div.
+- **`settlement.js` + `building.js` resource change rate in building UI**: `SettlementComponent` now finds the `ResourceStorage` for each `ResourceBuilding`'s output resource and passes it as `outputStorage` prop to `BuildingComponent`. `BuildingComponent.childRender()` reads `outputStorage.amount.expectedChange` (from the Cumulator) and displays it inline after the jobs count — green for positive, red for negative (e.g. `+2.4/tick`).
+- **`events.js` + `game.js` harvest pop-up**: `HarvestEvent` now accepts an `addGameMessage` callback prop. In `getBonuses()`, after rolling the harvest, it calls `addGameMessage` with a formatted message showing quality and farm productivity modifier (e.g. `🌾 Harvest: Good (+5%)`). `game.js` passes `this.addGameMessage.bind(this)` to the `HarvestEvent` constructor.
+- **`App.js` remove save/load buttons**: Removed the "Save Game" button and file input from the bottom toolbar. Kept the "↩ Scenario Select" button and theme switcher. Save/load is not properly implemented.
+- **`events.js` `NomadsArrive` group size freeze**: `getEventChoices()` was calling `Math.round(5 + Math.random() * 10)` on every call (every render), causing the displayed group size to vary while the modal was open. Fixed by adding a `fire_()` override that rolls and freezes `nomadGroupSize` once at fire time. Group size is capped at 10% of current population (minimum 3). `fire_()` also resets choice state (`deactivateBonusesAndEventEffects()`, `choiceApplied`, `appliedChoice`, `lastBonuses`).
+- **`resource.js` starting labour time**: `labourTime.startingAmount` reduced from 1000 to 500 across all scenarios.
+- **`character.js` `CharacterComponent` styling**: Rewrote `childRender()` with styled sections separated by horizontal dividers and uppercase section labels (matching the village stats style). Sections: Identity, Cultural Traits, Personal Traits, Skills, Attributes, Faction. Cultural traits displayed as pill badges in a flex row.
+
+### Fixed (this session) — battle system round 3
+
+- **`events.js` `BattleArmy` casualty fraction redesign**: the previous design called `setModifiers([])` in `finalise()` to wipe unit modifiers and bake a single base value — this meant the tooltip showed only "finalise: bake starting bow strength" with no unit breakdown. Redesigned: unit `addition` modifiers are kept permanently. A `bowCasualtyFraction` / `meleeCasualtyFraction` Variable (starts at 1.0) is added as a `multiplication` modifier. Because `addition` has priority 1 and `multiplication` has priority 3, units are summed first then scaled by the fraction. Casualties call `setNewBaseValue` on the fraction Variable only. The tooltip now shows the full unit breakdown (e.g. "3 short bows ×1.2: 3.6", "2 war bows ×2.5: 5.0") × surviving fraction — exactly like every other Variable in the game.
+- **`events.js` `BattleArmy.strategySkill`**: player army now uses `settlement.leader.strategy` directly (the same Variable shown on the character page), so hovering shows the full trait/culture breakdown. Enemy army uses a plain Variable.
+- **`events.js` structured log entries**: `state.log` entries changed from plain strings to `{ text: string, vars: { [key]: Variable } }` objects. `{key}` tokens in `text` are replaced by inline `VariableComponent`s in `BattleUI.renderLogEntry(entry)`. Per-round Variables are created for: effective bow strengths (`playerEffBowVar`, `enemyEffBowVar`), bow casualties (`playerBowDeadVar`, `enemyBowDeadVar`), total attack values (`playerAttackVar`, `enemyAttackVar`), melee casualties (`playerMeleeDeadVar`, `enemyMeleeDeadVar`). Each Variable has a `setNewBaseValue` explanation showing the calculation (e.g. "bow strength × (1 + GA)", "enemy attack ÷ cost-per-casualty").
+- **`events.js` `BattleUI` end-of-battle phase**: when `state.ended`, the battle modal stays open showing the final state and log. A "Close battle report" button calls `event._endEventCallback()` (which unforces the timer stop) and sets `event._battleState = null`. `EventComponent` now shows `BattleUI` whenever `event._battleState` is non-null (including after `ended`).
+- **`events.js` `BattleUI` draggable + resizable**: title bar has `data-drag-handle` attribute; `onMouseDown` on the `Box` starts drag tracking. Position stored as `this._modalPos = { x, y }` pixel offset from center. `Box` uses `resize: both` CSS for resizable corners.
+- **`events.js` `EventComponent` modal draggable + resizable**: same drag-handle pattern applied to all event modals. Position reset to `null` on re-open.
+
+### Fixed (this session) — battle system round 2
+
+- **`events.js` battle casualty math redesign**: the old system computed `casualtyRate = enemyAttack / totalAttack` then multiplied by `armyCount`, meaning a larger army always lost more soldiers in absolute terms even when winning. Replaced with a **cost-per-casualty** model: `dead = attackStrength / costPerCasualty` (bow: 3.0, melee: 4.0). Now the stronger side always kills more fighters per round in absolute terms, regardless of army sizes. Dead counts are capped at remaining unit count.
+- **`events.js` enemy flee threshold**: changed from `< 0.20` to `<= 0.25` of starting strength. Enemy now flees when at 25% or less of original forces.
+- **`events.js` `BattleUI` tooltip layering fix**: removed all `CustomTooltip` wrappers around `VariableComponent`s in `renderArmy` and the ground advantage header. Instead, the `description` prop is passed directly to each `VariableComponent` — this prepends the description to the Variable's own tooltip, so the player sees the full breakdown (unit contributions, casualty history) without a double-tooltip layer. Affected: bow strength, melee strength, total strength, strategy skill, ground advantage.
+- **`events.js` `BattleUI` manoeuvre button tooltip**: replaced `playerArmy.strategySkill.currentValue.toFixed(2)` plain text with a `VariableComponent` so the player can hover the strategy value inside the tooltip for a full breakdown.
+- **`events.js` `resolveSkirmishRound` log enrichment**: log line now shows effective bow strengths after ground advantage (e.g. `your bow 7.2 vs enemy 0.0`) so the player can see why casualties are what they are.
+- **`events.js` `resolveMeleeRound` log enrichment**: log line now shows full attack breakdown — `Attack: yours 19.5 (melee 19.5 + bows 0.0) vs enemy 7.4 (melee 7.4 + bows 0.0)` — plus ground advantage percentage when non-zero. Player can now understand exactly why they lost N soldiers.
 
 ### Fixed (this session) — battle system, Variable UI, tooltip depth
 

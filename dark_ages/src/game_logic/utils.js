@@ -111,16 +111,15 @@ export const HTMLTooltip = (props) => {
             />
         );
     } else {
-        // Top-level tooltip: identical to the original HTMLTooltip behaviour.
-        // No explicit placement (MUI defaults to bottom). Flip and
-        // preventOverflow disabled so the outer tooltip doesn't jump when
+        // Top-level tooltip: renders via portal (default MUI behaviour — no disablePortal)
+        // so it always appears above all parent containers regardless of overflow/z-index.
+        // Flip and preventOverflow disabled so the outer tooltip doesn't jump when
         // inner content changes height.
         return (
             <StyledTooltipBase
                 {...props}
                 title={wrappedTitle}
                 PopperProps={{
-                    disablePortal: true,
                     modifiers: [
                         { name: 'computeStyles', options: { adaptive: false } },
                         { name: 'flip', enabled: false },

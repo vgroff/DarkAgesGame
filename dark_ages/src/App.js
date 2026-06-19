@@ -185,7 +185,7 @@ function App() {
                     onScroll={handleScroll}
                     onPanelToggle={togglePanel}
                 />
-                {/* Bottom toolbar: save/load, scenario select, theme switcher — fixed to bottom of viewport */}
+                {/* Bottom toolbar: scenario select + theme switcher — fixed to bottom of viewport */}
                 <div style={{
                     position: 'fixed',
                     bottom: 0,
@@ -201,27 +201,6 @@ function App() {
                     borderTop: `1px solid ${theme.colors.hudBorder}`,
                     flexWrap: 'wrap',
                 }}>
-                    <button
-                        onClick={handleSave}
-                        style={{
-                            backgroundColor: 'transparent',
-                            border: `1px solid ${theme.colors.btnBorder}`,
-                            color: theme.colors.btnText,
-                            padding: '3px 10px',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                        }}
-                    >
-                        Save Game
-                    </button>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        onChange={handleLoad}
-                        accept=".json"
-                        style={{ color: theme.colors.textMuted, fontSize: '12px' }}
-                    />
                     <button
                         onClick={() => {
                             // Return to scenario select — stop current game clock first

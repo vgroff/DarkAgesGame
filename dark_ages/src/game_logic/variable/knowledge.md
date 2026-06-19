@@ -154,6 +154,7 @@ React component that subscribes to a `Variable` and re-renders when it changes.
 | `showMax` | false | Show `/maxValue` suffix |
 | `expanded` | false | Show full explanation list instead of tooltip |
 | `style` | — | Extra CSS styles |
+| `description` | — | If provided, prepended as an italic line at the top of the Variable's own tooltip. Use this instead of wrapping in `CustomTooltip` — avoids double-tooltip layering. |
 
 ### Lifecycle
 

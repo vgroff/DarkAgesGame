@@ -1,4 +1,4 @@
-import {VariableModifier, Variable, addition, subtraction, min, multiplication, division, roundTo } from '../UIUtils.js';
+import {VariableModifier, Variable, addition, subtraction, min, multiplication, division, roundTo, CumulatorComponent } from '../UIUtils.js';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
@@ -527,11 +527,25 @@ export class BuildingComponent extends UIBase {
         };
         const buildingIcon = BUILDING_ICONS[titleCase(this.building.displayName)] || '';
 
+        // Resource change rate display — shown when outputStorage prop is provided.
+        // Uses deltaOnly mode on CumulatorComponent (same Variable instance as ResourceStorageComponent)
+        // so the tooltip shows the full production/demand breakdown. Displayed on a separate line
+        // below the building name in a smaller italic font, colored green/red.
+        const outputStorage = this.props.outputStorage;
+        const changeDisplay = outputStorage && outputStorage.amount
+            ? <div style={{ marginTop: '2px' }}>
+                <CumulatorComponent variable={outputStorage.amount} showName={false} showChange={true} showMax={false} deltaOnly={true} />
+              </div>
+            : null;
+
         return <Grid container spacing={0.5} style={cardStyle}>
             <Grid item xs={9}>
                 <CustomTooltip items={this.toolTipVars.concat(extraVars)} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                    <span style={nameStyle} onClick={()=>{Logger.setInspect(this.building)}}>{buildingIcon} {titleCase(this.building.displayName)} {this.building.sizeJobsMultiplier ? <span>{this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span> : this.building.passiveProduction ? this.building.passiveProduction.currentValue : this.building.size.currentValue} </span>
+                    <span style={nameStyle} onClick={()=>{Logger.setInspect(this.building)}}>
+                        {buildingIcon} {titleCase(this.building.displayName)} {this.building.sizeJobsMultiplier ? <span>{this.building.filledJobs.currentValue}/{this.building.totalJobs.currentValue}</span> : this.building.passiveProduction ? this.building.passiveProduction.currentValue : this.building.size.currentValue}
+                    </span>
                 </CustomTooltip>
+                {changeDisplay}
             </Grid>
             {this.props.addWorkers && this.props.isPlayerOwned ?
             <Grid item xs={3} style={{textAlign:"center", alignItems: "center", justifyContent: "center"}}>

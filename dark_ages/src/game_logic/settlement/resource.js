@@ -219,7 +219,7 @@ export const Resources = {
     medicinalHerbs: new Resource({name: "medicinal herbs", storageMultiplier: 200, productionRatio: 12.0, description: "helps keep your villagers healthy"}),
     religion: new Resource({name: "religion", storageMultiplier: null, cumulates: false, productionRatio: 50.0, description: "helps keep your villagers happy"}),
     entertainment: new Resource({name: "entertainment", storageMultiplier: null, cumulates: false, productionRatio: 40.0, description: "helps keep your villagers happy"}),
-    labourTime: new Resource({name: "labour time", storageMultiplier: 0, productionRatio: 1.0, startingAmount: 1000, description: "used for building, upkeep and upgrading"}),
+    labourTime: new Resource({name: "labour time", storageMultiplier: 0, productionRatio: 1.0, startingAmount: 500, description: "used for building, upkeep and upgrading"}),
     research: new Resource({name: "research", storageMultiplier: null, productionRatio: 1.0, startingAmount: 1000, description: "for new research developements"}),
     wood: new Resource({name: "wood", storageMultiplier: 200, productionRatio: 1.0, startingAmount: 100, description: "for building, upkeep and fuel"}),
     dirtPathAccess: new Resource({name: "dirt path access", storageMultiplier: null, cumulates: false, productionRatio: 1.0, startingAmount: 0, description: "improves general productivity and trade"}),

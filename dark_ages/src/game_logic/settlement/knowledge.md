@@ -284,6 +284,7 @@ Input resource demand system:
 - Tooltip shows output resource, production per worker, input requirements, alerts
 - Buttons: +/- workers (ResourceBuilding only), Build, Demolish, Upgrade, Downgrade
 - All buttons disabled for non-player settlements (`isPlayerOwned` prop)
+- **Resource change rate**: `SettlementComponent` passes `outputStorage` prop (the `ResourceStorage` for the building's output resource) to `BuildingComponent`. `childRender()` reads `outputStorage.amount.expectedChange` (Cumulator net change for the current tick) and displays it inline after the jobs count — green for positive, red for negative (e.g. `+2.4/tick`).
 
 ### Known Issues
 
@@ -500,6 +501,7 @@ Amount per click: 0.01, Ctrl=0.05, Shift=0.10.
 ### Fixed
 
 - **Coal demand set twice** (`settlement.js`): the rationing loop previously subscribed to `gameClock` to set `coal.idealAmount` on every tick, duplicating the work already done by `adjustCoalDemand()`. The redundant subscription in the rationing loop has been removed; `adjustCoalDemand()` is the sole owner of this logic.
+- **Rationing index misalignment bug** (`settlement.js`): `rationsDemanded.filter(...).map((ration, i) => ...)` — after filtering, index `i` no longer matched the original `rationsAchieved[i]`, `idealRations[i]`, `rationResources[i]` arrays. This caused the Apothecary (medicinalHerbs) to display as "beer" in the rationing UI. Fixed by replacing `.filter().map()` with `.map()` + conditional return to preserve original indices.
 
 ---
 

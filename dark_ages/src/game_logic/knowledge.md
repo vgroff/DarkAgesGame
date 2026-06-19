@@ -324,6 +324,7 @@ Subclasses: `Celtic`, `Roman`. Each defines `getTraits()` returning a list of `T
 - `CharacterComponent` subscribes to `character.legitimacy`
 - Shows culture, cultural traits, trait groups (editable for player), skills, attributes, faction
 - `ChoiceComponent` renders a tooltip-wrapped display or a MUI `Select` dropdown for editing
+- **Styled sections**: `childRender()` uses horizontal dividers and uppercase section labels (matching village stats style). Sections: Identity, Cultural Traits, Personal Traits, Skills, Attributes, Faction. Cultural traits shown as pill badges in a flex row. Name shown with "Name:" label prefix.
 
 ### Known Issues
 - `addTrait()` throws if a trait group already has a trait — but `updateFactionTraits()` calls `removeTrait` then `addTrait` which should be safe; however if `factionTraits` is undefined on first call, `forEach` on undefined throws
@@ -374,17 +375,53 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 - `BanditRaid` — forcePause; choices: pay tribute / fight (multi-stage battle) / do nothing; banned for first 2 years
 
 ### Battle System (§4.4+4.5)
-- `BattleArmy` — holds `bowStrength`, `meleeStrength`, `totalStrength`, `strategySkill` Variables + `bowCount`/`meleeCount` plain numbers. Also tracks `startingBowStrength`, `startingMeleeStrength`, `startingBowCount`, `startingMeleeCount` for fraction-based casualty scaling.
-  - **`finalise()`**: called after all units added. Records starting strengths, then calls `setModifiers([])` on `bowStrength`/`meleeStrength` to remove build-time addition modifiers and bakes the total into `baseValue`. This is critical — without it, `setNewBaseValue` calls during combat would be overridden by the still-present modifiers.
-  - **`applyBowCasualties(dead)`**: scales `bowStrength` to `startingBowStrength * (survivingCount / startingBowCount)`.
-  - **`applyMeleeCasualties(dead)`**: scales `meleeStrength` to `startingMeleeStrength * (survivingCount / startingMeleeCount)`.
-- `buildPlayerArmy(settlement)` — builds player army from unit resource storages + mobilised civilians; calls `finalise()` at end
-- `buildBanditArmy(settlement)` — builds bandit army scaled to player unit count / population; calls `finalise()` at end
-- `resolveSkirmishRound(state)` — strategy check → ground advantage → bow casualties; stores `state.lastSkirmishRoll = { playerStratRoll, enemyStratRoll, playerStratChance, enemyStratChance, groundDelta }`
-- `resolveMeleeRound(state, firstRoundPenalty)` — bow support + melee → casualties; stores `state.lastMeleeRound = { playerTotalAttack, enemyTotalAttack, playerBowVsMelee, enemyBowVsMelee, ga }`
-- `applyBattleAftermath(settlement, playerWon, playerFled, totalPlayerDead, timer)` — happiness/legitimacy/health bonuses/penalties
-- `BattleUI` — React component showing battle state and player choices (skirmish/clash/flee/manoeuvre). Uses `VariableComponent` for all numeric values (bow/melee/total strength, strategy skill, ground advantage). Shows a "Last strategy roll" panel after each skirmish/manoeuvre with colour-coded roll results and success chances. Action buttons have `HTMLTooltip` explanations.
-- `BanditRaid.advanceBattle(choice)` — drives battle phase transitions; stores state in `this._battleState`. Manoeuvre stores `state.lastSkirmishRoll` with `isManoeuvre: true`.
+
+#### `BattleArmy`
+Holds `bowStrength`, `meleeStrength`, `totalStrength`, `strategySkill` Variables + `bowCount`/`meleeCount` plain numbers.
+
+**Casualty fraction design** (important — do not revert):
+- `bowStrength` and `meleeStrength` are built with one `addition` VariableModifier per unit type (added during `buildPlayerArmy`/`buildBanditArmy`).
+- Each also has a `bowCasualtyFraction` / `meleeCasualtyFraction` Variable (starts at 1.0) applied as a `multiplication` modifier.
+- Because `addition` has priority 1 and `multiplication` has priority 3, the unit additions are summed first, then the fraction scales the total.
+- This means the tooltip shows the full unit breakdown AND the surviving fraction — exactly like every other Variable in the game.
+- **Do NOT call `setModifiers([])` or `setNewBaseValue` on `bowStrength`/`meleeStrength` directly** — that would wipe the unit breakdown from the tooltip.
+
+**`finalise()`**: records `startingBowCount` and `startingMeleeCount` only. No modifier changes needed.
+
+**`applyBowCasualties(dead)`**: updates `bowCasualtyFraction` to `newCount / startingBowCount` with explanation showing survivors/total.
+
+**`applyMeleeCasualties(dead)`**: updates `meleeCasualtyFraction` to `newCount / startingMeleeCount` with explanation showing survivors/total.
+
+**`strategySkill`**: for player army, set to `settlement.leader.strategy` directly (the same Variable shown on the character page, so the tooltip shows the full trait/culture breakdown). For enemy army, a plain Variable.
+
+#### Build functions
+- `buildPlayerArmy(settlement)` — unit resource storages + mobilised civilians; sets `army.strategySkill = settlement.leader.strategy`
+- `buildBanditArmy(settlement)` — scaled to player unit count / population; creates plain `strategySkill` Variable
+
+#### Round resolution
+- `resolveSkirmishRound(state)` — strategy check → ground advantage → bow casualties using **cost-per-casualty model** (`bowCostPerCasualty = 3.0`): `dead = effectiveBowStrength / costPerCasualty`. Stronger side always kills more in absolute terms. Pushes `{text, vars}` log entry with per-round Variables for effective bow strengths and casualty counts.
+- `resolveMeleeRound(state, firstRoundPenalty)` — bow support + melee → casualties using **cost-per-casualty model** (`meleeCostPerCasualty = 4.0`): `dead = totalAttack / costPerCasualty`. Pushes `{text, vars}` log entry with per-round Variables for attack values and casualty counts.
+
+#### Log format
+`state.log` entries are `{ text: string, vars: { [key]: Variable } }`. The `text` contains `{key}` tokens that `BattleUI.renderLogEntry(entry)` replaces with inline `VariableComponent`s. This lets the player hover any number in the log for a full breakdown.
+
+#### `BattleUI`
+- Draggable via title bar (`data-drag-handle`), resizable via CSS `resize: both` on the `Box`.
+- `renderLogEntry(entry)` splits `{key}` tokens and renders inline `VariableComponent`s.
+- All numeric values use `VariableComponent` with `description` prop — **no `CustomTooltip` wrappers**.
+- End-of-battle: when `state.ended`, shows "Close battle report" button. Clicking it calls `event._endEventCallback()` (which unforces the timer stop) and sets `event._battleState = null`.
+- `EventComponent` shows `BattleUI` whenever `event._battleState` is non-null (including after `ended`). Once `_battleState` is null, falls through to normal event modal.
+
+#### `BanditRaid.advanceBattle(choice)`
+Drives battle phase transitions. Enemy flees when `enemyTotal <= startingEnemyStrength * 0.25` (25% threshold). On battle end, sets `state.ended = true` and stores `this._endEventCallback = () => this.timer.unforceStopTimer(...)` — timer is NOT unforced until player clicks "Close battle report".
+
+#### `applyBattleAftermath`
+Happiness/legitimacy/health bonuses/penalties applied on battle end.
+
+#### `EventComponent` (updated)
+- Modal is now **draggable** (mouse events on `data-drag-handle` title bar) and **resizable** (`resize: both` CSS).
+- Position stored in `this._modalPos = { x, y }` (pixel offset from center). Reset to `null` on re-open.
+- Shows `BattleUI` whenever `event._battleState` is non-null (active battle OR end-of-battle report).
 
 ### Concrete Events
 
@@ -399,7 +436,7 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 | `CourtIntrigue` | 3.5 years | 35% | 1 day | yes | 35% |
 | `HarvestEvent` | 1 year | 0 | permanent | no | always |
 
-**Note**: All settlement events except `CourtIntrigue` are commented out in `settlement.js`. Only `CourtIntrigue` fires in the current build.
+**Note**: All settlement events are active. `NomadsArrive` freezes `nomadGroupSize` at fire time (in `fire_()` override) to prevent re-rolling on every render. Group size is capped at 10% of current population (minimum 3).
 
 ### `HarvestEvent`
 - Fires every year (not a `RegularSettlementEvent`)
@@ -407,6 +444,7 @@ Adds variance to `checkEvery` on each check: `checkEvery = checkEveryAvg * rando
 - `harvestModifier = 0.95 + 0.05 * successToNumber(result, 3)` — ranges ~0.8 to ~1.1
 - Applies `SpecificBuildingProductivityBonus` to Farm and `ChangePriceBonus` to food (inverse of harvest modifier)
 - `forceGoodNextHarvest` flag: if true, the next `getBonuses()` call forces `harvestSuccess = successText` and `harvestModifier = 1.0` (decent, not amazing). Flag is cleared after one use. Set via `props.forceGoodNextHarvest` at construction time (used by `goodFirstYearHarvest` scenario field).
+- **Harvest pop-up**: accepts `addGameMessage` callback prop (passed from `game.js` as `this.addGameMessage.bind(this)`). After rolling in `getBonuses()`, calls it with a formatted message: `🌾 Harvest: <Quality> (farm productivity <±N%>)`. Quality labels: Excellent / Good / Poor / Very Poor.
 
 ### `EventEffect` subclasses
 - `ChangeEventDuration`: multiplies `eventDuration` by `amount`

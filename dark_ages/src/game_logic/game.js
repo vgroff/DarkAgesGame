@@ -148,6 +148,8 @@ class Game {
             // Force a decent (not amazing) first harvest if the scenario requests it.
             // This flag is consumed by getBonuses() on the first fire and then cleared.
             forceGoodNextHarvest: scenario?.goodFirstYearHarvest ?? true,
+            // Show a pop-up message to the player when the harvest fires.
+            addGameMessage: this.addGameMessage.bind(this),
         });
         this.globalEvents = [
             this.harvestEvent

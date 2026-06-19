@@ -751,11 +751,13 @@ export class SettlementComponent extends UIBase {
                     color: c ? c.textMuted : '#aaa',
                     marginBottom: '2px',
                 }}>Active Events</div>
-                {activeEvents.map((ev, i) =>
-                    <span key={`${ev.name}_${i}`} style={{ fontSize: '1.05em', fontWeight: 'bold', marginRight: '8px' }}>
-                        <EventComponent event={ev}/>
-                    </span>
-                )}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                    {activeEvents.map((ev, i) =>
+                        <span key={`${ev.name}_${i}`} style={{ fontSize: '1.05em', fontWeight: 'bold' }}>
+                            <EventComponent event={ev}/>
+                        </span>
+                    )}
+                </div>
             </div>}
         </Grid>;
     }
@@ -842,8 +844,11 @@ export class SettlementComponent extends UIBase {
             {!isPlayer && this.props.game && this.renderDiplomacySection()}
             <Grid item xs={12} style={{border:"1px solid grey", padding:"5px", textAlign:"center"}}>
                 <Grid container spacing={3} justifyContent="center" alignItems="center" style={{textAlign:"center"}}>
-                    {s.getBuildings().filter(b => b.unlocked).map((building, i) =>
-                        <Grid item xs={4} key={building.name} style={{alignItems:"center", justifyContent:"center"}}>
+                    {s.getBuildings().filter(b => b.unlocked).map((building, i) => {
+                        const outputStorage = building instanceof ResourceBuilding
+                            ? s.resourceStorages.find(rs => rs.resource === building.outputResource)
+                            : null;
+                        return <Grid item xs={4} key={building.name} style={{alignItems:"center", justifyContent:"center"}}>
                             {building instanceof ResourceBuilding
                                 ? <BuildingComponent building={building}
                                     buildText={building.getBuildText(s.resourceStorages)}
@@ -858,6 +863,7 @@ export class SettlementComponent extends UIBase {
                                     isPlayerOwned={isPlayer}
                                     upgradeBuilding={(e, direction) => this.upgradeBuilding(e, building, direction)}
                                     upgradeText={building.getUpgradeText(s.resourceStorages, building)}
+                                    outputStorage={outputStorage}
                                 />
                                 : <BuildingComponent building={building}
                                     buildText={building.getBuildText(s.resourceStorages)}
@@ -871,8 +877,8 @@ export class SettlementComponent extends UIBase {
                                     upgradeText={building.getUpgradeText(s.resourceStorages, building)}
                                 />
                             }
-                        </Grid>
-                    )}
+                        </Grid>;
+                    })}
                 </Grid>
             </Grid>
             {/* Distribution section — merged below production */}
@@ -880,17 +886,17 @@ export class SettlementComponent extends UIBase {
                 <Grid item xs={12} style={{borderTop: '1px solid #ccc', marginTop: '8px', paddingTop: '4px'}}>
                     <span style={{fontWeight:'bold', color:'#555'}}>Rationing</span>
                 </Grid>
-                {s.rationsDemanded.filter((ration, i) =>
+                {s.rationsDemanded.map((ration, i) =>
                     s.resourceBuildings.find(b => b.outputResource === s.rationResources[i] && b.unlocked)
-                ).map((ration, i) =>
-                    <Grid item xs={4} key={s.rationResources[i].name} justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
-                        <RationingComponent
-                            demandedRation={ration}
-                            recievedRation={s.rationsAchieved[i]}
-                            idealRation={s.idealRations[i]}
-                            addRations={(e, direction) => this.addToRation(e, ration, direction)}
-                        />
-                    </Grid>
+                        ? <Grid item xs={4} key={s.rationResources[i].name} justifyContent="center" alignItems="center" style={{alignItems:"center", justifyContent:"center"}}>
+                            <RationingComponent
+                                demandedRation={ration}
+                                recievedRation={s.rationsAchieved[i]}
+                                idealRation={s.idealRations[i]}
+                                addRations={(e, direction) => this.addToRation(e, ration, direction)}
+                            />
+                          </Grid>
+                        : null
                 )}
                 <Grid item xs={12}><span style={{fontWeight:'bold', color:'#555'}}>Resources</span></Grid>
                 {s.resourceStorages.filter(rs =>

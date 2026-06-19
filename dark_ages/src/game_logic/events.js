@@ -789,6 +789,8 @@ export class HarvestEvent extends SettlementEvent {
         // If true, the next getBonuses() call will produce a "success" (decent, not amazing) harvest.
         // Set by _applyScenario when goodFirstYearHarvest is enabled.
         this.forceGoodNextHarvest = props.forceGoodNextHarvest || false;
+        // Optional callback to show a game message pop-up when the harvest fires.
+        this.addGameMessage = props.addGameMessage || null;
     }
     eventShouldFire_(day, settlements) {
         return true;
@@ -806,6 +808,15 @@ export class HarvestEvent extends SettlementEvent {
             this.harvestModifier = 0.95 + 0.05*harvestSuccess; // varies between ~0.75 and ~1.15
         }
         Logger.info(`Harvest result: ${this.harvestSuccess}`, { modifier: this.harvestModifier, day: this.timer.currentValue });
+        // Show a pop-up message to the player with the harvest result
+        if (this.addGameMessage) {
+            const qualityText = this.harvestSuccess === majorSuccessText ? 'Excellent' :
+                                this.harvestSuccess === successText ? 'Good' :
+                                this.harvestSuccess === failureText ? 'Poor' : 'Very Poor';
+            const modifierPct = Math.round((this.harvestModifier - 1) * 100);
+            const sign = modifierPct >= 0 ? '+' : '';
+            this.addGameMessage(`🌾 Harvest: ${qualityText} (farm productivity ${sign}${modifierPct}%)`);
+        }
         return [
             new SpecificBuildingProductivityBonus({name: "effect of weather on the harvest", building: Farm.name, amount: this.harvestModifier}),
             new ChangePriceBonus({name: "effect of weather on the harvest", resource: Resources.food, amount: 1/this.harvestModifier})
@@ -1069,9 +1080,25 @@ export class NomadsArrive extends RegularSettlementEvent {
     }
     eventShouldFire_() { return successToTruthy(rollSuccess(0.25)); }
     getBonuses() { return []; }
+    // Override fire_() to freeze the nomad group size at fire time (not in getEventChoices,
+    // which is called every render and would re-roll the size each time the modal re-renders).
+    fire_() {
+        const settlement = this.settlements[0];
+        const pop = settlement.populationSizeExternal ? settlement.populationSizeExternal.currentValue : 50;
+        // Cap at 10% of current population, minimum 3
+        const maxFromPop = Math.max(3, Math.floor(pop * 0.1));
+        this.nomadGroupSize = Math.min(maxFromPop, Math.round(5 + Math.random() * 10)); // 5–15 nomads, capped
+        this._robGold = Math.round(this.nomadGroupSize * 2);
+        Logger.info(`Nomads arrive: group size ${this.nomadGroupSize} (pop cap: ${maxFromPop})`, { day: this.timer.currentValue });
+        // Reset choice state (mirrors what the else branch in SettlementEvent.fire() does)
+        this.deactivateBonusesAndEventEffects();
+        this.choiceApplied = false;
+        this.appliedChoice = null;
+        this.lastBonuses = [];
+    }
     getEventChoices() {
         const settlement = this.settlements[0];
-        this.nomadGroupSize = Math.round(5 + Math.random() * 10); // 5–15 nomads
+        // Use the frozen nomadGroupSize set at fire time — do NOT re-roll here
         const choices = [
             new EventChoice({name: `Take them in (+${this.nomadGroupSize} population)`, effects: [
                 new ChangePopulationBonus({ name: "nomads taken in", amount: this.nomadGroupSize }),
@@ -1090,9 +1117,7 @@ export class NomadsArrive extends RegularSettlementEvent {
         const armyStrength = settlement.armyStrength ? settlement.armyStrength.currentValue : 0;
         const robThreshold = this.nomadGroupSize * 1.5;
         if (armyStrength >= robThreshold) {
-            const goldGained = Math.round(this.nomadGroupSize * 2);
-            this._robGold = goldGained;
-            choices.push(new EventChoice({name: `Rob them (gain ~${goldGained} gold, reduces future nomad visits)`, effects: [
+            choices.push(new EventChoice({name: `Rob them (gain ~${this._robGold} gold, reduces future nomad visits)`, effects: [
                 new TemporaryLocalLegitimacyBonus({
                     name: "reputation for robbing nomads", amount: -0.04,
                     duration: daysInYear * 2, timer: this.timer
@@ -1172,9 +1197,12 @@ export class BanditRaid extends RegularSettlementEvent {
             this._battleState = {
                 playerArmy: this._playerArmy,
                 enemyArmy: this._banditArmy,
-                groundAdvantage: new Variable({ name: "Ground advantage", startingValue: 0 }),
+                groundAdvantage: new Variable({ name: "Ground advantage", startingValue: 0, displayRound: 2,
+                    description: 'Affects bow effectiveness and melee combat. Positive = your advantage, negative = enemy advantage. Range: −0.5 to +0.5.' }),
                 phase: 'skirmish',
                 round: 1,
+                // log entries are { text: string, vars: {[key]: Variable} }
+                // Render with renderLogEntry(entry) which replaces {key} tokens with VariableComponents
                 log: [],
                 playerBowCasualties: 0,
                 enemyBowCasualties: 0,
@@ -1234,11 +1262,11 @@ export class BanditRaid extends RegularSettlementEvent {
             // Check if bandits auto-move in (no archers left)
             if (state.enemyArmy.bowCount === 0 && state.phase === 'skirmish') {
                 state.phase = 'clash';
-                state.log.push("With no archers left, the enemy charges!");
+                state.log.push({ text: "With no archers left, the enemy charges!", vars: {} });
             }
         } else if (choice === 'move_in') {
             state.phase = 'clash';
-            state.log.push("Your archers hold their fire as your infantry advances into the fray.");
+            state.log.push({ text: "Your archers hold their fire as your infantry advances into the fray.", vars: {} });
             resolveMeleeRound(state, true); // first round penalty
         } else if (choice === 'clash') {
             resolveMeleeRound(state, false);
@@ -1265,7 +1293,7 @@ export class BanditRaid extends RegularSettlementEvent {
                 Math.max(-0.5, Math.min(0.5, state.groundAdvantage.currentValue + groundDelta)),
                 `manoeuvre: ${stratRoll} (chance ${Math.round(playerStratChance * 100)}%)`
             );
-            state.log.push(flavour);
+            state.log.push({ text: flavour, vars: {} });
             // Store roll info for UI display (reuse lastSkirmishRoll slot)
             state.lastSkirmishRoll = {
                 playerStratRoll: stratRoll,
@@ -1286,25 +1314,26 @@ export class BanditRaid extends RegularSettlementEvent {
         // Check end conditions
         const playerTotal = state.playerArmy.totalStrength.currentValue;
         const enemyTotal = state.enemyArmy.totalStrength.currentValue;
-        const enemyFled = enemyTotal < state.startingEnemyStrength * 0.2;
+        const enemyFled = enemyTotal <= state.startingEnemyStrength * 0.25;
         const maxRounds = 8;
 
         if (enemyTotal <= 0 || enemyFled) {
-            // Player wins
+            // Player wins — mark ended but keep modal open for battle report
             Logger.info('Battle won vs bandits', { round: state.round, playerStrength: playerTotal, day: this.timer.currentValue });
             applyBattleAftermath(settlement, true, false, 0, this.timer);
-            state.log.push(enemyFled ? "The bandits flee! Victory!" : "The bandits are defeated! Victory!");
+            state.log.push({ text: enemyFled ? "⚔ The bandits flee! Victory!" : "⚔ The bandits are defeated! Victory!", vars: {} });
             state.ended = true;
             state.playerWon = true;
-            this.timer.unforceStopTimer("Event: " + this.name);
+            // Timer unforced when player clicks "Close battle report" in BattleUI
+            this._endEventCallback = () => this.timer.unforceStopTimer("Event: " + this.name);
         } else if (playerTotal <= 0 || state.round > maxRounds) {
-            // Player loses
+            // Player loses — mark ended but keep modal open for battle report
             Logger.info('Battle lost vs bandits', { round: state.round, playerStrength: playerTotal, enemyStrength: enemyTotal, day: this.timer.currentValue });
             this._applyRaid(settlement, false, true);
-            state.log.push(playerTotal <= 0 ? "Your forces are overwhelmed!" : "The battle drags on — your forces are exhausted and retreat.");
+            state.log.push({ text: playerTotal <= 0 ? "💀 Your forces are overwhelmed!" : "💀 The battle drags on — your forces are exhausted and retreat.", vars: {} });
             state.ended = true;
             state.playerWon = false;
-            this.timer.unforceStopTimer("Event: " + this.name);
+            this._endEventCallback = () => this.timer.unforceStopTimer("Event: " + this.name);
         }
     }
 }
@@ -1330,19 +1359,28 @@ class BattleArmy {
         this.name = name;
         this.isPlayer = isPlayer;
 
-        // bowStrength and meleeStrength accumulate unit contributions via addition
-        // modifiers during build. After finalise(), casualties are applied by
-        // calling setNewBaseValue(startingStrength * survivingFraction) — this
-        // works correctly because the base value is set to the scaled total and
-        // the modifiers are cleared (we never add modifiers after finalise()).
+        // Design: bowStrength and meleeStrength accumulate unit contributions as
+        // addition modifiers (one per unit type, added during build). A separate
+        // bowCasualtyFraction / meleeCasualtyFraction Variable (starts at 1.0) is
+        // applied as a multiplication modifier. Casualties update the fraction Variable,
+        // so the tooltip always shows the full unit breakdown AND the surviving fraction.
         //
-        // Specifically: during build we add modifiers (one per unit type).
-        // finalise() records currentValue as startingStrength, then removes all
-        // modifiers and sets baseValue = startingStrength. After that, casualties
-        // simply call setNewBaseValue(startingStrength * fraction), which is
-        // correct because there are no modifiers left to interfere.
-        this.bowStrength   = new Variable({ name: `${name} bow strength`,   startingValue: 0, displayRound: 1 });
-        this.meleeStrength = new Variable({ name: `${name} melee strength`, startingValue: 0, displayRound: 1 });
+        // Example tooltip for bowStrength:
+        //   base: 0
+        //   + 3 short bows (×1.2 each): 3.6
+        //   + 2 war bows (×2.5 each): 5.0
+        //   × surviving fraction (2/5 archers): 0.4
+        //   = 3.44
+
+        // Fraction Variables — start at 1.0 (no casualties yet)
+        this.bowCasualtyFraction   = new Variable({ name: `${name} archer survival fraction`,  startingValue: 1, displayRound: 2 });
+        this.meleeCasualtyFraction = new Variable({ name: `${name} fighter survival fraction`, startingValue: 1, displayRound: 2 });
+
+        // Strength Variables — unit modifiers added during build, fraction applied as multiplication
+        this.bowStrength   = new Variable({ name: `${name} bow strength`,   startingValue: 0, displayRound: 1,
+            modifiers: [ new VariableModifier({ variable: this.bowCasualtyFraction,   type: multiplication }) ] });
+        this.meleeStrength = new Variable({ name: `${name} melee strength`, startingValue: 0, displayRound: 1,
+            modifiers: [ new VariableModifier({ variable: this.meleeCasualtyFraction, type: multiplication }) ] });
 
         this.totalStrength = new Variable({
             name: `${name} total strength`,
@@ -1358,63 +1396,55 @@ class BattleArmy {
         this.meleeCount = 0;  // number of melee units remaining
         this.startingBowCount   = 0;
         this.startingMeleeCount = 0;
-        this.startingBowStrength   = 0;  // set after finalise(), used for fraction calc
-        this.startingMeleeStrength = 0;
 
-        this.strategySkill = new Variable({ name: `${name} leader strategy`, startingValue: 0, displayRound: 2 });
+        // strategySkill: for the player army this is set to the leader's actual
+        // strategy Variable (so the tooltip shows the full breakdown from traits/culture).
+        // For the enemy army a plain Variable is used.
+        this.strategySkill = null; // set by buildPlayerArmy / buildBanditArmy
     }
 
     /**
-     * Call after all units have been added. Locks in the starting strengths,
-     * then removes all build-time modifiers and sets baseValue = startingStrength.
-     * After this point, setNewBaseValue(startingStrength * fraction) correctly
-     * scales strength without any modifiers interfering.
+     * Call after all units have been added. Records starting counts.
+     * The fraction Variables start at 1.0 so no further action needed.
      */
     finalise() {
-        // Record the fully-modded starting strength
-        this.startingBowStrength   = this.bowStrength.currentValue;
-        this.startingMeleeStrength = this.meleeStrength.currentValue;
-        this.startingBowCount      = this.bowCount;
-        this.startingMeleeCount    = this.meleeCount;
-
-        // Remove all build-time addition modifiers and bake the value into baseValue.
-        // This ensures future setNewBaseValue calls are not affected by leftover modifiers.
-        this.bowStrength.setModifiers([]);
-        this.bowStrength.setNewBaseValue(this.startingBowStrength, 'finalise: bake starting bow strength');
-
-        this.meleeStrength.setModifiers([]);
-        this.meleeStrength.setNewBaseValue(this.startingMeleeStrength, 'finalise: bake starting melee strength');
+        this.startingBowCount   = this.bowCount;
+        this.startingMeleeCount = this.meleeCount;
     }
 
     /**
      * Apply bow casualties. `dead` is the integer number of archers killed.
-     * Scales bowStrength proportionally to surviving fraction.
+     * Updates the bowCasualtyFraction Variable so the tooltip shows the surviving fraction.
      */
     applyBowCasualties(dead) {
         if (dead <= 0) return;
         const newCount = Math.max(0, this.bowCount - dead);
         const fraction = this.startingBowCount > 0 ? newCount / this.startingBowCount : 0;
-        this.bowStrength.setNewBaseValue(
-            this.startingBowStrength * fraction,
-            `${dead} archers lost (${newCount}/${this.startingBowCount} remaining)`
+        this.bowCasualtyFraction.setNewBaseValue(
+            fraction,
+            `${newCount}/${this.startingBowCount} archers surviving (${dead} lost this round)`
         );
         this.bowCount = newCount;
     }
 
     /**
      * Apply melee casualties. `dead` is the integer number of melee fighters killed.
-     * Scales meleeStrength proportionally to surviving fraction.
+     * Updates the meleeCasualtyFraction Variable so the tooltip shows the surviving fraction.
      */
     applyMeleeCasualties(dead) {
         if (dead <= 0) return;
         const newCount = Math.max(0, this.meleeCount - dead);
         const fraction = this.startingMeleeCount > 0 ? newCount / this.startingMeleeCount : 0;
-        this.meleeStrength.setNewBaseValue(
-            this.startingMeleeStrength * fraction,
-            `${dead} soldiers lost (${newCount}/${this.startingMeleeCount} remaining)`
+        this.meleeCasualtyFraction.setNewBaseValue(
+            fraction,
+            `${newCount}/${this.startingMeleeCount} fighters surviving (${dead} lost this round)`
         );
         this.meleeCount = newCount;
     }
+
+    // Convenience getters used by resolveSkirmishRound / resolveMeleeRound
+    get startingBowStrength()   { return this.bowStrength.currentValue   / (this.bowCasualtyFraction.currentValue   || 1); }
+    get startingMeleeStrength() { return this.meleeStrength.currentValue / (this.meleeCasualtyFraction.currentValue || 1); }
 }
 
 function buildPlayerArmy(settlement) {
@@ -1470,13 +1500,12 @@ function buildPlayerArmy(settlement) {
         army.meleeCount += mobilised;
     }
 
-    // Strategy from leader
+    // Strategy: use the leader's actual strategy Variable directly so the tooltip
+    // shows the full breakdown (traits, culture bonuses, etc.) just like the character page.
     if (settlement.leader && settlement.leader.strategy) {
-        army.strategySkill.addModifier(new VariableModifier({
-            name: `${settlement.leader.name} strategy`,
-            variable: settlement.leader.strategy,
-            type: addition
-        }));
+        army.strategySkill = settlement.leader.strategy;
+    } else {
+        army.strategySkill = new Variable({ name: 'leader strategy', startingValue: 0, displayRound: 2 });
     }
 
     army.finalise();
@@ -1521,10 +1550,11 @@ function buildBanditArmy(settlement) {
             startingValue: swordCount * 2.0, type: addition
         }));
     }
-    army.strategySkill.addModifier(new VariableModifier({
-        name: `bandit leader strategy (poor)`,
-        startingValue: banditStrategy, type: addition
-    }));
+    army.strategySkill = new Variable({
+        name: 'bandit leader strategy',
+        startingValue: banditStrategy,
+        displayRound: 2
+    });
     army.bowCount   = bowCount;
     army.meleeCount = spearCount + swordCount;
 
@@ -1551,27 +1581,52 @@ function resolveSkirmishRound(state) {
     const ga = state.groundAdvantage.currentValue;
     const playerEffBow = playerArmy.bowStrength.currentValue * (1 + ga);
     const enemyEffBow  = enemyArmy.bowStrength.currentValue  * (1 - ga);
-    const totalBow = playerEffBow + enemyEffBow + 5;
 
-    const playerBowCasualtyRate = enemyEffBow / totalBow;
-    const enemyBowCasualtyRate  = playerEffBow / totalBow;
-
-    state.playerBowCasualties += playerArmy.bowCount * playerBowCasualtyRate;
-    state.enemyBowCasualties  += enemyArmy.bowCount  * enemyBowCasualtyRate;
-    const playerBowDead = Math.floor(state.playerBowCasualties);
-    const enemyBowDead  = Math.floor(state.enemyBowCasualties);
+    // Casualties are proportional to the attacker's effective bow strength.
+    // A constant "cost per casualty" (bowCostPerCasualty) converts attack strength → dead archers.
+    // This means the stronger side always kills more in absolute terms — not just proportionally.
+    const bowCostPerCasualty = 3.0; // attack strength needed to kill one archer per round
+    state.playerBowCasualties += enemyEffBow / bowCostPerCasualty;
+    state.enemyBowCasualties  += playerEffBow / bowCostPerCasualty;
+    // Cap dead at remaining count
+    const playerBowDead = Math.min(playerArmy.bowCount, Math.floor(state.playerBowCasualties));
+    const enemyBowDead  = Math.min(enemyArmy.bowCount,  Math.floor(state.enemyBowCasualties));
     state.playerBowCasualties -= playerBowDead;
     state.enemyBowCasualties  -= enemyBowDead;
 
     playerArmy.applyBowCasualties(playerBowDead);
     enemyArmy.applyBowCasualties(enemyBowDead);
 
-    const groundText = groundDelta > 0 ? "Your general seized the high ground." :
-                       groundDelta < 0 ? "The enemy took the better position." :
+    const groundText = groundDelta > 0.05 ? "Your general seized the high ground." :
+                       groundDelta < -0.05 ? "The enemy took the better position." :
                        "Neither side gained a positional advantage.";
     // Store roll info for UI display
     state.lastSkirmishRoll = { playerStratRoll, enemyStratRoll, playerStratChance, enemyStratChance, groundDelta };
-    state.log.push(`Skirmish round ${state.round}: ${groundText} ${playerBowDead} of your archers fell, ${enemyBowDead} enemy archers fell.`);
+
+    // Build per-round Variables for the log so the player can hover for breakdowns
+    const gaSign = ga >= 0 ? '+' : '';
+    const gaLabel = Math.abs(ga) > 0.01 ? ` GA ${gaSign}${roundNumber(ga * 100, 0)}%` : '';
+
+    const playerEffBowVar = new Variable({ name: `your effective bow (round ${state.round})`, startingValue: playerEffBow, displayRound: 1 });
+    playerEffBowVar.setNewBaseValue(playerEffBow,
+        `${roundNumber(playerArmy.bowStrength.currentValue, 1)} bow strength × (1 ${ga >= 0 ? '+' : ''}${roundNumber(ga, 2)} GA)`);
+
+    const enemyEffBowVar = new Variable({ name: `enemy effective bow (round ${state.round})`, startingValue: enemyEffBow, displayRound: 1 });
+    enemyEffBowVar.setNewBaseValue(enemyEffBow,
+        `${roundNumber(enemyArmy.bowStrength.currentValue, 1)} bow strength × (1 ${(-ga) >= 0 ? '+' : ''}${roundNumber(-ga, 2)} GA)`);
+
+    const playerBowDeadVar = new Variable({ name: `your archers lost (round ${state.round})`, startingValue: playerBowDead, displayRound: 0 });
+    playerBowDeadVar.setNewBaseValue(playerBowDead,
+        `enemy effective bow ${roundNumber(enemyEffBow, 1)} ÷ ${bowCostPerCasualty} cost-per-casualty`);
+
+    const enemyBowDeadVar = new Variable({ name: `enemy archers lost (round ${state.round})`, startingValue: enemyBowDead, displayRound: 0 });
+    enemyBowDeadVar.setNewBaseValue(enemyBowDead,
+        `your effective bow ${roundNumber(playerEffBow, 1)} ÷ ${bowCostPerCasualty} cost-per-casualty`);
+
+    state.log.push({
+        text: `Skirmish round ${state.round}: ${groundText}${gaLabel} (your bow {playerEffBow} vs enemy {enemyEffBow}). {playerBowDead} of your archers fell, {enemyBowDead} enemy archers fell.`,
+        vars: { playerEffBow: playerEffBowVar, enemyEffBow: enemyEffBowVar, playerBowDead: playerBowDeadVar, enemyBowDead: enemyBowDeadVar }
+    });
     state.round++;
 }
 
@@ -1588,15 +1643,16 @@ function resolveMeleeRound(state, firstRoundPenalty) {
 
     const playerTotalAttack = playerArmy.meleeStrength.currentValue + playerBowVsMelee;
     const enemyTotalAttack  = enemyArmy.meleeStrength.currentValue  + enemyBowVsMelee;
-    const totalAttack = playerTotalAttack + enemyTotalAttack + 10;
 
-    const playerMeleeCasualtyRate = enemyTotalAttack / totalAttack;
-    const enemyMeleeCasualtyRate  = playerTotalAttack / totalAttack;
-
-    state.playerMeleeCasualties = (state.playerMeleeCasualties || 0) + playerArmy.meleeCount * playerMeleeCasualtyRate;
-    state.enemyMeleeCasualties  = (state.enemyMeleeCasualties  || 0) + enemyArmy.meleeCount  * enemyMeleeCasualtyRate;
-    const playerMeleeDead = Math.floor(state.playerMeleeCasualties);
-    const enemyMeleeDead  = Math.floor(state.enemyMeleeCasualties);
+    // Casualties are proportional to the attacker's total attack strength.
+    // A constant "cost per casualty" converts attack strength → dead fighters per round.
+    // This means the stronger side always kills more in absolute terms — not just proportionally.
+    const meleeCostPerCasualty = 4.0; // attack strength needed to kill one fighter per round
+    state.playerMeleeCasualties = (state.playerMeleeCasualties || 0) + enemyTotalAttack / meleeCostPerCasualty;
+    state.enemyMeleeCasualties  = (state.enemyMeleeCasualties  || 0) + playerTotalAttack / meleeCostPerCasualty;
+    // Cap dead at remaining count
+    const playerMeleeDead = Math.min(playerArmy.meleeCount, Math.floor(state.playerMeleeCasualties));
+    const enemyMeleeDead  = Math.min(enemyArmy.meleeCount,  Math.floor(state.enemyMeleeCasualties));
     state.playerMeleeCasualties -= playerMeleeDead;
     state.enemyMeleeCasualties  -= enemyMeleeDead;
 
@@ -1609,7 +1665,31 @@ function resolveMeleeRound(state, firstRoundPenalty) {
     const bowNote = firstRoundPenalty ? " Your archers hold their fire as your infantry advances." : "";
     // Store roll info for UI display
     state.lastMeleeRound = { playerTotalAttack, enemyTotalAttack, playerBowVsMelee, enemyBowVsMelee, ga };
-    state.log.push(`Melee round ${state.round}: ${advantage}${bowNote} ${playerMeleeDead} of your soldiers fell, ${enemyMeleeDead} enemy soldiers fell.`);
+
+    // Build per-round Variables for the log so the player can hover for breakdowns
+    const gaSign = ga >= 0 ? '+' : '';
+    const gaLabel = Math.abs(ga) > 0.01 ? ` GA ${gaSign}${roundNumber(ga * 100, 0)}%.` : '';
+
+    const playerAttackVar = new Variable({ name: `your total attack (round ${state.round})`, startingValue: playerTotalAttack, displayRound: 1 });
+    playerAttackVar.setNewBaseValue(playerTotalAttack,
+        `melee ${roundNumber(playerArmy.meleeStrength.currentValue, 1)} + bow support ${roundNumber(playerBowVsMelee, 1)} (${Math.round(playerBowMult * 100)}% effectiveness${Math.abs(ga) > 0.01 ? `, ${gaSign}${roundNumber(ga * 100, 0)}% GA` : ''})`);
+
+    const enemyAttackVar = new Variable({ name: `enemy total attack (round ${state.round})`, startingValue: enemyTotalAttack, displayRound: 1 });
+    enemyAttackVar.setNewBaseValue(enemyTotalAttack,
+        `melee ${roundNumber(enemyArmy.meleeStrength.currentValue, 1)} + bow support ${roundNumber(enemyBowVsMelee, 1)} (${Math.round(enemyBowMult * 100)}% effectiveness${Math.abs(ga) > 0.01 ? `, ${gaSign}${roundNumber(-ga * 100, 0)}% GA` : ''})`);
+
+    const playerMeleeDeadVar = new Variable({ name: `your soldiers lost (round ${state.round})`, startingValue: playerMeleeDead, displayRound: 0 });
+    playerMeleeDeadVar.setNewBaseValue(playerMeleeDead,
+        `enemy attack ${roundNumber(enemyTotalAttack, 1)} ÷ ${meleeCostPerCasualty} cost-per-casualty`);
+
+    const enemyMeleeDeadVar = new Variable({ name: `enemy soldiers lost (round ${state.round})`, startingValue: enemyMeleeDead, displayRound: 0 });
+    enemyMeleeDeadVar.setNewBaseValue(enemyMeleeDead,
+        `your attack ${roundNumber(playerTotalAttack, 1)} ÷ ${meleeCostPerCasualty} cost-per-casualty`);
+
+    state.log.push({
+        text: `Melee round ${state.round}: ${advantage}${bowNote}${gaLabel} Attack: yours {playerAttack} vs enemy {enemyAttack}. {playerMeleeDead} of your soldiers fell, {enemyMeleeDead} enemy soldiers fell.`,
+        vars: { playerAttack: playerAttackVar, enemyAttack: enemyAttackVar, playerMeleeDead: playerMeleeDeadVar, enemyMeleeDead: enemyMeleeDeadVar }
+    });
     state.round++;
 }
 
@@ -1652,12 +1732,37 @@ export class EventComponent extends UIBase {
         this.event = props.event;
         this._lastAutoOpenedTrigger = null; // track which fire we last auto-opened for
         this.addVariables([this.event.timer]);
+        // Draggable state for the modal
+        this._dragState = null;
+        this._modalPos = null; // { x, y } offset from center, null = centered
+        this._onMouseMove = this._onMouseMove.bind(this);
+        this._onMouseUp   = this._onMouseUp.bind(this);
     }
     setModalOpen(modalOpen) {
         this.setState({modalOpen: modalOpen});
         if (modalOpen === true) {
             this.event.read = true;
+            this._modalPos = null; // reset position when re-opening
         }
+    }
+    _onMouseDown(e) {
+        // Only drag from the title bar (the element with data-drag-handle)
+        if (!e.target.closest('[data-drag-handle]')) return;
+        e.preventDefault();
+        const pos = this._modalPos || { x: 0, y: 0 };
+        this._dragState = { startX: e.clientX - pos.x, startY: e.clientY - pos.y };
+        window.addEventListener('mousemove', this._onMouseMove);
+        window.addEventListener('mouseup',   this._onMouseUp);
+    }
+    _onMouseMove(e) {
+        if (!this._dragState) return;
+        this._modalPos = { x: e.clientX - this._dragState.startX, y: e.clientY - this._dragState.startY };
+        this.forceUpdate();
+    }
+    _onMouseUp() {
+        this._dragState = null;
+        window.removeEventListener('mousemove', this._onMouseMove);
+        window.removeEventListener('mouseup',   this._onMouseUp);
     }
     childRender() {
         this.event = this.props.event;
@@ -1672,10 +1777,24 @@ export class EventComponent extends UIBase {
             // Use setTimeout to avoid setState-during-render
             setTimeout(() => this.setModalOpen(true), 0);
         }
-        // For BanditRaid in battle phase, show battle UI instead of normal event modal
-        if (this.event instanceof BanditRaid && this.event._battleState && !this.event._battleState.ended) {
+        // For BanditRaid in battle phase (or end-of-battle report), show battle UI.
+        // BattleUI stays open until the player clicks "Close battle report", which sets _battleState = null.
+        if (this.event instanceof BanditRaid && this.event._battleState) {
             return <BattleUI event={this.event} />;
         }
+
+        // Compute modal position style
+        const pos = this._modalPos;
+        const boxSx = pos
+            ? { position: 'absolute', top: `calc(50% + ${pos.y}px)`, left: `calc(50% + ${pos.x}px)`,
+                transform: 'translate(-50%, -50%)', width: 600, minWidth: 320, minHeight: 200,
+                bgcolor: 'background.paper', border: '2px solid #000', boxShadow: 24,
+                resize: 'both', overflow: 'auto' }
+            : { position: 'absolute', top: '50%', left: '50%',
+                transform: 'translate(-50%, -50%)', width: 600, minWidth: 320, minHeight: 200,
+                bgcolor: 'background.paper', border: '2px solid #000', boxShadow: 24,
+                resize: 'both', overflow: 'auto' };
+
         return <div><CustomTooltip items={this.event.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center", color: this.event.read ? "black" : "red"}}>
             <span onClick={()=>{Logger.setInspect(this.event); this.setModalOpen(true);}}>{titleCase(this.event.name)}</span>
         </CustomTooltip>
@@ -1685,36 +1804,33 @@ export class EventComponent extends UIBase {
             aria-labelledby="modal-modal-title"
             aria-describedby="modal-modal-description"
             >
-            <Box sx={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: 600,
-                bgcolor: 'background.paper',
-                border: '2px solid #000',
-                boxShadow: 24,
-                p: 4,
-                }}>
-                <Typography id="modal-modal-title" variant="h6" component="h2">
-                Event: {this.event.name}
-                </Typography>
-                <div>
-                    {this.event.getText().map((text, i) => {return <span key={i}>{text}<br /></span>})}
+            <Box sx={boxSx} onMouseDown={(e) => this._onMouseDown(e)}>
+                <div data-drag-handle style={{ cursor: 'move', padding: '16px 20px 12px 20px',
+                    userSelect: 'none', borderBottom: '1px solid #e0e0e0',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography id="modal-modal-title" variant="h6" component="h2" style={{ margin: 0 }}>
+                        Event: {this.event.name}
+                    </Typography>
+                    <span style={{ fontSize: '11px', color: '#aaa', marginLeft: '8px' }}>drag · resize from corner</span>
                 </div>
-                <br />
-                {!this.event.appliedChoice && this.event.getEventChoices ? this.event.getEventChoices().map((choice, i) => {
-                    return <div key={i}><CustomTooltip key={i} items={choice.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                        <Button variant='outlined' onClick={() => {this.event.applyChoice(choice);}}>{choice.name}</Button>
-                    </CustomTooltip></div>
-                }) : ''}
-                <br />
-                {this.event.appliedChoice ?
+                <div style={{ padding: '16px 20px 20px 20px' }}>
                     <div>
-                        You chose to: {this.event.appliedChoice.getText().map((text, i) => {return <span key={i}>{text}<br /></span>})}
+                        {this.event.getText().map((text, i) => {return <span key={i}>{text}<br /></span>})}
                     </div>
-                : ''}
-                <Button variant='outlined' onClick={() => this.setModalOpen(false)}>Close</Button>
+                    <br />
+                    {!this.event.appliedChoice && this.event.getEventChoices ? this.event.getEventChoices().map((choice, i) => {
+                        return <div key={i}><CustomTooltip key={i} items={choice.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
+                            <Button variant='outlined' onClick={() => {this.event.applyChoice(choice);}}>{choice.name}</Button>
+                        </CustomTooltip></div>
+                    }) : ''}
+                    <br />
+                    {this.event.appliedChoice ?
+                        <div>
+                            You chose to: {this.event.appliedChoice.getText().map((text, i) => {return <span key={i}>{text}<br /></span>})}
+                        </div>
+                    : ''}
+                    <Button variant='outlined' onClick={() => this.setModalOpen(false)}>Close</Button>
+                </div>
             </Box>
         </Modal></div>
     }
@@ -1724,12 +1840,71 @@ export class EventComponent extends UIBase {
  * §4.5 Battle UI — shown as a modal when a BanditRaid battle is in progress.
  * Renders the current battle state and player choices.
  * Uses VariableComponent for all numeric values so tooltips show breakdowns.
+ * Log entries are {text, vars} objects — {key} tokens in text are replaced by
+ * inline VariableComponents so the player can hover each number for a breakdown.
  */
 class BattleUI extends React.Component {
     constructor(props) {
         super(props);
         this.state = { open: true };
+        // Draggable state
+        this._dragState = null;
+        this._modalPos  = null; // { x, y } pixel offset from center
+        this._onMouseMove = this._onMouseMove.bind(this);
+        this._onMouseUp   = this._onMouseUp.bind(this);
     }
+    _onMouseDown(e) {
+        if (!e.target.closest('[data-drag-handle]')) return;
+        e.preventDefault();
+        const pos = this._modalPos || { x: 0, y: 0 };
+        this._dragState = { startX: e.clientX - pos.x, startY: e.clientY - pos.y };
+        window.addEventListener('mousemove', this._onMouseMove);
+        window.addEventListener('mouseup',   this._onMouseUp);
+    }
+    _onMouseMove(e) {
+        if (!this._dragState) return;
+        this._modalPos = { x: e.clientX - this._dragState.startX, y: e.clientY - this._dragState.startY };
+        this.forceUpdate();
+    }
+    _onMouseUp() {
+        this._dragState = null;
+        window.removeEventListener('mousemove', this._onMouseMove);
+        window.removeEventListener('mouseup',   this._onMouseUp);
+    }
+    componentWillUnmount() {
+        window.removeEventListener('mousemove', this._onMouseMove);
+        window.removeEventListener('mouseup',   this._onMouseUp);
+    }
+
+    /**
+     * Render a structured log entry {text, vars} as JSX.
+     * Replaces {key} tokens in text with inline VariableComponents.
+     * Falls back to plain string rendering for legacy string entries.
+     */
+    renderLogEntry(entry) {
+        if (typeof entry === 'string') return <span>{entry}</span>;
+        const { text, vars } = entry;
+        // Split on {key} tokens
+        const parts = text.split(/(\{[a-zA-Z0-9_]+\})/g);
+        return (
+            <span>
+                {parts.map((part, i) => {
+                    const match = part.match(/^\{([a-zA-Z0-9_]+)\}$/);
+                    if (match) {
+                        const variable = vars[match[1]];
+                        if (variable) {
+                            return <VariableComponent key={i} variable={variable}
+                                showName={false} showOwner={false}
+                                style={{ fontSize: '12px', display: 'inline' }} />;
+                        }
+                        return <span key={i}>{part}</span>;
+                    }
+                    return <span key={i}>{part}</span>;
+                })}
+            </span>
+        );
+    }
+
     render() {
         const { event } = this.props;
         const state = event._battleState;
@@ -1742,22 +1917,6 @@ class BattleUI extends React.Component {
                              letterSpacing: '0.06em', color: '#888', marginBottom: '2px' };
         const rowStyle   = { display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' };
         const varStyle   = { fontSize: '14px' };
-
-        // ── Ground advantage tooltip content ───────────────────────────────────
-        const gaTooltipItems = [
-            groundAdvantage,
-            'Affects bow effectiveness and melee combat. Positive = your advantage, negative = enemy advantage. Range: −50% to +50%.'
-        ];
-
-        // ── Strategy skill tooltip content ─────────────────────────────────────
-        const playerStratTooltipItems = [
-            playerArmy.strategySkill,
-            'Your leader\'s strategy skill. Used for skirmish positioning rolls and manoeuvre checks. Higher = better chance of gaining ground advantage.'
-        ];
-        const enemyStratTooltipItems = [
-            enemyArmy.strategySkill,
-            'Enemy leader\'s strategy skill. Used for skirmish positioning rolls.'
-        ];
 
         // ── Last roll info panel ───────────────────────────────────────────────
         const renderLastRollInfo = () => {
@@ -1790,37 +1949,28 @@ class BattleUI extends React.Component {
                 <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>{label}</div>
                 <div style={rowStyle}>
                     <span style={labelStyle}>🏹 Bow</span>
-                    <CustomTooltip items={[army.bowStrength, `${army.bowCount} archers remaining (of ${army.startingBowCount} starting). Bow strength = sum of all archer unit attack values, scaled by casualties.`]}>
-                        <span style={varStyle}>
-                            <VariableComponent variable={army.bowStrength} showName={false} showOwner={false} style={varStyle} />
-                        </span>
-                    </CustomTooltip>
+                    <VariableComponent variable={army.bowStrength} showName={false} showOwner={false} style={varStyle}
+                        description={`${army.bowCount} archers remaining (of ${army.startingBowCount} starting). Bow strength = sum of all archer unit attack values, scaled by casualties.`} />
                     <span style={{ color: '#888', fontSize: '12px' }}>({army.bowCount} archers)</span>
                 </div>
                 <div style={rowStyle}>
                     <span style={labelStyle}>⚔ Melee</span>
-                    <CustomTooltip items={[army.meleeStrength, `${army.meleeCount} fighters remaining (of ${army.startingMeleeCount} starting). Melee strength = sum of all melee unit attack values, scaled by casualties.`]}>
-                        <span style={varStyle}>
-                            <VariableComponent variable={army.meleeStrength} showName={false} showOwner={false} style={varStyle} />
-                        </span>
-                    </CustomTooltip>
+                    <VariableComponent variable={army.meleeStrength} showName={false} showOwner={false} style={varStyle}
+                        description={`${army.meleeCount} fighters remaining (of ${army.startingMeleeCount} starting). Melee strength = sum of all melee unit attack values, scaled by casualties.`} />
                     <span style={{ color: '#888', fontSize: '12px' }}>({army.meleeCount} fighters)</span>
                 </div>
                 <div style={rowStyle}>
                     <span style={labelStyle}>Total</span>
-                    <CustomTooltip items={[army.totalStrength, 'Total combat strength = bow strength + melee strength.']}>
-                        <span style={{ fontSize: '15px', fontWeight: 'bold' }}>
-                            <VariableComponent variable={army.totalStrength} showName={false} showOwner={false} style={{ fontSize: '15px', fontWeight: 'bold' }} />
-                        </span>
-                    </CustomTooltip>
+                    <VariableComponent variable={army.totalStrength} showName={false} showOwner={false}
+                        style={{ fontSize: '15px', fontWeight: 'bold' }}
+                        description="Total combat strength = bow strength + melee strength." />
                 </div>
                 <div style={{ ...rowStyle, marginTop: '4px' }}>
                     <span style={labelStyle}>Strategy</span>
-                    <CustomTooltip items={army.isPlayer ? playerStratTooltipItems : enemyStratTooltipItems}>
-                        <span style={varStyle}>
-                            <VariableComponent variable={army.strategySkill} showName={false} showOwner={false} style={varStyle} />
-                        </span>
-                    </CustomTooltip>
+                    <VariableComponent variable={army.strategySkill} showName={false} showOwner={false} style={varStyle}
+                        description={army.isPlayer
+                            ? "Your leader's strategy skill. Used for skirmish positioning rolls and manoeuvre checks. Higher = better chance of gaining ground advantage."
+                            : "Enemy leader's strategy skill. Used for skirmish positioning rolls."} />
                 </div>
             </div>
         );
@@ -1828,76 +1978,86 @@ class BattleUI extends React.Component {
         // ── Choices ────────────────────────────────────────────────────────────
         const renderChoices = () => {
             if (ended) {
-                return <div>
-                    <Typography sx={{ color: playerWon ? 'green' : 'red', fontWeight: 'bold', mb: 1 }}>
-                        {playerWon ? '⚔ Victory!' : '💀 Defeat'}
-                    </Typography>
-                    <Button variant='outlined' onClick={() => this.setState({ open: false })}>Close</Button>
-                </div>;
+                return (
+                    <div>
+                        <Typography sx={{ color: playerWon ? 'green' : 'red', fontWeight: 'bold', mb: 1 }}>
+                            {playerWon ? '⚔ Victory!' : '💀 Defeat'}
+                        </Typography>
+                        <Button variant='outlined' onClick={() => {
+                            if (event._endEventCallback) event._endEventCallback();
+                            event._battleState = null;
+                            this.setState({ open: false });
+                        }}>Close battle report</Button>
+                    </div>
+                );
             }
             if (phase === 'skirmish') {
-                return <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <HTMLTooltip title={
-                        <div>
-                            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Continue skirmishing</div>
-                            <div>Both sides' archers exchange fire. Your general and the enemy leader each make a strategy roll to gain ground advantage.</div>
-                            <div style={{ marginTop: '4px', color: '#555' }}>Your strategy chance: {Math.round(Math.min(0.85, Math.max(0.1, playerArmy.strategySkill.currentValue)) * 100)}%</div>
-                            <div style={{ color: '#555' }}>Enemy strategy chance: {Math.round(Math.min(0.85, Math.max(0.1, enemyArmy.strategySkill.currentValue)) * 100)}%</div>
-                        </div>
-                    }>
-                        <Button variant='outlined' onClick={() => { event.advanceBattle('skirmish'); this.forceUpdate(); }}>
-                            Continue skirmishing
-                        </Button>
-                    </HTMLTooltip>
-                    <HTMLTooltip title={
-                        <div>
-                            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Move in (melee)</div>
-                            <div>Your infantry advances. Your archers fire at reduced effectiveness (20%) while the enemy archers fire at increased effectiveness (50%) during the charge.</div>
-                        </div>
-                    }>
-                        <Button variant='outlined' onClick={() => { event.advanceBattle('move_in'); this.forceUpdate(); }}>
-                            Move in (melee)
-                        </Button>
-                    </HTMLTooltip>
-                    <Button variant='outlined' color='error' onClick={() => { event.advanceBattle('flee'); this.setState({ open: false }); }}>
-                        Flee
-                    </Button>
-                </div>;
-            } else {
-                return <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <HTMLTooltip title={
-                        <div>
-                            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Hold the line</div>
-                            <div>Both sides fight in place. Archers fire at 40% effectiveness into the melee. Casualties are proportional to relative attack strength.</div>
-                        </div>
-                    }>
-                        <Button variant='outlined' onClick={() => { event.advanceBattle('clash'); this.forceUpdate(); }}>
-                            Hold the line
-                        </Button>
-                    </HTMLTooltip>
-                    <HTMLTooltip title={
-                        <div>
-                            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Attempt a manoeuvre (strategy check)</div>
-                            <div>Your general attempts a flanking move or tactical repositioning. Rolls against your strategy skill.</div>
-                            <div style={{ marginTop: '4px', color: '#555' }}>Your strategy: {playerArmy.strategySkill.currentValue.toFixed(2)}</div>
-                            <div style={{ color: '#555' }}>Success chance: {Math.round(Math.min(0.85, Math.max(0.1, playerArmy.strategySkill.currentValue)) * 100)}%</div>
-                            <div style={{ marginTop: '4px' }}>
-                                <span style={{ color: '#1a7a1a' }}>Major success: +25% ground advantage</span><br/>
-                                <span style={{ color: '#2e7d32' }}>Success: +15% ground advantage</span><br/>
-                                <span style={{ color: '#b26a00' }}>Failure: −5% ground advantage</span><br/>
-                                <span style={{ color: '#c62828' }}>Major failure: −15% ground advantage</span>
+                return (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <HTMLTooltip title={
+                            <div>
+                                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Continue skirmishing</div>
+                                <div>Both sides' archers exchange fire. Your general and the enemy leader each make a strategy roll to gain ground advantage.</div>
+                                <div style={{ marginTop: '4px', color: '#555' }}>Your strategy chance: {Math.round(Math.min(0.85, Math.max(0.1, playerArmy.strategySkill.currentValue)) * 100)}%</div>
+                                <div style={{ color: '#555' }}>Enemy strategy chance: {Math.round(Math.min(0.85, Math.max(0.1, enemyArmy.strategySkill.currentValue)) * 100)}%</div>
                             </div>
-                            <div style={{ marginTop: '4px', color: '#555' }}>Melee combat also resolves this round.</div>
-                        </div>
-                    }>
-                        <Button variant='outlined' onClick={() => { event.advanceBattle('manoeuvre'); this.forceUpdate(); }}>
-                            Attempt a manoeuvre (strategy check)
+                        }>
+                            <Button variant='outlined' onClick={() => { event.advanceBattle('skirmish'); this.forceUpdate(); }}>
+                                Continue skirmishing
+                            </Button>
+                        </HTMLTooltip>
+                        <HTMLTooltip title={
+                            <div>
+                                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Move in (melee)</div>
+                                <div>Your infantry advances. Your archers fire at reduced effectiveness (20%) while the enemy archers fire at increased effectiveness (50%) during the charge.</div>
+                            </div>
+                        }>
+                            <Button variant='outlined' onClick={() => { event.advanceBattle('move_in'); this.forceUpdate(); }}>
+                                Move in (melee)
+                            </Button>
+                        </HTMLTooltip>
+                        <Button variant='outlined' color='error' onClick={() => { event.advanceBattle('flee'); this.setState({ open: false }); }}>
+                            Flee
                         </Button>
-                    </HTMLTooltip>
-                    <Button variant='outlined' color='error' onClick={() => { event.advanceBattle('flee'); this.setState({ open: false }); }}>
-                        Flee
-                    </Button>
-                </div>;
+                    </div>
+                );
+            } else {
+                return (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <HTMLTooltip title={
+                            <div>
+                                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Hold the line</div>
+                                <div>Both sides fight in place. Archers fire at 40% effectiveness into the melee. Casualties are proportional to relative attack strength.</div>
+                            </div>
+                        }>
+                            <Button variant='outlined' onClick={() => { event.advanceBattle('clash'); this.forceUpdate(); }}>
+                                Hold the line
+                            </Button>
+                        </HTMLTooltip>
+                        <HTMLTooltip title={
+                            <div>
+                                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Attempt a manoeuvre (strategy check)</div>
+                                <div>Your general attempts a flanking move or tactical repositioning. Rolls against your strategy skill.</div>
+                                <div style={{ marginTop: '4px', color: '#555' }}>Your strategy: <VariableComponent variable={playerArmy.strategySkill} showName={false} showOwner={false} /></div>
+                                <div style={{ color: '#555' }}>Success chance: {Math.round(Math.min(0.85, Math.max(0.1, playerArmy.strategySkill.currentValue)) * 100)}%</div>
+                                <div style={{ marginTop: '4px' }}>
+                                    <span style={{ color: '#1a7a1a' }}>Major success: +25% ground advantage</span><br/>
+                                    <span style={{ color: '#2e7d32' }}>Success: +15% ground advantage</span><br/>
+                                    <span style={{ color: '#b26a00' }}>Failure: −5% ground advantage</span><br/>
+                                    <span style={{ color: '#c62828' }}>Major failure: −15% ground advantage</span>
+                                </div>
+                                <div style={{ marginTop: '4px', color: '#555' }}>Melee combat also resolves this round.</div>
+                            </div>
+                        }>
+                            <Button variant='outlined' onClick={() => { event.advanceBattle('manoeuvre'); this.forceUpdate(); }}>
+                                Attempt a manoeuvre (strategy check)
+                            </Button>
+                        </HTMLTooltip>
+                        <Button variant='outlined' color='error' onClick={() => { event.advanceBattle('flee'); this.setState({ open: false }); }}>
+                            Flee
+                        </Button>
+                    </div>
+                );
             }
         };
 
@@ -1905,52 +2065,70 @@ class BattleUI extends React.Component {
         const gaVal = groundAdvantage.currentValue;
         const gaColor = gaVal > 0.05 ? '#1a7a1a' : gaVal < -0.05 ? '#c62828' : '#555';
 
-        return <Modal open={this.state.open}>
-            <Box sx={{
-                position: 'absolute', top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: 700, bgcolor: 'background.paper',
-                border: '2px solid #000', boxShadow: 24, p: 3,
-                maxHeight: '85vh', overflowY: 'auto'
-            }}>
-                <Typography variant="h6" sx={{ mb: 1 }}>⚔ Battle: {event.name}</Typography>
+        // ── Modal position (draggable) ─────────────────────────────────────────
+        const pos = this._modalPos;
+        const boxSx = pos
+            ? { position: 'absolute', top: `calc(50% + ${pos.y}px)`, left: `calc(50% + ${pos.x}px)`,
+                transform: 'translate(-50%, -50%)', width: 700, minWidth: 400, minHeight: 300,
+                bgcolor: 'background.paper', border: '2px solid #000', boxShadow: 24,
+                resize: 'both', overflow: 'auto' }
+            : { position: 'absolute', top: '50%', left: '50%',
+                transform: 'translate(-50%, -50%)', width: 700, minWidth: 400, minHeight: 300,
+                bgcolor: 'background.paper', border: '2px solid #000', boxShadow: 24,
+                resize: 'both', overflow: 'auto' };
 
-                {/* Phase / Round / Ground advantage header */}
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '10px',
-                              backgroundColor: '#fafafa', border: '1px solid #e0e0e0',
-                              borderRadius: '4px', padding: '6px 12px', fontSize: '13px' }}>
-                    <span>Phase: <strong>{phase}</strong></span>
-                    <span>Round: <strong>{state.round}</strong></span>
-                    <CustomTooltip items={gaTooltipItems}>
-                        <span>Ground advantage: <strong style={{ color: gaColor }}>
-                            <VariableComponent variable={groundAdvantage} showName={false} showOwner={false}
-                                style={{ color: gaColor, fontWeight: 'bold', display: 'inline' }} />
-                        </strong></span>
-                    </CustomTooltip>
-                </div>
+        return (
+            <Modal open={this.state.open}>
+                <Box sx={boxSx} onMouseDown={(e) => this._onMouseDown(e)}>
+                    {/* Drag handle title bar */}
+                    <div data-drag-handle style={{ cursor: 'move', padding: '12px 16px 8px 16px',
+                        userSelect: 'none', borderBottom: '1px solid #e0e0e0',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="h6" style={{ margin: 0 }}>⚔ Battle: {event.name}</Typography>
+                        <span style={{ fontSize: '11px', color: '#aaa' }}>drag · resize from corner</span>
+                    </div>
 
-                {/* Army panels */}
-                <Grid container spacing={2} sx={{ mb: 1 }}>
-                    <Grid item xs={6}>
-                        {renderArmy(playerArmy, '🛡 Your forces')}
-                    </Grid>
-                    <Grid item xs={6}>
-                        {renderArmy(enemyArmy, '💀 Enemy forces')}
-                    </Grid>
-                </Grid>
+                    <div style={{ padding: '12px 16px 16px 16px' }}>
+                        {/* Phase / Round / Ground advantage header */}
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '10px',
+                                      backgroundColor: '#fafafa', border: '1px solid #e0e0e0',
+                                      borderRadius: '4px', padding: '6px 12px', fontSize: '13px' }}>
+                            <span>Phase: <strong>{phase}</strong></span>
+                            <span>Round: <strong>{state.round}</strong></span>
+                            <span>Ground advantage:&nbsp;
+                                <VariableComponent variable={groundAdvantage} showName={false} showOwner={false}
+                                    style={{ color: gaColor, fontWeight: 'bold', display: 'inline' }}
+                                    description="Affects bow effectiveness and melee combat. Positive = your advantage, negative = enemy advantage. Range: −50% to +50%." />
+                            </span>
+                        </div>
 
-                {/* Last roll info */}
-                {renderLastRollInfo()}
+                        {/* Army panels */}
+                        <Grid container spacing={2} sx={{ mb: 1 }}>
+                            <Grid item xs={6}>
+                                {renderArmy(playerArmy, '🛡 Your forces')}
+                            </Grid>
+                            <Grid item xs={6}>
+                                {renderArmy(enemyArmy, '💀 Enemy forces')}
+                            </Grid>
+                        </Grid>
 
-                {/* Battle log */}
-                <div style={{ maxHeight: '120px', overflowY: 'auto', backgroundColor: '#f5f5f5',
-                              padding: '8px', borderRadius: '4px', marginBottom: '12px', fontSize: '12px' }}>
-                    {log.slice().reverse().map((line, i) => <div key={i}>{line}</div>)}
-                </div>
+                        {/* Last roll info */}
+                        {renderLastRollInfo()}
 
-                {/* Action buttons */}
-                {renderChoices()}
-            </Box>
-        </Modal>;
+                        {/* Battle log — newest entry first, each line renders inline Variables */}
+                        <div style={{ maxHeight: '150px', overflowY: 'auto', backgroundColor: '#f5f5f5',
+                                      padding: '8px', borderRadius: '4px', marginBottom: '12px', fontSize: '12px',
+                                      lineHeight: '1.6' }}>
+                            {log.slice().reverse().map((entry, i) => (
+                                <div key={i}>{this.renderLogEntry(entry)}</div>
+                            ))}
+                        </div>
+
+                        {/* Action buttons */}
+                        {renderChoices()}
+                    </div>
+                </Box>
+            </Modal>
+        );
     }
 }
