@@ -103,11 +103,13 @@ totalRebellionSupport (Cumulator, min=0) += rebellionSupport each tick
 ```
 
 When `totalRebellionSupport.valueAtTurnStart >= 1`, `rebel()` fires:
-- Creates a new `Character` with the same culture as the old leader
+- Creates a new `Character` with the same culture AND religion as the old leader (via `copyCulture` + `copyReligion`), with a culture-appropriate random name (via `getRandomCharacterName`)
 - Calls `setLeader(newLeader)` — replaces leader and re-creates support/rebellion Variables
 - If old leader was the player, calls `handleRebellion(this)`
 
 `localLegitimacy` = leader's `legitimacy` Variable (additive). Leader's `diplomacy` adds a scaled bonus to `support` (scale=0.1).
+
+**Important ordering in `setLeader()`**: `leader.addSettlement(this)` is called AFTER `rebellionSupport` is created. This ensures that cultural/religious trait bonuses targeting `rebellionSupport` (a `SimpleSettlementModifier`) are applied to the correct newly-created `Variable` instance. If `addSettlement` were called before `rebellionSupport` exists, those modifiers would fail silently.
 
 ### Job Assignment (`adjustJobs()`)
 

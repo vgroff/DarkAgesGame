@@ -172,13 +172,16 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 ### Game Systems
 
 #### Characters
-- Have a `Culture` (Celtic or Roman), each providing cultural `Trait`s
+- Have a `Culture` (Celtic, Roman, Byzantine, Germanic, or Viking), each providing cultural `Trait`s
+- Have a `Religion` (CelticPagan, GermanPagan, Christianity, RomanPagan, CelticChristianity, or NorsePagan), each providing religious `Trait`s
+- Available religions per culture are defined in `CULTURE_RELIGION_COMPATIBILITY`; changing culture resets religion to the new culture's default if the old religion is no longer compatible
 - Have 5 trait groups: childhood, ability, personality, fame, trinket
 - Skills: `strategy`, `diplomacy`, `administration` (all `Variable`)
 - `administrativeEfficiency` = 0.9 + 0.3 × administration (affects settlement productivity)
 - `legitimacy` Variable affects settlement `localLegitimacy` and rebellion risk
 - Characters belong to a `Faction` which can have up to 4 privilege levels across 3 privilege types (noble, citizen, clergy)
 - Faction privilege changes pause the game clock until confirmed; confirmation applies a temporary legitimacy malus
+- NPC characters are assigned a random culture, the default religion for that culture, and a culture-appropriate random name on creation
 
 #### Settlements
 - Each settlement has: population, buildings, resources, rationing, market, research, events, terrain
@@ -187,7 +190,8 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 - `generalProductivity` is a `Variable` modified by health (invLogit curve), happiness (invLogit curve), leader administration, and research/traits
 - `happiness` and `health` are `TrendingVariable`s (slow to change)
 - `support = happiness + localLegitimacy + diplomacyEffect - 1`; negative support accumulates in `totalRebellionSupport`; when ≥ 1, rebellion fires
-- Rebellion replaces the leader with a random NPC; if the player loses all settlements, game over
+- Rebellion replaces the leader with a new NPC copying the old leader's culture and religion, with a culture-appropriate random name; if the player loses all settlements, game over
+- **`setLeader()` ordering**: `leader.addSettlement(this)` is called AFTER `rebellionSupport` is created, so cultural/religious trait modifiers targeting `rebellionSupport` are applied to the correct Variable instance
 
 #### Resources
 - 25+ resource types defined in `Resources` object
@@ -353,8 +357,9 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 - **Coastal**: fishing wharf building, higher raid event probability
 
 #### New Cultures & Traits
-- More cultures beyond Celtic and Roman (developer has notes on phone)
-- More cultural traits
+- Byzantine, Germanic, and Viking cultures are now implemented (see `character.js`)
+- Religion system is now implemented: 6 religions with culture compatibility matrix
+- More cultural/religious traits and balance tweaks (developer has notes on phone)
 
 #### New Faction Features
 - More faction privilege edits / laws (developer has notes on phone)
@@ -621,7 +626,8 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 ### Characters & Factions
 - `Character.addTrait()` activates bonus on all settlements
 - `Character.removeTrait()` deactivates bonus on all settlements
-- `Character.changeCulture()` swaps cultural traits correctly
+- `Character.changeCulture()` swaps cultural traits correctly; resets religion to new culture's default if old religion is incompatible
+- `Character.changeReligion()` swaps religious traits correctly
 - `Faction.changePrivilegeTentatively()` pauses game clock
 - `Faction.confirmPrivilegeChanges()` applies legitimacy malus and unpauses
 - `Faction.getNumPrivileges()` returns correct total

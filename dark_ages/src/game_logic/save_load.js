@@ -75,7 +75,7 @@ import {
     TemporaryLegitimacyBonus
 } from './settlement/bonus';
 import { Market } from './settlement/market';
-import { Trait, Faction, Celtic, Roman } from './character';
+import { Trait, Faction, Celtic, Roman, Byzantine, Germanic, Viking, Religion, CelticPagan, GermanPagan, Christianity, RomanPagan, CelticChristianity, NorsePagan } from './character';
 import { SumAggModifier } from './variable/sumAgg';
 import {VariableModifier} from './variable/modifier';
 import { Cumulator } from './variable/cumulator';
@@ -91,6 +91,15 @@ const CLASS_MAP = {
     Faction: { constructor: Faction, hasInit: false },
     Celtic: { constructor: Celtic, hasInit: false },
     Roman: { constructor: Roman, hasInit: false },
+    Byzantine: { constructor: Byzantine, hasInit: false },
+    Germanic: { constructor: Germanic, hasInit: false },
+    Viking: { constructor: Viking, hasInit: false },
+    CelticPagan: { constructor: CelticPagan, hasInit: false },
+    GermanPagan: { constructor: GermanPagan, hasInit: false },
+    Christianity: { constructor: Christianity, hasInit: false },
+    RomanPagan: { constructor: RomanPagan, hasInit: false },
+    CelticChristianity: { constructor: CelticChristianity, hasInit: false },
+    NorsePagan: { constructor: NorsePagan, hasInit: false },
     VariableModifier: { constructor: VariableModifier, hasInit: false },
     Cumulator: { constructor: Cumulator, hasInit: true },
     SumAggModifier: { constructor: SumAggModifier, hasInit: true },

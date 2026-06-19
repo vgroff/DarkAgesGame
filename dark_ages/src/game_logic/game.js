@@ -6,7 +6,7 @@ import { SumAggModifier } from "./variable/sumAgg";
 import {daysInYear, seasons} from './seasons'
 import { Farmlands, Marshlands, Woodlands, Mountains, NoTerrain } from "./settlement/terrain";
 import { HarvestEvent, BanditRaid, CropBlight, Pestilence, WarmSpell, Blizzard, NomadsArrive, MerchantBoom, CourtIntrigue } from "./events";
-import { Character, Cultures, ChildhoodTraits, AbilityTraits, PersonalityTraits, FameTraits, TrinketTraits } from "./character";
+import { Character, Cultures, ChildhoodTraits, AbilityTraits, PersonalityTraits, FameTraits, TrinketTraits, CULTURE_RELIGION_COMPATIBILITY, getAllowedReligions, getDefaultReligion, getRandomCharacterName } from "./character";
 import { TradeAgreement, npcWillAcceptTrade } from "./diplomacy";
 import { Resources } from "./settlement/resource";
 import { Logger, LOG_LEVELS } from "./logger";
@@ -67,7 +67,14 @@ class Game {
         // Create player character. If scenario says skipTraitSelection, we will
         // fill traits after construction (before the timer is released).
         this.playerCharacter = new Character({name:"player", culture: new Cultures.Celtic(), isPlayer: true, gameClock: this.gameClock});
-        this.npcCharacter = new Character({name:"npc 2", culture: new Cultures.Celtic(), gameClock: this.gameClock, randomizeTraits: true});
+
+        // NPC character: random culture from all available cultures, default religion for that culture
+        const npcCultureClasses = Object.values(Cultures);
+        const NpcCultureClass = npcCultureClasses[Math.floor(Math.random() * npcCultureClasses.length)];
+        const npcCulture = new NpcCultureClass();
+        const npcReligion = getDefaultReligion(npcCulture);
+        const npcName = getRandomCharacterName(npcCulture);
+        this.npcCharacter = new Character({name: npcName, culture: npcCulture, religion: npcReligion, gameClock: this.gameClock, randomizeTraits: true});
         this.settlements = [
             new Settlement({name: 'Village 1', gameClock: this.gameClock, leader: this.playerCharacter, startingPopulation: startingPop, terrain: new TerrainClass(), bankrupt: this.bankrupt, handleRebellion: this.handleRebellion.bind(this), addToTreasury: this.addToTreasury.bind(this)}),
             new Settlement({name: 'Village 2', gameClock: this.gameClock, leader: this.npcCharacter, startingPopulation: 35, terrain: new Farmlands(), bankrupt: this.bankrupt, handleRebellion: () => {}})
@@ -465,6 +472,28 @@ class Game {
             }
             // checkTraitsComplete() is called by addTrait, so the force-stop will be released
             // automatically once all 5 groups are filled.
+        }
+
+        // ── 6b. Player religion (playerReligion) ───────────────────────────────
+        // If playerReligion is specified in the scenario, apply it to the player character.
+        // This is a behind-the-scenes pre-fill (same pattern as playerTraits).
+        // The player can still change it in the character editor.
+        if (scenario.playerReligion) {
+            const ALL_RELIGION_CLASSES = [
+                ...Object.values(CULTURE_RELIGION_COMPATIBILITY).flatMap(entry => entry.allowed)
+            ];
+            // Deduplicate
+            const uniqueReligionClasses = [...new Set(ALL_RELIGION_CLASSES)];
+            const specifiedName = scenario.playerReligion.toLowerCase();
+            const ReligionClass = uniqueReligionClasses.find(R => {
+                const instance = new R();
+                return instance.name.toLowerCase() === specifiedName;
+            });
+            if (ReligionClass) {
+                this.playerCharacter.changeReligion(new ReligionClass());
+            } else {
+                console.warn(`[Scenario] Religion not found: "${scenario.playerReligion}"`);
+            }
         }
 
         // ── 7. Bandit raid ban override ────────────────────────────────────────

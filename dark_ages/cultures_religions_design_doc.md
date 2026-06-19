@@ -1,8 +1,6 @@
 # Cultures & Religions Design Document
 
-> **Status: DRAFT v2 — awaiting final approval before implementation.**
->
-> This document is for review and discussion. Please edit it directly or leave comments, and we will iterate before any code is written.
+> **Status: IMPLEMENTED** — all items in Part 5 checklist completed.
 
 ---
 
@@ -44,7 +42,7 @@ A `SimpleSettlementModifier` on `support` (addition, negative value) directly re
 |---|---|---|---|---|
 | State Bureaucracy | Administration boost | `AdministrationBonus` (addition) | +0.15 | Boosts `administrativeEfficiency` → settlement productivity |
 | Merchant Civilisation | Trade factor boost | `SimpleSettlementModifier` on `tradeFactor` (multiplication) | ×1.2 | Multiplier — amplifies existing trade, no effect without roads |
-| Incessant Infighting | Support reduction | `SimpleSettlementModifier` on `support` (addition) | −0.05 | Reduces popular support directly; rebellions accumulate faster when things go bad |
+| Incessant Infighting | Support reduction | `SimpleSettlementModifier` on `rebellionSupport` (multiplier) | x1.5 |rebellions accumulate faster when things go bad |
 
 ---
 
@@ -54,15 +52,11 @@ A `SimpleSettlementModifier` on `support` (addition, negative value) directly re
 
 | Trait Name | Effect | Bonus Type | Value | Notes |
 |---|---|---|---|---|
-| Modern Tactics | Strategy boost | `StrategyBonus` (multiplication) | ×1.2 | |
-| Slayers of Emperors | Legitimacy flat boost | `LegitimacyBonus` (addition) | +0.15 | Higher base legitimacy from warrior prestige |
-| Rule by the Fittest | Support multiplier (penalty) | `SimpleSettlementModifier` on `support` (multiplication) | ×0.9 | Amplifies negative support — once things go bad, they spiral faster |
+| Modern Tactics | Strategy boost | `StrategyBonus` (multiplication) | ×1.15 | |
+| Bane of The Empire | Legitimacy flat boost | `LegitimacyBonus` (addition) | +0.05 | Higher base legitimacy from warrior prestige |
+| Barracks Emperors | Support multiplier (penalty) | `SimpleSettlementModifier` on `rebellionSupport` (multiplication) | ×2.0 | Amplifies negative support — once things go bad, they spiral faster |
 | Hunters | Hunting Cabin boost | `SpecificBuildingProductivityBonus` on `HuntingCabin` | ×1.2 | |
-| Decentralised Administration | Admin penalty | `AdministrationBonus` (multiplication) | ×0.85 | |
-
-**Net legitimacy feel**: High base legitimacy (+0.15) but a support multiplier that makes rebellions spiral faster once support goes negative. Stable when things are good; volatile when things go bad.
-
-> **Note on "Rule by the Fittest" as a support multiplier**: `support` can be positive or negative. A ×0.9 multiplier on `support` would *reduce* positive support (slightly bad) and *amplify* negative support (making rebellions worse). This gives the intended feel — Germanics are fine when happy but dangerous when unhappy. However, multiplying a Variable that can be negative requires care in implementation (a `multiplication` modifier on `support` would need to handle the sign correctly). **Flag for implementation: confirm this is the right approach or use a `scaledMultiplication` instead.**
+| Decentralised Administration | Admin penalty | `AdministrationBonus` (multiplication) | ×0.9 | |
 
 ---
 
@@ -75,9 +69,8 @@ A `SimpleSettlementModifier` on `support` (addition, negative value) directly re
 | Warrior Society | Strategy boost + productivity drop | `StrategyBonus` (multiplication) + `GeneralProductivityBonus` (multiplication) | ×1.25 strategy, ×0.93 productivity | One trait, two effects |
 | Legitimacy Through Blood | Legitimacy flat drop | `LegitimacyBonus` (addition) | −0.08 | Kept modest so it's not crippling on its own |
 | Feared | Weaker trade factor | `SimpleSettlementModifier` on `tradeFactor` (multiplication) | ×0.8 | Multiplier — proportionally reduces trade benefit from roads |
-| Weaponsmiths | Weapon Maker production boost | `SpecificBuildingProductivityBonus` on `WeaponMaker` | ×1.3 | |
+| Weaponsmiths | Weapon Maker production boost | `SpecificBuildingProductivityBonus` on `WeaponMaker` | ×1.35 | |
 
-**Note**: "Legitimacy Through Blood" appears only on the Viking *culture*, not on Norse Pagan religion (see Part 2). The religion does not double up on this penalty.
 
 ---
 
@@ -106,7 +99,7 @@ The existing `religion` resource (produced by the `Church` building) already exi
 | Trait Name | Effect | Bonus Type | Value |
 |---|---|---|---|
 | Personal Gods | Happiness boost | `HappinessBonus` (multiplication) | ×1.05 |
-| Decentralised Religion | Church productivity drop | `SpecificBuildingProductivityBonus` on `Church` | ×0.8 |
+| Decentralised Religion | Church productivity drop | `SpecificBuildingProductivityBonus` on `Church` | ×0.85 |
 
 ---
 
@@ -117,7 +110,7 @@ The existing `religion` resource (produced by the `Church` building) already exi
 | Trait Name | Effect | Bonus Type | Value |
 |---|---|---|---|
 | Personal Gods | Happiness boost | `HappinessBonus` (multiplication) | ×1.05 |
-| Decentralised Religion | Church productivity drop | `SpecificBuildingProductivityBonus` on `Church` | ×0.8 |
+| Decentralised Religion | Church productivity drop | `SpecificBuildingProductivityBonus` on `Church` | ×0.85 |
 
 > **Implementation note**: Identical effects to Celtic Pagan. Implemented as two separate classes (both extending `Religion`) so they can diverge in future without breaking saves.
 
@@ -129,8 +122,8 @@ The existing `religion` resource (produced by the `Church` building) already exi
 
 | Trait Name | Effect | Bonus Type | Value |
 |---|---|---|---|
-| Render unto Caesar | Legitimacy flat boost | `LegitimacyBonus` (addition) | +0.15 |
-| Organised Religion | Church productivity boost | `SpecificBuildingProductivityBonus` on `Church` | ×1.3 |
+| Render unto Caesar | Legitimacy flat boost | `LegitimacyBonus` (addition) | +0.05 |
+| Organised Religion | Church productivity boost | `SpecificBuildingProductivityBonus` on `Church` | ×1.25 |
 
 ---
 
@@ -140,7 +133,7 @@ The existing `religion` resource (produced by the `Church` building) already exi
 
 | Trait Name | Effect | Bonus Type | Value |
 |---|---|---|---|
-| State Religion | Legitimacy boost | `LegitimacyBonus` (addition) | +0.1 |
+| State Religion | Legitimacy boost | `LegitimacyBonus` (addition) | +0.05 |
 | Elite Religion | Happiness reduction | `HappinessBonus` (multiplication) | ×0.95 |
 
 ---
@@ -152,7 +145,7 @@ The existing `religion` resource (produced by the `Church` building) already exi
 | Trait Name | Effect | Bonus Type | Value |
 |---|---|---|---|
 | Pagan Syncreticism | Happiness boost | `HappinessBonus` (multiplication) | ×1.03 |
-| Render unto Caesar (partial) | Legitimacy flat boost (smaller) | `LegitimacyBonus` (addition) | +0.08 |
+| Render unto Caesar | Legitimacy flat boost (smaller) | `LegitimacyBonus` (addition) | +0.025 |
 
 ---
 
@@ -187,60 +180,19 @@ The following matrix defines which religion options are available for each cultu
 
 ---
 
-## Part 4: Stacking Analysis
+## Part 4: Implementation Checklist
 
-### Viking (culture) + Norse Pagan (religion)
-- Strategy: ×1.25 (culture) — religion adds ×1.1 → combined ×1.375
-- Legitimacy: −0.08 (culture only; religion has no legitimacy penalty)
-- Starting legitimacy is 0.1, so net legitimacy = 0.02. Very low but not negative.
-- Trade: ×0.8 on `tradeFactor`
+- [x] Add `Religion` abstract class to `character.js` (parallel to `Culture`)
+- [x] Add 6 `Religion` subclasses: `CelticPagan`, `GermanPagan`, `Christianity`, `RomanPagan`, `CelticChristianity`, `NorsePagan`
+- [x] Add 3 `Culture` subclasses: `Byzantine`, `Germanic`, `Viking`
+- [x] Add `religion` property to `Character` constructor; activate/deactivate religious traits alongside cultural traits
+- [x] Add `CULTURE_RELIGION_COMPATIBILITY` map (culture class → allowed religion classes + default)
+- [x] Update `CharacterComponent` to show religion dropdown (editable for player, display-only for NPCs)
+- [x] Add optional `playerReligion` field to scenario config shape (same pattern as `playerTraits` — pre-fills character editor state, not shown in scenario selector UI; player can still change it)
+- [x] Update `_applyScenario()` in `game.js` to handle `playerReligion`
+- [x] Update NPC character construction to assign a random culture + default religion for that culture
+- [x] Add new `Culture`/`Religion` classes to `CLASS_MAP` in `save_load.js`
+- [x] Fix `setLeader()` order in `settlement.js`: `leader.addSettlement(this)` moved after `rebellionSupport` is created, so cultural/religious trait bonuses targeting `rebellionSupport` are applied to the correct Variable instance
+- [x] Add character/settlement name lists per culture; AI characters auto-assigned appropriate names on creation
+- [x] Update all relevant `knowledge.md` files
 
-### Germanic (culture) + Christianity (religion)
-- Strategy: ×1.2
-- Legitimacy: +0.15 (culture) + +0.15 (religion) = +0.30 flat boost. Strong.
-- Support multiplier: ×0.9 (volatile when unhappy)
-- Admin: ×0.85
-
-### Byzantine (culture) + Christianity (religion)
-- Admin: +0.15
-- Trade: ×1.2 on `tradeFactor`
-- Support: −0.05 flat
-- Legitimacy: +0.15 (religion)
-
-### Celtic (culture) + Celtic Christianity (religion)
-- Legitimacy: ×0.95 (culture) + +0.08 (religion) — slight legitimacy penalty from culture, partial offset from religion
-- Happiness: ×1.03 (religion)
-- Apothecary: ×1.25, Health: ×1.03, LumberjacksHut: ×1.15, HuntingCabin: ×1.1 (all from culture)
-
----
-
-## Part 5: Implementation Checklist (for when approved)
-
-- [ ] Add `Religion` abstract class to `character.js` (parallel to `Culture`)
-- [ ] Add 6 `Religion` subclasses: `CelticPagan`, `GermanPagan`, `Christianity`, `RomanPagan`, `CelticChristianity`, `NorsePagan`
-- [ ] Add 3 `Culture` subclasses: `Byzantine`, `Germanic`, `Viking`
-- [ ] Add `religion` property to `Character` constructor; activate/deactivate religious traits alongside cultural traits
-- [ ] Add `CULTURE_RELIGION_COMPATIBILITY` map (culture class → allowed religion classes + default)
-- [ ] Update `CharacterComponent` to show religion dropdown (editable for player, display-only for NPCs)
-- [ ] Add optional `playerReligion` field to scenario config shape (same pattern as `playerTraits` — pre-fills character editor state, not shown in scenario selector UI; player can still change it)
-- [ ] Update `_applyScenario()` in `game.js` to handle `playerReligion`
-- [ ] Update NPC character construction to assign a random religion from allowed set
-- [ ] Add new `Culture`/`Religion` classes to `CLASS_MAP` in `save_load.js`
-- [ ] Update all relevant `knowledge.md` files
-
----
-
-## Open Questions (resolved)
-
-| # | Question | Answer |
-|---|---|---|
-| 1 | Rebellion mechanic for Byzantine/Germanic | Modify `support` directly (not `totalRebellionSupport` or `legitimacy`) |
-| 2 | Byzantine trade boost: flat or multiplier? | Multiplier (×1.2 on `tradeFactor`) |
-| 3 | Germanic legitimacy balance | Higher base legitimacy (+0.15 flat) but support multiplier (×0.9) makes things spiral when bad |
-| 4 | Viking legitimacy stacking | "Legitimacy Through Blood" only on culture (−0.08), not on Norse Pagan religion |
-| 5 | Vikings and Christianity | Allowed |
-| 6 | Religion UI | Dropdown in `CharacterComponent`, same as culture |
-| 7 | German Pagan vs Celtic Pagan | Identical effects, separate classes for future divergence |
-| 8 | "Warrior Society" — one trait or two? | One trait, two effects |
-| 9 | NPC religions | Randomly assigned from culture's allowed set |
-| 10 | Scenario integration | `playerReligion` field in scenario config pre-fills character editor (not shown in scenario selector UI — religion is always set via the character editor dropdown) |

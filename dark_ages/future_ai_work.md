@@ -8,10 +8,12 @@ For the following, I am giving you auto-approved edit perms. This means I will n
 - Then, read all other knowledge files (don't bother with handwritten_notes.md)
 
 Current changes:
-- Can you add a section to the knowledge.md file to say that the tooltips are very important, and in particular the Variable class and their associated VariableComponent and their associated tooltips are core to how the player is meant to play and understand the game. We need to take care to make them visible and have a philosophy of using them wherever possible
-- The resource count on the buildings UI - it's good, although let's replace "/tick" with "/day". I also want them to have the same tooltip as it does in the resource storage, which shows the production and demand, exactly the same, don't make a new Variable, just use the same thing
-- Fix the tooltips going off screen and the tooltips in the event section
-    - Possible to have it so that tooltips are always at the top, i.e. they overlay everything, except other tooltips?
+- We are going to implement the suggestions in the file cultures_religions_design_doc.md. So read that
+- We wrote this file together, but I've made some changes (you can see it in git diff if you want), both to some numbers and to some behaviours. I think everything is consistent, but do ask if anything is unclear/inconsistent/doesn't make sense or you're unsure. 
+- We also want to add some default character names and settlement names, for each culture type, and AI characters/settlements should be auto-assigned an appropriate name on creation
+
+
+Current changes:
 
 
 ============================================================================
@@ -20,8 +22,6 @@ Current changes:
 MVP fixes:
 - ignore anything relating to saving and loading
 
-MVP UI fixes:
-
 
 MVP fixes:
 - Too many civilians in my army?
@@ -29,15 +29,24 @@ MVP fixes:
 
 MVP content:
 - (Look through these first!!!) - We are going to implement the suggestions in the file cultures_religions_design_doc.md
-    - I think we might want the modifiers on support to go on the instantaneous rebellionSupport variable
-    - Do one less level of noble privileges for celts?
-- Randomly generated settlement and character names by factio
+    - I think we might want the modifiers on support to go on the instantaneous rebellionSupport variable rather than the cumulative one
+- Add to tutorial, first section "Many numbers, such as happiness and health, will start between 0 and 1. However, most of them can grow larger than 1. You should think of 1 as "good, fulfilled" rather than "maxed out""
+- Religion/culture changes:
+    - Valhalla - increase size of army
+    - Germans - good brewers - improve brewery productivity
+    - Do one less level of noble privileges for celts? Or make it weaker?
 
 MVP changes:
+- What exactly does the Faction traits do? is this culture or different? Waht happens to these when leader of settlement changes?
+    - I think it just holds privileges and research?
 - Name character and settlement on scenario select
 - Make the year longer, maybe 4 days per season instead of 3 - could this cause any problems do you think?
 - Treasury should be held on a per-faction basis, not per-settlement (if it isn't already)
 
+MVP code stuff:
+- Tests, unit tests
+- scenario loading tests (no unemployed, variables snapped etc...)
+- Refactor/rewrites/cleanups
 
 ============================================================================
 

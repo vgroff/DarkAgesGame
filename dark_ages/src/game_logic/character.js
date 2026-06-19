@@ -4,8 +4,8 @@ import Button from "@mui/material/Button";
 import React from "react";
 import { chooseRandomly } from "./rolling";
 import { daysInYear } from "./seasons";
-import { AdministrationBonus, CharacterBonus, HealthBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, SpecificBuildingProductivityBonus, StrategyBonus, HappinessBonus, TemporaryLegitimacyBonus } from "./settlement/bonus";
-import { Apothecary, Church, HuntingCabin, Library, LumberjacksHut } from "./settlement/building";
+import { AdministrationBonus, CharacterBonus, HealthBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, SpecificBuildingProductivityBonus, StrategyBonus, HappinessBonus, TemporaryLegitimacyBonus, SimpleSettlementModifier } from "./settlement/bonus";
+import { Apothecary, Church, HuntingCabin, Library, LumberjacksHut, WeaponMaker } from "./settlement/building";
 import UIBase from "./UIBase";
 import { addition, multiplication, Variable, VariableComponent, VariableModifier } from "./UIUtils";
 import { CustomTooltip, titleCase } from "./utils";
@@ -278,14 +278,327 @@ export class Roman extends Culture {
     }
 }
 
+export class Byzantine extends Culture {
+    constructor(props) {
+        super({...props, name: "byzantine"})
+    }
+    getTraits() {
+        this.lastTraits = [
+            new Trait({name: "state bureaucracy", effects: [
+                new AdministrationBonus({amount: 0.15, type: addition})
+            ]}),
+            new Trait({name: "merchant civilisation", effects: [
+                new SimpleSettlementModifier({variableAccessor: "tradeFactor", amount: 1.2, type: multiplication, variableHumanReadable: "trade factor"})
+            ]}),
+            new Trait({name: "incessant infighting", effects: [
+                new SimpleSettlementModifier({variableAccessor: "rebellionSupport", amount: 1.5, type: multiplication, variableHumanReadable: "rebellion support"})
+            ]}),
+        ];
+        return this.lastTraits;
+    }
+}
+
+export class Germanic extends Culture {
+    constructor(props) {
+        super({...props, name: "germanic"})
+    }
+    getTraits() {
+        this.lastTraits = [
+            new Trait({name: "modern tactics", effects: [
+                new StrategyBonus({amount: 1.15, type: multiplication})
+            ]}),
+            new Trait({name: "bane of the empire", effects: [
+                new LegitimacyBonus({amount: 0.05, type: addition})
+            ]}),
+            new Trait({name: "barracks emperors", effects: [
+                new SimpleSettlementModifier({variableAccessor: "rebellionSupport", amount: 2.0, type: multiplication, variableHumanReadable: "rebellion support"})
+            ]}),
+            new Trait({name: "hunters", effects: [
+                new SpecificBuildingProductivityBonus({amount: 1.2, building: HuntingCabin.name, type: multiplication})
+            ]}),
+            new Trait({name: "decentralised administration", effects: [
+                new AdministrationBonus({amount: 0.9, type: multiplication})
+            ]}),
+        ];
+        return this.lastTraits;
+    }
+}
+
+export class Viking extends Culture {
+    constructor(props) {
+        super({...props, name: "viking"})
+    }
+    getTraits() {
+        this.lastTraits = [
+            new Trait({name: "warrior society", effects: [
+                new StrategyBonus({amount: 1.25, type: multiplication}),
+                new GeneralProductivityBonus({amount: 0.93, type: multiplication})
+            ]}),
+            new Trait({name: "legitimacy through blood", effects: [
+                new LegitimacyBonus({amount: -0.08, type: addition})
+            ]}),
+            new Trait({name: "feared", effects: [
+                new SimpleSettlementModifier({variableAccessor: "tradeFactor", amount: 0.8, type: multiplication, variableHumanReadable: "trade factor"})
+            ]}),
+            new Trait({name: "weaponsmiths", effects: [
+                new SpecificBuildingProductivityBonus({amount: 1.35, building: WeaponMaker.name, type: multiplication})
+            ]}),
+        ];
+        return this.lastTraits;
+    }
+}
+
 export const Cultures = {
     Celtic: Celtic,
-    Roman: Roman
+    Roman: Roman,
+    Byzantine: Byzantine,
+    Germanic: Germanic,
+    Viking: Viking,
 };
 
 export function copyCulture(character) {
     let culture = Object.values(Cultures).filter(culture => character.culture instanceof culture)[0];
     return new culture();
+}
+
+// ── Religion System ────────────────────────────────────────────────────────────
+
+export class Religion {
+    constructor(props) {
+        this.name = props.name;
+        if (!this.name) {
+            throw Error("Religion needs name");
+        }
+    }
+    getTraits() {
+        throw Error("abstract class");
+    }
+    getText(extensive=false) {
+        let text = [`Religion ${this.name} has following traits:`];
+        let traits = this.lastTraits ? this.lastTraits : this.getTraits();
+        text = text.concat(traits ? traits.map(trait => extensive ? trait.getText() : trait.name).flat() : ['']);
+        return text;
+    }
+}
+
+export class CelticPagan extends Religion {
+    constructor(props) {
+        super({...props, name: "celtic pagan"});
+    }
+    getTraits() {
+        this.lastTraits = [
+            new Trait({name: "personal gods", effects: [
+                new HappinessBonus({amount: 1.05, type: multiplication})
+            ]}),
+            new Trait({name: "decentralised religion", effects: [
+                new SpecificBuildingProductivityBonus({amount: 0.85, building: Church.name, type: multiplication})
+            ]}),
+        ];
+        return this.lastTraits;
+    }
+}
+
+export class GermanPagan extends Religion {
+    constructor(props) {
+        super({...props, name: "german pagan"});
+    }
+    getTraits() {
+        // Identical effects to CelticPagan — kept as separate class for future divergence
+        this.lastTraits = [
+            new Trait({name: "personal gods", effects: [
+                new HappinessBonus({amount: 1.05, type: multiplication})
+            ]}),
+            new Trait({name: "decentralised religion", effects: [
+                new SpecificBuildingProductivityBonus({amount: 0.85, building: Church.name, type: multiplication})
+            ]}),
+        ];
+        return this.lastTraits;
+    }
+}
+
+export class Christianity extends Religion {
+    constructor(props) {
+        super({...props, name: "christianity"});
+    }
+    getTraits() {
+        this.lastTraits = [
+            new Trait({name: "render unto caesar", effects: [
+                new LegitimacyBonus({amount: 0.05, type: addition})
+            ]}),
+            new Trait({name: "organised religion", effects: [
+                new SpecificBuildingProductivityBonus({amount: 1.25, building: Church.name, type: multiplication})
+            ]}),
+        ];
+        return this.lastTraits;
+    }
+}
+
+export class RomanPagan extends Religion {
+    constructor(props) {
+        super({...props, name: "roman pagan"});
+    }
+    getTraits() {
+        this.lastTraits = [
+            new Trait({name: "state religion", effects: [
+                new LegitimacyBonus({amount: 0.05, type: addition})
+            ]}),
+            new Trait({name: "elite religion", effects: [
+                new HappinessBonus({amount: 0.95, type: multiplication})
+            ]}),
+        ];
+        return this.lastTraits;
+    }
+}
+
+export class CelticChristianity extends Religion {
+    constructor(props) {
+        super({...props, name: "celtic christianity"});
+    }
+    getTraits() {
+        this.lastTraits = [
+            new Trait({name: "pagan syncreticism", effects: [
+                new HappinessBonus({amount: 1.03, type: multiplication})
+            ]}),
+            new Trait({name: "render unto caesar", effects: [
+                new LegitimacyBonus({amount: 0.025, type: addition})
+            ]}),
+        ];
+        return this.lastTraits;
+    }
+}
+
+export class NorsePagan extends Religion {
+    constructor(props) {
+        super({...props, name: "norse pagan"});
+    }
+    getTraits() {
+        this.lastTraits = [
+            new Trait({name: "valhalla", effects: [
+                new StrategyBonus({amount: 1.1, type: multiplication})
+            ]}),
+        ];
+        return this.lastTraits;
+    }
+}
+
+/**
+ * Defines which religions are available for each culture, and which is the default.
+ * Keys are Culture class constructors; values are { allowed: Religion[], default: Religion }.
+ */
+export const CULTURE_RELIGION_COMPATIBILITY = {
+    Celtic:     { allowed: [CelticPagan, CelticChristianity, Christianity], default: CelticPagan },
+    Roman:      { allowed: [RomanPagan, Christianity], default: RomanPagan },
+    Byzantine:  { allowed: [Christianity, RomanPagan], default: Christianity },
+    Germanic:   { allowed: [GermanPagan, Christianity], default: GermanPagan },
+    Viking:     { allowed: [NorsePagan, Christianity], default: NorsePagan },
+};
+
+/**
+ * Returns the allowed Religion classes for a given culture instance.
+ */
+export function getAllowedReligions(culture) {
+    const entry = Object.entries(CULTURE_RELIGION_COMPATIBILITY).find(
+        ([, v]) => culture instanceof Cultures[Object.keys(Cultures).find(k => Cultures[k].name === culture.constructor.name) || ''] ||
+        culture.constructor === Cultures[Object.keys(Cultures).find(k => Cultures[k] === culture.constructor)]
+    );
+    // Simpler lookup: match by culture constructor name
+    const key = Object.keys(Cultures).find(k => culture instanceof Cultures[k]);
+    if (!key) return [CelticPagan]; // fallback
+    return CULTURE_RELIGION_COMPATIBILITY[key]?.allowed || [CelticPagan];
+}
+
+/**
+ * Returns the default Religion class for a given culture instance.
+ */
+export function getDefaultReligion(culture) {
+    const key = Object.keys(Cultures).find(k => culture instanceof Cultures[k]);
+    if (!key) return CelticPagan;
+    const ReligionClass = CULTURE_RELIGION_COMPATIBILITY[key]?.default || CelticPagan;
+    return new ReligionClass();
+}
+
+export function copyReligion(character) {
+    if (!character.religion) return new CelticPagan();
+    const Religions = { CelticPagan, GermanPagan, Christianity, RomanPagan, CelticChristianity, NorsePagan };
+    const ReligionClass = Object.values(Religions).find(r => character.religion instanceof r);
+    return ReligionClass ? new ReligionClass() : new CelticPagan();
+}
+
+// ── Character/Settlement Name Lists per Culture ────────────────────────────────
+
+export const CULTURE_NAMES = {
+    Celtic: {
+        characterNames: [
+            "Cormac", "Brigid", "Fergus", "Aoife", "Conall", "Niamh", "Eoghan",
+            "Deirdre", "Fionn", "Caoimhe", "Ruairi", "Sorcha", "Diarmuid", "Aisling", "Cú Chulainn"
+        ],
+        settlementNames: [
+            "Dún Scaith", "Ráth Mór", "Caer Dyfed", "Dún Aonghasa", "Tír na nÓg",
+            "Emain Macha", "Dún Dealgan", "Caer Sidi"
+        ]
+    },
+    Roman: {
+        characterNames: [
+            "Marcus", "Livia", "Gaius", "Claudia", "Lucius", "Valeria", "Titus",
+            "Aurelia", "Quintus", "Flavia", "Publius", "Cornelia", "Decimus", "Julia", "Brutus"
+        ],
+        settlementNames: [
+            "Castra Novum", "Portus Magnus", "Aquila Vicus", "Colonia Firma", "Arx Romana",
+            "Vicus Aureus", "Castellum Novum", "Fons Vitae"
+        ]
+    },
+    Byzantine: {
+        characterNames: [
+            "Konstantinos", "Theodora", "Alexios", "Zoe", "Nikephoros", "Eudokia",
+            "Basileios", "Irene", "Ioannes", "Anna", "Romanos", "Helena", "Mikhail", "Sophia", "Leon"
+        ],
+        settlementNames: [
+            "Nikopolis", "Chrysopolis", "Adrianoupolis", "Thessalonike", "Herakleia",
+            "Laodikeia", "Philippoupolis", "Anchialos"
+        ]
+    },
+    Germanic: {
+        characterNames: [
+            "Aldric", "Hildegard", "Wolfram", "Brunhild", "Sigbert", "Adelheid",
+            "Hartmann", "Gisela", "Dietrich", "Mechthild", "Konrad", "Irmgard", "Gerhard", "Kunigunde", "Albrecht"
+        ],
+        settlementNames: [
+            "Eisenburg", "Waldheim", "Steinbach", "Grünfels", "Hartenburg",
+            "Wolfsberg", "Adlerhorst", "Schwarztal"
+        ]
+    },
+    Viking: {
+        characterNames: [
+            "Bjorn", "Sigrid", "Leif", "Astrid", "Ragnar", "Freydis", "Gunnar",
+            "Ragnhild", "Ivar", "Thyra", "Ulf", "Gudrun", "Halfdan", "Ingrid", "Thorvald"
+        ],
+        settlementNames: [
+            "Ravensfjord", "Ironhaven", "Stormvik", "Skaldheim", "Bjornstad",
+            "Ulvhamn", "Grimsborg", "Vindheim"
+        ]
+    },
+};
+
+/**
+ * Returns a random character name appropriate for the given culture instance.
+ * Falls back to a generic name if the culture is not in CULTURE_NAMES.
+ */
+export function getRandomCharacterName(culture) {
+    const key = Object.keys(Cultures).find(k => culture instanceof Cultures[k]);
+    const names = key ? CULTURE_NAMES[key]?.characterNames : null;
+    if (!names || names.length === 0) return "Unnamed";
+    return chooseRandomly(names);
+}
+
+/**
+ * Returns a random settlement name appropriate for the given culture instance.
+ * Falls back to a generic name if the culture is not in CULTURE_NAMES.
+ */
+export function getRandomSettlementName(culture) {
+    const key = Object.keys(Cultures).find(k => culture instanceof Cultures[k]);
+    const names = key ? CULTURE_NAMES[key]?.settlementNames : null;
+    if (!names || names.length === 0) return "Settlement";
+    return chooseRandomly(names);
 }
 
 export class Trait {
@@ -527,6 +840,9 @@ export class Character {
         ];
         this.faction = props.faction || null;
         this.changeCulture(props.culture);
+        // Religion: use provided religion, or derive default from culture
+        const initialReligion = props.religion || getDefaultReligion(this.culture);
+        this.changeReligion(initialReligion);
         if (props.faction) {
             this.setFaction(props.faction)
         } else {
@@ -535,9 +851,7 @@ export class Character {
         if (!this.culture) {
             throw Error("everyone needs a culture")
         }
-        console.log("check")
         if (props.randomizeTraits) {
-            console.log("check2")
             this.randomizeTraits();
         }
     }
@@ -618,10 +932,35 @@ export class Character {
     }
     changeCulture(culture) {
         if (this.culture) {
-            this.culture.lastTraits.forEach(lastTrait => this.removeTrait(lastTrait));
+            // Use lastTraits if available (set by getTraits()).
+            // If lastTraits is undefined the culture was never activated (e.g. directly assigned
+            // without going through changeCulture), so there is nothing to remove.
+            if (this.culture.lastTraits) {
+                this.culture.lastTraits.forEach(lastTrait => this.removeTrait(lastTrait));
+            }
         }
         this.culture = culture;
         this.culture.getTraits().forEach(lastTrait => this.addTrait(lastTrait));
+        // When culture changes, reset religion to the new culture's default
+        // (only if religion is already set and is no longer compatible)
+        if (this.religion) {
+            const allowed = getAllowedReligions(this.culture);
+            const stillCompatible = allowed.some(R => this.religion instanceof R);
+            if (!stillCompatible) {
+                this.changeReligion(getDefaultReligion(this.culture));
+            }
+        }
+    }
+    changeReligion(religion) {
+        if (this.religion) {
+            // Use lastTraits if available (set by getTraits()).
+            // If lastTraits is undefined the religion was never activated, so nothing to remove.
+            if (this.religion.lastTraits) {
+                this.religion.lastTraits.forEach(lastTrait => this.removeTrait(lastTrait));
+            }
+        }
+        this.religion = religion;
+        this.religion.getTraits().forEach(lastTrait => this.addTrait(lastTrait));
     }
     addTrait(trait) {
         Logger.debug(`Trait added: ${trait.name} to ${this.name}`, { character: this.name, trait: trait.name, isPlayer: this.isPlayer });
@@ -834,6 +1173,10 @@ export class CharacterComponent extends UIBase {
     }
     handleCultureChange(newCulture, oldCulture) {
         this.character.changeCulture(newCulture);
+        this.setState({}); // force re-render so religion dropdown updates to new allowed list
+    }
+    handleReligionChange(newReligion, oldReligion) {
+        this.character.changeReligion(newReligion);
     }
     applyPreset(preset) {
         const groupKeys = Object.keys(this.character.traitGroups);
@@ -920,14 +1263,35 @@ export class CharacterComponent extends UIBase {
                     groupName="Culture"
                     handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)} />
             </div>
+            <div style={statRowStyle}>
+                <ChoiceComponent key={`religion_${this.character.culture?.name}`} editable={this.character.isPlayer}
+                    chosen={this.character.religion}
+                    choices={getAllowedReligions(this.character.culture).map(R => new R())}
+                    groupName="Religion"
+                    handleChange={(newReligion, oldReligion) => this.handleReligionChange(newReligion, oldReligion)} />
+            </div>
 
-            {/* ── Cultural Traits ───────────────────────────────────────────── */}
+            {/* ── Cultural & Religious Traits ───────────────────────────────── */}
             {sectionDivider}
             {sectionLabel('Cultural Traits')}
             {this.character.culture.lastTraits && this.character.culture.lastTraits.length > 0
                 ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
                     {this.character.culture.lastTraits.map((trait, i) =>
                         <span key={`cultural_trait_${trait.name}_${i}`}
+                              style={{ fontSize: '12px', padding: '2px 6px',
+                                       border: `1px solid ${c ? c.borderLight : '#ddd'}`,
+                                       borderRadius: '3px', backgroundColor: c ? c.contentBgAlt : '#f5f5f5' }}>
+                            <ChoiceComponent chosen={trait} />
+                        </span>
+                    )}
+                  </div>
+                : <span style={{ fontSize: '12px', color: c ? c.textMuted : '#aaa' }}>None</span>
+            }
+            {sectionLabel('Religious Traits')}
+            {this.character.religion?.lastTraits && this.character.religion.lastTraits.length > 0
+                ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
+                    {this.character.religion.lastTraits.map((trait, i) =>
+                        <span key={`religious_trait_${trait.name}_${i}`}
                               style={{ fontSize: '12px', padding: '2px 6px',
                                        border: `1px solid ${c ? c.borderLight : '#ddd'}`,
                                        borderRadius: '3px', backgroundColor: c ? c.contentBgAlt : '#f5f5f5' }}>

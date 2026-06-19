@@ -94,6 +94,7 @@ Called at the end of the constructor when a scenario is provided. All game syste
 4. **Pre-research** — for each name in `scenario.preResearched`, sets `item.researched = true` on the faction tree item and calls `settlement.activateBonus()` for each bonus on the matching settlement research item
 5. **Pre-arm soldiers** — calls `settlement.armSoldiers(unitResource, count)` for each entry in `scenario.startingArmy` (weapon resources must already be in storage from step 1)
 6. **Player traits** — if `skipTraitSelection`, fills all 5 trait groups using `scenario.playerTraits` names (looked up case-insensitively) or falls back to first available trait in each group
+6b. **Player religion** — if `scenario.playerReligion` is set, looks up the religion class by name across all Religion subclasses and calls `playerCharacter.changeReligion(new ReligionClass())`
 7. **Bandit raid ban** — if `scenario.banditRaidBanDays !== null`, sets `banditRaidEvent.bannedUntil`
 8. **Force events on day 1** — adds a priority-998 timer subscription that fires on tick 1, directly calls `event.fire()` for each named event class
 9. **Research rate multiplier** — adds a multiplication modifier to Library `productivity` (if Library exists)
@@ -263,7 +264,7 @@ Returns a random element. Used for NPC trait randomization.
 ## `character.js` — Characters, Cultures, Traits, Factions
 
 ### `Character`
-Constructor props: `name`, `culture`, `isPlayer`, `gameClock`, `diplomacy`, `strategy`, `administration`, `randomizeTraits`, `faction`, `factionName`.
+Constructor props: `name`, `culture`, `religion`, `isPlayer`, `gameClock`, `diplomacy`, `strategy`, `administration`, `randomizeTraits`, `faction`, `factionName`.
 
 Key Variables:
 - `legitimacy` (startingValue: 0.1) — affects settlement local legitimacy
@@ -279,12 +280,61 @@ Trait groups (each holds one trait at a time):
 
 `TraitScaler = 0.1` — base unit for skill bonuses from traits.
 
+`changeCulture(culture)`: deactivates old cultural traits, activates new ones; if the current religion is no longer compatible with the new culture, resets religion to the new culture's default.
+
+`changeReligion(religion)`: deactivates old religious traits, sets `this.religion`, activates new religious traits on all current settlements.
+
 ### `Culture` (abstract)
-Subclasses: `Celtic`, `Roman`. Each defines `getTraits()` returning a list of `Trait` objects.
+Subclasses: `Celtic`, `Roman`, `Byzantine`, `Germanic`, `Viking`. Each defines `getTraits()` returning a list of `Trait` objects.
 
 **Celtic traits**: elected kings (legitimacy ×0.95), druidic traditions (Apothecary ×1.25, health ×1.03), foresters (LumberjacksHut ×1.15, HuntingCabin ×1.1)
 
-**Roman traits**: obsolete military tactics (strategy ×0.85), academic traditions (Library ×1.2), roman plumbing (health ×1.05), rhetorical training (diplomacy ×1.1)
+**Roman traits**: dying empire (legitimacy ×0.95), obsolete military tactics (strategy ×0.85), academic traditions (Library ×1.2), roman plumbing (health ×1.05), rhetorical training (diplomacy ×1.1)
+
+**Byzantine traits**: state bureaucracy (admin +0.15), merchant civilisation (tradeFactor ×1.2), incessant infighting (rebellionSupport ×1.5)
+
+**Germanic traits**: modern tactics (strategy ×1.15), bane of the empire (legitimacy +0.05), barracks emperors (rebellionSupport ×2.0), hunters (HuntingCabin ×1.2), decentralised administration (admin ×0.9)
+
+**Viking traits**: warrior society (strategy ×1.25, generalProductivity ×0.93), legitimacy through blood (legitimacy −0.08), feared (tradeFactor ×0.8), weaponsmiths (WeaponMaker ×1.35)
+
+`Cultures` export: `{ Celtic, Roman, Byzantine, Germanic, Viking }`.
+
+### `Religion` (abstract)
+Parallel to `Culture`. Each subclass defines `getTraits()` returning a list of `Trait` objects. Traits are activated/deactivated on the character exactly like cultural traits.
+
+Subclasses: `CelticPagan`, `GermanPagan`, `Christianity`, `RomanPagan`, `CelticChristianity`, `NorsePagan`.
+
+**CelticPagan traits**: personal gods (happiness ×1.05), decentralised religion (Church ×0.85)
+
+**GermanPagan traits**: personal gods (happiness ×1.05), decentralised religion (Church ×0.85) *(identical to CelticPagan for now)*
+
+**Christianity traits**: render unto caesar (legitimacy +0.05), organised religion (Church ×1.25)
+
+**RomanPagan traits**: state religion (legitimacy +0.05), elite religion (happiness ×0.95)
+
+**CelticChristianity traits**: pagan syncreticism (happiness ×1.03), render unto caesar (legitimacy +0.025)
+
+**NorsePagan traits**: valhalla (strategy ×1.1)
+
+### `CULTURE_RELIGION_COMPATIBILITY`
+Maps culture key → `{ allowed: Religion[], default: Religion }`:
+- Celtic → allowed: [CelticPagan, CelticChristianity, Christianity], default: CelticPagan
+- Roman → allowed: [RomanPagan, Christianity], default: RomanPagan
+- Byzantine → allowed: [Christianity, RomanPagan], default: Christianity
+- Germanic → allowed: [GermanPagan, Christianity], default: GermanPagan
+- Viking → allowed: [NorsePagan, Christianity], default: NorsePagan
+
+### `getAllowedReligions(culture)` / `getDefaultReligion(culture)` / `copyReligion(character)`
+- `getAllowedReligions(culture)`: returns array of allowed `Religion` classes for a culture instance (uses `instanceof` check against `Cultures`)
+- `getDefaultReligion(culture)`: returns a new instance of the default religion for a culture
+- `copyReligion(character)`: creates a fresh instance of the character's current religion class (fallback: `CelticPagan`)
+
+### `CULTURE_NAMES` / `getRandomCharacterName(culture)` / `getRandomSettlementName(culture)`
+`CULTURE_NAMES` maps culture key → `{ characterNames: string[], settlementNames: string[] }` with ~15 character names and ~8 settlement names per culture (Celtic, Roman, Byzantine, Germanic, Viking).
+
+- `getRandomCharacterName(culture)`: picks a random name from the culture's character name list
+- `getRandomSettlementName(culture)`: picks a random name from the culture's settlement name list
+- Both fall back to `"Unnamed"` / `"Settlement"` if culture is not found
 
 ### `Trait`
 - `effects`: array of `Bonus` objects
@@ -322,13 +372,16 @@ Subclasses: `Celtic`, `Roman`. Each defines `getTraits()` returning a list of `T
 
 ### `CharacterComponent` / `FactionComponent`
 - `CharacterComponent` subscribes to `character.legitimacy`
-- Shows culture, cultural traits, trait groups (editable for player), skills, attributes, faction
+- Shows culture, religion, cultural traits, religious traits, trait groups (editable for player), skills, attributes, faction
 - `ChoiceComponent` renders a tooltip-wrapped display or a MUI `Select` dropdown for editing
-- **Styled sections**: `childRender()` uses horizontal dividers and uppercase section labels (matching village stats style). Sections: Identity, Cultural Traits, Personal Traits, Skills, Attributes, Faction. Cultural traits shown as pill badges in a flex row. Name shown with "Name:" label prefix.
+- **Styled sections**: `childRender()` uses horizontal dividers and uppercase section labels (matching village stats style). Sections: Identity, Cultural Traits, Religious Traits, Personal Traits, Skills, Attributes, Faction. Cultural and religious traits shown as pill badges in a flex row. Name shown with "Name:" label prefix.
+- Religion dropdown uses `key={`religion_${character.culture?.name}`}` to force remount when culture changes, ensuring the allowed religion list updates correctly.
+- `handleReligionChange(newReligion, oldReligion)`: calls `character.changeReligion(newReligion)`
+- `handleCultureChange(newCulture, oldCulture)`: calls `character.changeCulture(newCulture)` then `setState({})` to force re-render of religion dropdown
 
 ### Known Issues
 - `addTrait()` throws if a trait group already has a trait — but `updateFactionTraits()` calls `removeTrait` then `addTrait` which should be safe; however if `factionTraits` is undefined on first call, `forEach` on undefined throws
-- `copyCulture(character)` creates a new culture instance by finding the matching class — works but creates a fresh culture losing any runtime state
+- `copyCulture(character)` / `copyReligion(character)` create new instances by finding the matching class — works but creates a fresh instance losing any runtime state
 
 ---
 
@@ -547,6 +600,8 @@ LOG_LEVELS = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, GAME_MSG: 4 }
 Maps class name strings to `{ constructor, hasInit }`. `hasInit: true` means `instance.init()` is called after deserialization.
 
 Classes with `hasInit: true`: Game, Settlement, Timer, Variable, Cumulator, SumAggModifier, CourtIntrigue, CropBlight, Fire, HarvestEvent, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack.
+
+Classes with `hasInit: false` (added for cultures/religions): Byzantine, Germanic, Viking, CelticPagan, GermanPagan, Christianity, RomanPagan, CelticChristianity, NorsePagan.
 
 ### `EXCLUDED_PROPS`
 `component`, `react`, `_reactInternals`, `logHref` — never serialized.
@@ -793,10 +848,14 @@ Uses `ThemeContext` (`TutorialUI.contextType = ThemeContext`). Falls back to har
 - `chooseRandomly` returns element from array
 
 ### `character.js`
-- `Character` constructor creates correct Variables
+- `Character` constructor creates correct Variables; accepts `religion` prop
 - `addTrait` activates bonus on all settlements
 - `removeTrait` deactivates bonus on all settlements
-- `changeCulture` removes old cultural traits and adds new ones
+- `changeCulture` removes old cultural traits and adds new ones; resets religion if incompatible
+- `changeReligion` removes old religious traits and adds new ones
+- `getAllowedReligions(culture)` returns correct allowed religion classes for a culture instance
+- `getDefaultReligion(culture)` returns a new instance of the default religion for a culture
+- `getRandomCharacterName(culture)` / `getRandomSettlementName(culture)` return culture-appropriate names
 - `Faction.changePrivilegeTentatively` pauses game clock
 - `Faction.confirmPrivilegeChanges` applies legitimacy malus
 - `Faction.getNumPrivileges` sums correctly

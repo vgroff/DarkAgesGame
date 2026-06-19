@@ -17,7 +17,7 @@ import { seasonToTempFactor } from '../seasons.js';
 import { TerrainComponent } from './terrain.js';
 import { CourtIntrigue, CropBlight, EventComponent, Fire, LocalMiracle, MineShaftCollapse, Pestilence, WolfAttack, WarmSpell, MerchantBoom, HuntingGameSurplus, DryHuntingLands, Blizzard, RatsInStorage, NomadsArrive, BanditRaid } from '../events.js';
 import { getDefaultBuildings } from './default_buildings.js';
-import { Character, copyCulture } from '../character.js';
+import { Character, copyCulture, copyReligion, getRandomCharacterName } from '../character.js';
 import { TradeAgreement, npcWillAcceptTrade } from '../diplomacy.js';
 
 
@@ -325,9 +325,8 @@ export class Settlement {
         this.localLegitimacy = new Variable({name: "Local legitimacy", startingValue: 0, modifiers: [
             new VariableModifier({variable: this.leader.legitimacy, type: addition})
         ]});
-        this.leader.addSettlement(this);
         let diplomacySupport = new Variable({name: "Leader Diplomacy effect", startingValue:0, modifiers: [
-            new VariableModifier({variable: this.leader.diplomacy, type: scaledAddition, 
+            new VariableModifier({variable: this.leader.diplomacy, type: scaledAddition,
                 priority: addition, offset:0,  bias: 0.0, scale: 0.1
             })
         ]});
@@ -352,6 +351,10 @@ export class Settlement {
                 this.rebel();
             }
         });
+        // addSettlement must come AFTER rebellionSupport is created, so that cultural/religious
+        // trait bonuses targeting rebellionSupport (a settlement variable) are applied to the
+        // correct (newly created) Variable instance.
+        this.leader.addSettlement(this);
     }
     rebel() {
         if (this.rebellionOngoing) {
@@ -367,7 +370,10 @@ export class Settlement {
             rebellionSupport: this.totalRebellionSupport?.currentValue,
             day: this.gameClock?.currentValue,
         });
-        let newLeader = new Character({name:"random npc", culture: copyCulture(this.leader), gameClock: this.gameClock});
+        const newLeaderCulture = copyCulture(this.leader);
+        const newLeaderReligion = copyReligion(this.leader);
+        const newLeaderName = getRandomCharacterName(newLeaderCulture);
+        let newLeader = new Character({name: newLeaderName, culture: newLeaderCulture, religion: newLeaderReligion, gameClock: this.gameClock});
         let oldLeader = this.leader;
         this.setLeader(newLeader);
         if (oldLeader.isPlayer) {
