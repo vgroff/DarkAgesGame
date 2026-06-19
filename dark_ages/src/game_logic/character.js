@@ -5,7 +5,7 @@ import React from "react";
 import { chooseRandomly } from "./rolling";
 import { daysInYear } from "./seasons";
 import { AdministrationBonus, CharacterBonus, HealthBonus, DiplomacyBonus, GeneralProductivityBonus, LegitimacyBonus, SettlementBonus, SpecificBuildingProductivityBonus, StrategyBonus, HappinessBonus, TemporaryLegitimacyBonus, SimpleSettlementModifier } from "./settlement/bonus";
-import { Apothecary, Church, HuntingCabin, Library, LumberjacksHut, WeaponMaker } from "./settlement/building";
+import { Apothecary, Brewery, Church, HuntingCabin, Library, LumberjacksHut, WeaponMaker } from "./settlement/building";
 import UIBase from "./UIBase";
 import { addition, multiplication, Variable, VariableComponent, VariableModifier } from "./UIUtils";
 import { CustomTooltip, titleCase } from "./utils";
@@ -315,6 +315,9 @@ export class Germanic extends Culture {
             ]}),
             new Trait({name: "hunters", effects: [
                 new SpecificBuildingProductivityBonus({amount: 1.2, building: HuntingCabin.name, type: multiplication})
+            ]}),
+            new Trait({name: "good brewers", effects: [
+                new SpecificBuildingProductivityBonus({amount: 1.15, building: Brewery.name, type: multiplication})
             ]}),
             new Trait({name: "decentralised administration", effects: [
                 new AdministrationBonus({amount: 0.9, type: multiplication})

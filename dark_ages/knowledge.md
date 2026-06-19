@@ -28,6 +28,25 @@ There are knowledge.md files like this one at most levels of the repo, read thos
 - Game clock drives all time-based mechanics via `setInterval`
 - Save/load via JSON serialization with circular-reference tracking (`$ref`/`$id`)
 
+## Running Tests
+
+Tests use Jest via `react-scripts`. Because `npm`/`node` are managed by nvm and not on the default `PATH` in non-interactive shells, you must prefix the command with the nvm node bin path:
+
+```sh
+PATH="/home/vincent/.nvm/versions/node/v20.10.0/bin:$PATH" npm test -- --watchAll=false --no-coverage
+```
+
+To run only specific test files (e.g. the game logic and culture tests):
+
+```sh
+PATH="/home/vincent/.nvm/versions/node/v20.10.0/bin:$PATH" npm test -- --testPathPattern="character_culture|game_logic|scenario_debug" --watchAll=false --no-coverage
+```
+
+Run from the `dark_ages/` directory. Test files live in `src/game_logic/`:
+- `scenario_debug.test.js` — smoke test: constructs all scenarios, checks no ERROR logs
+- `character_culture.test.js` — culture/religion trait activation, name lists, compatibility
+- `game_logic.test.js` — broader game logic: variables, rebellion, save/load round-trip
+
 ## Repository Structure
 
 ```

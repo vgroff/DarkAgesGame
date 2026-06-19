@@ -293,7 +293,7 @@ Subclasses: `Celtic`, `Roman`, `Byzantine`, `Germanic`, `Viking`. Each defines `
 
 **Byzantine traits**: state bureaucracy (admin +0.15), merchant civilisation (tradeFactor ×1.2), incessant infighting (rebellionSupport ×1.5)
 
-**Germanic traits**: modern tactics (strategy ×1.15), bane of the empire (legitimacy +0.05), barracks emperors (rebellionSupport ×2.0), hunters (HuntingCabin ×1.2), decentralised administration (admin ×0.9)
+**Germanic traits**: modern tactics (strategy ×1.15), bane of the empire (legitimacy +0.05), barracks emperors (rebellionSupport ×2.0), hunters (HuntingCabin ×1.2), good brewers (Brewery ×1.15), decentralised administration (admin ×0.9)
 
 **Viking traits**: warrior society (strategy ×1.25, generalProductivity ×0.93), legitimacy through blood (legitimacy −0.08), feared (tradeFactor ×0.8), weaponsmiths (WeaponMaker ×1.35)
 

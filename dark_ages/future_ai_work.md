@@ -22,18 +22,16 @@ Current changes:
 MVP fixes:
 - ignore anything relating to saving and loading
 
+MVP tutorial:
+- More than one way. Show the 3 paths of food -> food 
 
 MVP fixes:
 - Too many civilians in my army?
-- Legitimacy boost for fighting off bandits
+- Legitimacy boost for fighting off bandits - but have it fall over time - does this behaviour exist yet?
 
 MVP content:
-- (Look through these first!!!) - We are going to implement the suggestions in the file cultures_religions_design_doc.md
-    - I think we might want the modifiers on support to go on the instantaneous rebellionSupport variable rather than the cumulative one
-- Add to tutorial, first section "Many numbers, such as happiness and health, will start between 0 and 1. However, most of them can grow larger than 1. You should think of 1 as "good, fulfilled" rather than "maxed out""
 - Religion/culture changes:
     - Valhalla - increase size of army
-    - Germans - good brewers - improve brewery productivity
     - Do one less level of noble privileges for celts? Or make it weaker?
 
 MVP changes:
