@@ -407,6 +407,10 @@ Extends `VariableComponent`. Shows `(+expectedChange)` or `(-expectedChange)` su
 
 Default props: `showChange: true`, `showMax: true`.
 
+**`deltaOnly` mode**: when `deltaOnly={true}` is passed as a prop, only the colored delta span is rendered (no current value, no max). Used by `BuildingComponent` to show the per-tick change inline next to a building.
+
+**`deltaLabel` prop**: when `deltaOnly={true}`, an optional `deltaLabel` string can be passed. It is prepended before the colored change value in the delta span — e.g. `deltaLabel="🌾 daily change: "` renders as `🌾 daily change: +2.4` (colored green/red). If omitted, only the change value is shown.
+
 ### Usage Pattern
 
 A `Cumulator` with supply and demand modifiers:

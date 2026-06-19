@@ -1,6 +1,7 @@
 import React from 'react';
 import UIBase from "./UIBase";
 import { ThemeContext } from "./theme";
+import TextField from '@mui/material/TextField';
 
 
 /**
@@ -198,19 +199,71 @@ export class SidePanel extends UIBase {
 
                     {/* Settlements section */}
                     <div style={sectionLabelStyle}>Settlements</div>
-                    {this.game.settlements.map((settlement, i) => (
-                        <SidePanelItem
-                            key={`settlement_${i}`}
-                            label={settlement.name}
-                            sublabel={settlement.terrain ? settlement.terrain.name : null}
-                            onClick={() => {
-                                if (onToggleResearch && showResearch) onToggleResearch();
-                                if (onToggleTutorial && showTutorial) onToggleTutorial();
-                                this.setSelected(settlement);
-                            }}
-                            c={c}
-                        />
-                    ))}
+                    {this.game.settlements.map((settlement, i) => {
+                        const editKey = `editSettlementName_${i}`;
+                        const isEditing = this.state && this.state[editKey];
+                        return (
+                            <div key={`settlement_${i}`}>
+                                {isEditing ? (
+                                    <div style={{ padding: '4px 12px' }}>
+                                        <TextField
+                                            size="small"
+                                            variant="outlined"
+                                            defaultValue={settlement.name}
+                                            autoFocus
+                                            onBlur={(e) => {
+                                                const newName = e.target.value.trim();
+                                                if (newName) {
+                                                    settlement.name = newName;
+                                                    settlement._nameIsDefault = false;
+                                                }
+                                                this.setState({ [editKey]: false });
+                                            }}
+                                            onKeyUp={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    const newName = e.target.value.trim();
+                                                    if (newName) {
+                                                        settlement.name = newName;
+                                                        settlement._nameIsDefault = false;
+                                                    }
+                                                    this.setState({ [editKey]: false });
+                                                } else if (e.key === 'Escape') {
+                                                    this.setState({ [editKey]: false });
+                                                }
+                                            }}
+                                            inputProps={{ style: { fontSize: '14px', padding: '4px 8px' } }}
+                                            sx={{ width: '100%' }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <SidePanelItem
+                                        label={
+                                            <span>
+                                                {settlement.name}
+                                                {settlement.leader && settlement.leader.isPlayer && (
+                                                    <span
+                                                        title="Rename settlement"
+                                                        style={{ marginLeft: '6px', fontSize: '11px', opacity: 0.5, cursor: 'pointer' }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            this.setState({ [editKey]: true });
+                                                        }}
+                                                    >✏️</span>
+                                                )}
+                                            </span>
+                                        }
+                                        sublabel={settlement.terrain ? settlement.terrain.name : null}
+                                        onClick={() => {
+                                            if (onToggleResearch && showResearch) onToggleResearch();
+                                            if (onToggleTutorial && showTutorial) onToggleTutorial();
+                                            this.setSelected(settlement);
+                                        }}
+                                        c={c}
+                                    />
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Tutorial button — pinned at the bottom of the side panel */}

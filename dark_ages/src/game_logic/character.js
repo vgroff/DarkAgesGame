@@ -8,7 +8,7 @@ import { AdministrationBonus, CharacterBonus, HealthBonus, DiplomacyBonus, Gener
 import { Apothecary, Brewery, Church, HuntingCabin, Library, LumberjacksHut, WeaponMaker } from "./settlement/building";
 import UIBase from "./UIBase";
 import { addition, multiplication, Variable, VariableComponent, VariableModifier } from "./UIUtils";
-import { CustomTooltip, titleCase } from "./utils";
+import { CustomTooltip, HTMLTooltip, titleCase } from "./utils";
 import { createResearchTree, ResearchComponent } from "./settlement/research";
 import { Resources } from "./settlement/resource";
 import { ThemeContext } from "./theme";
@@ -811,6 +811,9 @@ export const FameTraits = [JoustingChampion, Orator, Officer, PoliticalVeteran, 
 export class Character {
     constructor(props) {
         this.name = props.name || "Unnamed Character";
+        // Flag: true if the character name has never been manually changed by the player.
+        // Used by changeCulture() to auto-rename when culture changes.
+        this._nameIsDefault = true;
         this.isPlayer = props.isPlayer || false;
         this.gameClock = props.gameClock;
         this.traitGroups = {
@@ -934,6 +937,10 @@ export class Character {
         });
     }
     changeCulture(culture) {
+        // Track whether this is a culture change (vs. initial assignment at construction).
+        // On initial construction, this.culture is undefined, so this is the first call.
+        const isCultureChange = !!this.culture;
+
         if (this.culture) {
             // Use lastTraits if available (set by getTraits()).
             // If lastTraits is undefined the culture was never activated (e.g. directly assigned
@@ -952,6 +959,21 @@ export class Character {
             if (!stillCompatible) {
                 this.changeReligion(getDefaultReligion(this.culture));
             }
+        }
+        // Auto-rename character and settlements if their names are still the default.
+        // Only fires on actual culture changes (not on initial construction).
+        if (isCultureChange) {
+            if (this._nameIsDefault) {
+                this.name = getRandomCharacterName(this.culture);
+                // Keep _nameIsDefault = true so further culture changes keep renaming.
+                // The flag is only cleared when the player manually edits the name.
+            }
+            this.settlements.forEach(settlement => {
+                if (settlement._nameIsDefault) {
+                    settlement.name = getRandomSettlementName(this.culture);
+                    // Keep _nameIsDefault = true so further culture changes keep renaming.
+                }
+            });
         }
     }
     changeReligion(religion) {
@@ -1027,12 +1049,40 @@ export class ChoiceComponent extends React.Component {
         if (!this.chosen && this.choices) {
             this.edit = true;
         }
-        return <div>
-            {!this.edit && this.chosen ? 
-            <div onClick = {() => !this.edit && this.choices ? this.setState({edit: !this.edit}) : null}>
-                <CustomTooltip items={this.chosen.getText()} style={{textAlign:'center', alignItems: "center", justifyContent: "center"}}>
-                    <span>{this.groupName ? `${titleCase(this.groupName)}: ` : null}{titleCase(this.chosen.name)}</span>
+        const extensive = this.props.extensive || false;
+        let tooltipElement;
+        if (extensive && this.chosen && typeof this.chosen.getTraits === 'function') {
+            const traits = this.chosen.lastTraits || this.chosen.getTraits();
+            const tooltipTitle = (
+                <div>
+                    <span style={{ fontStyle: 'italic', display: 'block', marginBottom: '4px' }}>
+                        {`${titleCase(this.chosen.name)} has the following traits:`}
+                    </span>
+                    {traits && traits.map((trait, i) => (
+                        <CustomTooltip key={i} items={trait.getText()} style={{ textAlign: 'left' }}>
+                            <span style={{ display: 'block', cursor: 'default', padding: '1px 0', textDecoration: 'underline dotted' }}>
+                                {titleCase(trait.name)}
+                            </span>
+                        </CustomTooltip>
+                    ))}
+                </div>
+            );
+            tooltipElement = (chosen, label) => (
+                <HTMLTooltip title={tooltipTitle} style={{ textAlign: 'center', alignItems: 'center', justifyContent: 'center' }}>
+                    <span>{label}</span>
+                </HTMLTooltip>
+            );
+        } else {
+            tooltipElement = (chosen, label) => (
+                <CustomTooltip items={chosen.getText ? chosen.getText() : []} style={{ textAlign: 'center', alignItems: 'center', justifyContent: 'center' }}>
+                    <span>{label}</span>
                 </CustomTooltip>
+            );
+        }
+        return <div>
+            {!this.edit && this.chosen ?
+            <div onClick = {() => !this.edit && this.choices ? this.setState({edit: !this.edit}) : null}>
+                {tooltipElement(this.chosen, `${this.groupName ? `${titleCase(this.groupName)}: ` : ''}${titleCase(this.chosen.name)}`)}
             </div> :
             <FormControl fullWidth size={"small"}>
                 <InputLabel id="demo-simple-select-label">{this.groupName}</InputLabel>
@@ -1253,24 +1303,32 @@ export class CharacterComponent extends UIBase {
                     {this.state.editName
                         ? <TextField id="outlined-basic" label="Name" variant="outlined" size="small"
                             defaultValue={this.character.name}
-                            onChange={(e) => { this.character.name = e.target.value; }}
+                            onChange={(e) => {
+                                this.character.name = e.target.value;
+                                // Mark name as no longer default once the player edits it
+                                this.character._nameIsDefault = false;
+                            }}
                             onKeyUp={(event) => event.key === "Enter" ? this.setState({editName: false}) : null} />
                         : <span style={{ fontWeight: 'bold' }}>{this.character.name}</span>
                     }
                 </span>
             </div>
-            <div style={statRowStyle}>
+            <div style={{ ...statRowStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '13px', color: c ? c.textMuted : '#888', minWidth: '52px' }}>Culture:</span>
                 <ChoiceComponent key="culture" editable={this.character.isPlayer}
                     chosen={this.character.culture}
                     choices={Object.values(Cultures).map(choice => new choice())}
-                    groupName="Culture"
+                    groupName={null}
+                    extensive={true}
                     handleChange={(newCulture, oldCulture) => this.handleCultureChange(newCulture, oldCulture)} />
             </div>
-            <div style={statRowStyle}>
+            <div style={{ ...statRowStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '13px', color: c ? c.textMuted : '#888', minWidth: '52px' }}>Religion:</span>
                 <ChoiceComponent key={`religion_${this.character.culture?.name}`} editable={this.character.isPlayer}
                     chosen={this.character.religion}
                     choices={getAllowedReligions(this.character.culture).map(R => new R())}
-                    groupName="Religion"
+                    groupName={null}
+                    extensive={true}
                     handleChange={(newReligion, oldReligion) => this.handleReligionChange(newReligion, oldReligion)} />
             </div>
 
@@ -1280,12 +1338,13 @@ export class CharacterComponent extends UIBase {
             {this.character.culture.lastTraits && this.character.culture.lastTraits.length > 0
                 ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
                     {this.character.culture.lastTraits.map((trait, i) =>
-                        <span key={`cultural_trait_${trait.name}_${i}`}
-                              style={{ fontSize: '12px', padding: '2px 6px',
-                                       border: `1px solid ${c ? c.borderLight : '#ddd'}`,
-                                       borderRadius: '3px', backgroundColor: c ? c.contentBgAlt : '#f5f5f5' }}>
-                            <ChoiceComponent chosen={trait} />
-                        </span>
+                        <CustomTooltip key={`cultural_trait_${trait.name}_${i}`} items={trait.getText()} style={{ textAlign: 'center' }}>
+                            <span style={{ fontSize: '12px', padding: '2px 6px', cursor: 'default',
+                                           border: `1px solid ${c ? c.borderLight : '#ddd'}`,
+                                           borderRadius: '3px', backgroundColor: c ? c.contentBgAlt : '#f5f5f5' }}>
+                                {titleCase(trait.name)}
+                            </span>
+                        </CustomTooltip>
                     )}
                   </div>
                 : <span style={{ fontSize: '12px', color: c ? c.textMuted : '#aaa' }}>None</span>
@@ -1294,12 +1353,13 @@ export class CharacterComponent extends UIBase {
             {this.character.religion?.lastTraits && this.character.religion.lastTraits.length > 0
                 ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
                     {this.character.religion.lastTraits.map((trait, i) =>
-                        <span key={`religious_trait_${trait.name}_${i}`}
-                              style={{ fontSize: '12px', padding: '2px 6px',
-                                       border: `1px solid ${c ? c.borderLight : '#ddd'}`,
-                                       borderRadius: '3px', backgroundColor: c ? c.contentBgAlt : '#f5f5f5' }}>
-                            <ChoiceComponent chosen={trait} />
-                        </span>
+                        <CustomTooltip key={`religious_trait_${trait.name}_${i}`} items={trait.getText()} style={{ textAlign: 'center' }}>
+                            <span style={{ fontSize: '12px', padding: '2px 6px', cursor: 'default',
+                                           border: `1px solid ${c ? c.borderLight : '#ddd'}`,
+                                           borderRadius: '3px', backgroundColor: c ? c.contentBgAlt : '#f5f5f5' }}>
+                                {titleCase(trait.name)}
+                            </span>
+                        </CustomTooltip>
                     )}
                   </div>
                 : <span style={{ fontSize: '12px', color: c ? c.textMuted : '#aaa' }}>None</span>

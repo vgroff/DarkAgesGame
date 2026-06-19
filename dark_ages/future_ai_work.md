@@ -7,23 +7,15 @@ For the following, I am giving you auto-approved edit perms. This means I will n
 - first off, read the top-level knowledge.md file in the repo
 - Then, read all other knowledge files (don't bother with handwritten_notes.md)
 
-Current changes:
-- We are going to implement the suggestions in the file cultures_religions_design_doc.md. So read that
-- We wrote this file together, but I've made some changes (you can see it in git diff if you want), both to some numbers and to some behaviours. I think everything is consistent, but do ask if anything is unclear/inconsistent/doesn't make sense or you're unsure. 
-- We also want to add some default character names and settlement names, for each culture type, and AI characters/settlements should be auto-assigned an appropriate name on creation
-
-
-Current changes:
 
 
 ============================================================================
 
+Immediate fixes:
+- show the tooltips within tooltips on the Culture/Religion Selectors too instead of only after it's been chosen
 
 MVP fixes:
 - ignore anything relating to saving and loading
-
-MVP tutorial:
-- More than one way. Show the 3 paths of food -> food 
 
 MVP fixes:
 - Too many civilians in my army?
@@ -32,12 +24,11 @@ MVP fixes:
 MVP content:
 - Religion/culture changes:
     - Valhalla - increase size of army
-    - Do one less level of noble privileges for celts? Or make it weaker?
+    - Do one less level of noble privileges for celts? Or make it weaker? Or worse legitimacy overall?
 
 MVP changes:
-- What exactly does the Faction traits do? is this culture or different? Waht happens to these when leader of settlement changes?
+- What exactly do the Faction traits do? is this culture or different? What happens to these when leader of settlement changes?
     - I think it just holds privileges and research?
-- Name character and settlement on scenario select
 - Make the year longer, maybe 4 days per season instead of 3 - could this cause any problems do you think?
 - Treasury should be held on a per-faction basis, not per-settlement (if it isn't already)
 

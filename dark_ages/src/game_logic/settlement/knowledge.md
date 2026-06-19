@@ -286,7 +286,9 @@ Input resource demand system:
 - Tooltip shows output resource, production per worker, input requirements, alerts
 - Buttons: +/- workers (ResourceBuilding only), Build, Demolish, Upgrade, Downgrade
 - All buttons disabled for non-player settlements (`isPlayerOwned` prop)
-- **Resource change rate**: `SettlementComponent` passes `outputStorage` prop (the `ResourceStorage` for the building's output resource) to `BuildingComponent`. `childRender()` reads `outputStorage.amount.expectedChange` (Cumulator net change for the current tick) and displays it inline after the jobs count — green for positive, red for negative (e.g. `+2.4/tick`).
+- **Resource change rate**: `SettlementComponent` passes `outputStorage` prop (the `ResourceStorage` for the building's output resource) to `BuildingComponent`. `childRender()` reads `outputStorage.cumulates` to decide display mode:
+  - **Accumulating resources** (`cumulates: true`): shows `CumulatorComponent` in `deltaOnly` mode with a `deltaLabel` of `"{icon} daily change: "` — e.g. `🌾 daily change: +2.4`. Green for positive, red for negative.
+  - **Flow/non-accumulating resources** (`cumulates: false`, e.g. housing, roads, religion, entertainment, tools): shows `"{icon} excess: "` label (styled span) followed by `VariableComponent` for the excess value. Both the label and value are colored green if > 0 (surplus), red if = 0 (none).
 
 ### Known Issues
 
@@ -415,7 +417,7 @@ Exported constants:
 
 - Subscribes to `resourceStorage.amount`
 - Cumulating resources: shows `CumulatorComponent` (with expected change)
-- Flow resources: shows `VariableComponent` with "Excess" prefix
+- Flow resources: shows `VariableComponent` with "Excess" prefix, **colored green if excess > 0 (surplus), red if = 0 (none produced/no excess)**
 - Tooltip shows resource description
 - Prefixes resource name with emoji icon from `RESOURCE_ICONS`
 
@@ -624,6 +626,7 @@ After construction, sets `resource.defaultBuilding` for each resource that has a
 - `activateBonus(AddNewBuildingBonus)` adds building to `resourceBuildings`
 - `activateBonus(SettlementBonus)` calls `bonus.activate(settlement)`
 - `recalculatePrices()` updates market ideal prices
+- **`_nameIsDefault`**: boolean flag initialized to `true` in the `Settlement` constructor. Set to `false` when the player manually edits the settlement name (via the side panel inline edit). Used by `Character.changeCulture()` to decide whether to auto-rename the settlement when the player changes culture.
 
 ### `ResourceStorage`
 - `updateDemands()` distributes supply correctly in priority order

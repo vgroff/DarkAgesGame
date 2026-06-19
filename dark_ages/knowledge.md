@@ -461,6 +461,19 @@ Scenarios are plain data objects defined in `scenarios.js`. They are passed to `
 ### Minor
 *(all minor bugs fixed — see below)*
 
+### Fixed (this session) — UI polish round 4 & culture rename
+
+- **`building.js` resource change rate display redesign**: `BuildingComponent.childRender()` now branches on `outputStorage.cumulates`:
+  - **Accumulating resources** (`cumulates: true`): uses `CumulatorComponent` in `deltaOnly` mode with a new `deltaLabel` prop (e.g. `"🌾 daily change: "`). Renders as `🌾 daily change: +2.4` (green) or `🌾 daily change: -1.2` (red). Removes the old `/day` suffix.
+  - **Flow/non-accumulating resources** (`cumulates: false`, e.g. housing, roads, religion, entertainment, tools): uses `VariableComponent` for the excess value, colored green (`#2e7d32`) if excess > 0 (surplus), red (`#c62828`) if = 0 (none).
+- **`cumulator.js` `CumulatorComponent` `deltaLabel` prop**: new optional prop. When `deltaOnly={true}`, prepends the label string before the colored change value in the delta span. Used by `BuildingComponent` to show the resource icon and "daily change: " prefix.
+- **`resource.js` `ResourceStorageComponent` flow resource coloring**: flow resources (housing, roads, religion, entertainment, tools) now show the excess value colored green if > 0 (surplus) or red if = 0 (none), matching the building UI.
+- **`character.js` `Character._nameIsDefault` flag**: new boolean field initialized to `true` in the `Character` constructor. Cleared to `false` when the player manually edits the character name. Used by `changeCulture()` to decide whether to auto-rename.
+- **`character.js` `changeCulture()` auto-rename**: when the player changes culture (not the initial assignment at construction — detected by `!!this.culture` before the change), if `_nameIsDefault` is `true`, the character is renamed to a random culture-appropriate name. Each owned settlement with `settlement._nameIsDefault === true` is also renamed. The flag is NOT cleared after auto-rename, so further culture changes keep renaming until the player manually edits.
+- **`settlement.js` `Settlement._nameIsDefault` flag**: new boolean field initialized to `true` in the `Settlement` constructor. Cleared to `false` when the player manually edits the settlement name via the side panel.
+- **`sidePanelUI.js` settlement name inline editing**: player-owned settlements in the side panel now show a ✏️ pencil icon next to the name. Clicking opens an MUI `TextField` inline. Saving (blur or Enter) writes the new name and sets `settlement._nameIsDefault = false`. Escape cancels.
+- **`App.test.js` boilerplate test removed**: the pre-existing "renders learn react link" test was failing (it looks for text that doesn't exist in the game). Replaced with a comment. All 3 game-specific test suites continue to pass.
+
 ### Fixed (this session) — playtest fixes round 1
 
 - **`settlement.js` rationing index bug**: `rationsDemanded.filter(...).map((ration, i) => ...)` — after filtering, index `i` no longer matched the original `rationsAchieved[i]`, `idealRations[i]`, `rationResources[i]` arrays. This caused the Apothecary (medicinalHerbs) to display as "beer" in the rationing UI. Fixed by replacing `.filter().map()` with `.map()` + conditional return to preserve original indices.

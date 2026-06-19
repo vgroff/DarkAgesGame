@@ -1,8 +1,8 @@
-import {VariableModifier, Variable, addition, subtraction, min, multiplication, division, roundTo, CumulatorComponent } from '../UIUtils.js';
+import {VariableModifier, Variable, addition, subtraction, min, multiplication, division, roundTo, CumulatorComponent, VariableComponent } from '../UIUtils.js';
 import { titleCase, CustomTooltip, roundNumber } from '../utils.js';
 import React from 'react';
 import UIBase from '../UIBase';
-import {Resources} from './resource.js'
+import {Resources, RESOURCE_ICONS} from './resource.js'
 import Grid from  '@mui/material/Grid';
 import Button from '@mui/material/Button';
 import {Logger} from '../logger.js';
@@ -528,15 +528,49 @@ export class BuildingComponent extends UIBase {
         const buildingIcon = BUILDING_ICONS[titleCase(this.building.displayName)] || '';
 
         // Resource change rate display — shown when outputStorage prop is provided.
-        // Uses deltaOnly mode on CumulatorComponent (same Variable instance as ResourceStorageComponent)
-        // so the tooltip shows the full production/demand breakdown. Displayed on a separate line
-        // below the building name in a smaller italic font, colored green/red.
+        // For accumulating resources (Cumulator): shows "🌾 daily change: +N" label.
+        // For flow/non-accumulating resources (cumulates:false): shows excess colored green (>0) or red (=0).
         const outputStorage = this.props.outputStorage;
-        const changeDisplay = outputStorage && outputStorage.amount
-            ? <div style={{ marginTop: '2px' }}>
-                <CumulatorComponent variable={outputStorage.amount} showName={false} showChange={true} showMax={false} deltaOnly={true} />
-              </div>
-            : null;
+        let changeDisplay = null;
+        if (outputStorage && outputStorage.amount) {
+            const resourceIcon = RESOURCE_ICONS[outputStorage.resource.name] || '';
+            if (outputStorage.cumulates) {
+                // Accumulating resource: show delta with "daily change:" label
+                const expectedChange = outputStorage.amount.expectedChange
+                    ? roundNumber(parseFloat(outputStorage.amount.expectedChange.toFixed(3)), 3)
+                    : 0;
+                const changeColor = expectedChange > 0 ? '#2e7d32' : expectedChange < 0 ? '#c62828' : undefined;
+                const changeText = expectedChange > 0 ? `+${expectedChange}` : `${expectedChange}`;
+                changeDisplay = (
+                    <div style={{ marginTop: '2px' }}>
+                        <CumulatorComponent
+                            variable={outputStorage.amount}
+                            showName={false}
+                            showChange={true}
+                            showMax={false}
+                            deltaOnly={true}
+                            deltaLabel={`${resourceIcon} daily change: `}
+                        />
+                    </div>
+                );
+            } else {
+                // Flow/non-accumulating resource: show excess colored green (>0) or red (=0)
+                const excessVal = outputStorage.amount.currentValue;
+                const excessColor = excessVal > 0 ? '#2e7d32' : '#c62828';
+                changeDisplay = (
+                    <div style={{ marginTop: '2px', fontSize: '11px', fontStyle: 'italic', color: excessColor }}>
+                        <span>{resourceIcon} excess: </span>
+                        <VariableComponent
+                            variable={outputStorage.amount}
+                            showName={false}
+                            showOwner={false}
+                            description={`Excess ${outputStorage.resource.name}: how much is produced beyond what citizens need. Green = surplus, red = none.`}
+                            style={{ color: excessColor, fontSize: '11px', fontStyle: 'italic' }}
+                        />
+                    </div>
+                );
+            }
+        }
 
         return <Grid container spacing={0.5} style={cardStyle}>
             <Grid item xs={9}>

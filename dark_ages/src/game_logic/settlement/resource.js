@@ -200,9 +200,12 @@ export class ResourceStorageComponent extends UIBase {
                 <CumulatorComponent variable={this.resourceStorage.amount} showName={false}/><br />
             </span>
         } else {
+            // Flow resource: color excess green if > 0 (surplus), red if = 0 (none produced/no excess)
+            const excessVal = this.resourceStorage.amount.currentValue;
+            const excessColor = excessVal > 0 ? '#2e7d32' : '#c62828';
             return <span style={{alignItems: "center", justifyContent: "center"}}>
                 <CustomTooltip items={this.toolTipVars}><span onClick={() => {Logger.setInspect(this.resourceStorage)}}>{icon} Excess {titleCase(this.resourceStorage.resource.name)}: </span></CustomTooltip>
-                <VariableComponent variable={this.resourceStorage.amount} showName={false}/><br />
+                <VariableComponent variable={this.resourceStorage.amount} showName={false} style={{ color: excessColor }}/><br />
             </span>
         }
     }

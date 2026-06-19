@@ -24,6 +24,9 @@ import { TradeAgreement, npcWillAcceptTrade } from '../diplomacy.js';
 export class Settlement {
     constructor(props) {
         this.name = props.name;
+        // Flag: true if the settlement name has never been manually changed by the player.
+        // Used by Character.changeCulture() to auto-rename when culture changes.
+        this._nameIsDefault = props._nameIsDefault !== undefined ? props._nameIsDefault : true;
         this.autoManageUnemployed = false;
         this.gameClock = props.gameClock;
         this.handleRebellion = props.handleRebellion;
@@ -1200,7 +1203,7 @@ export class SettlementComponent extends UIBase {
                 top: this.props.stickyHeaderHeight || 165,
                 zIndex: 90,
                 backgroundColor: c ? c.contentBg : '#fff',
-                paddingBottom: '2px',
+                padding: '4px 8px 2px',
             }}>
                 {this.renderHeader()}
                 {this.renderStatsBar()}

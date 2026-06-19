@@ -68,9 +68,12 @@ export class CumulatorComponent extends VariableComponent {
             // pass the delta as extraChildren and suppress the base value display with showBase=false
             // (already default). The displayValue in super.render() will still show, so we wrap
             // the whole output in a span and use the deltaSpan as the primary visual via CSS override.
+            // If deltaLabel prop is provided, it is shown as a plain prefix before the colored value.
+            const label = this.props.deltaLabel || '';
+            const changeText = expectedChange > 0 ? `+${expectedChange}` : `${expectedChange}`;
             const deltaSpan = (
                 <span key="delta" style={{ color: changeColor, fontSize: '11px', fontStyle: 'italic', marginLeft: '2px' }}>
-                    {expectedChange > 0 ? `+${expectedChange}/day` : `${expectedChange}/day`}
+                    {label}{changeText}
                 </span>
             );
             // Use super.render() with the delta as extraChildren. Hide the numeric value by

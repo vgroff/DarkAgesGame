@@ -136,7 +136,7 @@ class GameUI extends UIBase {
 
                     {/* Main content — uses its own scroll container so sticky children work correctly.
                         paddingBottom reserves space for the fixed message log + bottom toolbar. */}
-                    <Grid item xs={8} style={{ padding: '0 8px', height: '100vh', overflowY: 'auto', position: 'relative', paddingBottom: `${fixedBottomHeight}px` }}>
+                    <Grid item xs={8} style={{ padding: 0, height: '100vh', overflowY: 'auto', position: 'relative', paddingBottom: `${fixedBottomHeight}px` }}>
                         {/* Sticky header block: HUD + warning banner + back/forward nav.
                             All three stick together at the top when scrolling.
                             A ref measures the actual rendered height so SettlementComponent
@@ -179,7 +179,7 @@ class GameUI extends UIBase {
                             </div>
                         </div>
 
-                        <div>
+                        <div style={{ padding: '0 8px' }}>
                             {showTutorial
                                 ? <TutorialUI />
                                 : showResearch

@@ -280,7 +280,9 @@ Trait groups (each holds one trait at a time):
 
 `TraitScaler = 0.1` — base unit for skill bonuses from traits.
 
-`changeCulture(culture)`: deactivates old cultural traits, activates new ones; if the current religion is no longer compatible with the new culture, resets religion to the new culture's default.
+`_nameIsDefault`: boolean flag on `Character`, initialized to `true`. Set to `false` when the player manually edits the character's name in `CharacterComponent`. Used by `changeCulture()` to decide whether to auto-rename.
+
+`changeCulture(culture)`: deactivates old cultural traits, activates new ones; if the current religion is no longer compatible with the new culture, resets religion to the new culture's default. **Auto-rename on culture change**: if this is an actual culture change (not the initial assignment at construction — detected by `!!this.culture` before the change), and `this._nameIsDefault` is `true`, the character is renamed to a random culture-appropriate name via `getRandomCharacterName(this.culture)`. Similarly, each owned settlement with `settlement._nameIsDefault === true` is renamed via `getRandomSettlementName(this.culture)`. The `_nameIsDefault` flag is NOT cleared after auto-rename — further culture changes will keep renaming until the player manually edits the name.
 
 `changeReligion(religion)`: deactivates old religious traits, sets `this.religion`, activates new religious traits on all current settlements.
 
@@ -378,6 +380,7 @@ Maps culture key → `{ allowed: Religion[], default: Religion }`:
 - Religion dropdown uses `key={`religion_${character.culture?.name}`}` to force remount when culture changes, ensuring the allowed religion list updates correctly.
 - `handleReligionChange(newReligion, oldReligion)`: calls `character.changeReligion(newReligion)`
 - `handleCultureChange(newCulture, oldCulture)`: calls `character.changeCulture(newCulture)` then `setState({})` to force re-render of religion dropdown
+- **Name edit clears `_nameIsDefault`**: the name `TextField` `onChange` handler sets `character._nameIsDefault = false` when the player edits the name, preventing further auto-renames on culture change.
 
 ### Known Issues
 - `addTrait()` throws if a trait group already has a trait — but `updateFactionTraits()` calls `removeTrait` then `addTrait` which should be safe; however if `factionTraits` is undefined on first call, `forEach` on undefined throws
@@ -826,6 +829,7 @@ Uses `ThemeContext` (`TutorialUI.contextType = ThemeContext`). Falls back to har
 - **Research** nav item (📜 Research) sits between Characters and Settlements; toggles `showResearch` state in `GameUI` via `onToggleResearch` prop; clicking a settlement/character also closes the Research panel
 - **Tutorial** nav item (📖 How to Play) pinned at the bottom of the side panel via `marginTop: auto` on a flex container; toggles `showTutorial` state in `GameUI` via `onToggleTutorial` prop; opening tutorial closes Research and vice versa; clicking a settlement/character also closes the Tutorial panel
 - Clicking calls `setSelected` to update `GameUI` state
+- **Settlement name inline editing**: player-owned settlements show a ✏️ pencil icon next to the name. Clicking the icon opens an MUI `TextField` (inline, replacing the name text). Saving (on `onBlur` or Enter key) writes the new name to `settlement.name` and sets `settlement._nameIsDefault = false` to prevent further auto-renames. Pressing Escape cancels without saving. NPC settlements show only the name (no edit icon).
 
 ---
 
